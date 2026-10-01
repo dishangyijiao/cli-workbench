@@ -58,7 +58,7 @@ assert_contains "doctor sees a clean git clone" "PASS  repo has no uncommitted c
 echo "a fresh interactive zsh starts cleanly"
 zsh -i -c 'echo shell-ok' >"$T_DIR/zsh.out" 2>"$T_DIR/zsh.err" </dev/null
 assert_eq "it runs" "shell-ok" "$(cat "$T_DIR/zsh.out")"
-assert_eq "nothing on stderr" 0 "$(grep -v -E "can.t change option: zle" "$T_DIR/zsh.err" | wc -l | tr -d ' ')"
+assert_eq "nothing on stderr" "" "$(grep -v -E "can.t change option: zle" "$T_DIR/zsh.err")"   # shows the text if it fails
 assert "completion cache is in the XDG cache dir" test -f "$HOME/.cache/zsh/zcompdump"
 assert_eq "no duplicate PATH entries" 0 "$(zsh -i -c 'print -l $path | sort | uniq -d | wc -l' 2>/dev/null </dev/null | tr -d ' ')"
 
