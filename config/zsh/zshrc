@@ -23,7 +23,7 @@ setopt AUTO_CD INTERACTIVE_COMMENTS NO_BEEP
 _wb_cache=${XDG_CACHE_HOME:-$HOME/.cache}/zsh
 [[ -d $_wb_cache ]] || mkdir -p "$_wb_cache"
 autoload -Uz compinit
-compinit -C -d "$_wb_cache/zcompdump"
+compinit -i -C -d "$_wb_cache/zcompdump"   # -i: silently skip insecure completion dirs instead of asking y/n (no terminal, CI)
 zstyle ':completion:*' menu select
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
 unset _wb_cache
