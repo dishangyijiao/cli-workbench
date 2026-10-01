@@ -1,0 +1,9 @@
+theme = Catppuccin Mocha
+# Needs a Nerd Font installed (brew install --cask font-sauce-code-pro-nerd-font); otherwise change or remove this line.
+font-family = SauceCodePro Nerd Font Mono
+
+# Put the tab bar in the title bar; each tab then shows its Cmd+1..8 / Cmd+9 shortcut hint.
+macos-titlebar-style = tabs
+
+# Restore windows and tabs after restarting Ghostty (tmux keeps the processes alive).
+window-save-state = always

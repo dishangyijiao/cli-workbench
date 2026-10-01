@@ -1,0 +1,58 @@
+# cli-workbench zshrc: portable defaults. Everything optional is guarded, so a missing tool never breaks the shell.
+# Per-machine settings (extra PATH entries, proxies, work tools) go in ~/.config/zsh/local.zsh, which is not tracked.
+
+typeset -gU path                              # PATH without duplicate entries
+_wb_zsh_dir=${${(%):-%N}:A:h}                 # directory of this file, also when reached through the ~/.zshrc symlink
+
+export LANG=${LANG:-en_US.UTF-8}
+if (( $+commands[nvim] )); then export EDITOR=${EDITOR:-nvim}; else export EDITOR=${EDITOR:-vim}; fi
+
+# PATH (static part lives in path.zsh)
+source "$_wb_zsh_dir/path.zsh" || print -u2 "cli-workbench: FAILED to load $_wb_zsh_dir/path.zsh"
+
+# History
+HISTFILE=${HISTFILE:-$HOME/.zsh_history}
+HISTSIZE=50000
+SAVEHIST=50000
+setopt HIST_IGNORE_ALL_DUPS HIST_REDUCE_BLANKS HIST_IGNORE_SPACE SHARE_HISTORY EXTENDED_HISTORY
+
+# Options
+setopt AUTO_CD INTERACTIVE_COMMENTS NO_BEEP
+
+# Completion (the dump file lives in the XDG cache dir, not in $HOME)
+_wb_cache=${XDG_CACHE_HOME:-$HOME/.cache}/zsh
+[[ -d $_wb_cache ]] || mkdir -p "$_wb_cache"
+autoload -Uz compinit
+compinit -C -d "$_wb_cache/zcompdump"
+zstyle ':completion:*' menu select
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
+unset _wb_cache
+
+# Key bindings: emacs style; Up/Down search history by the text already typed
+if [[ -o zle ]]; then
+  bindkey -e
+  autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
+  zle -N up-line-or-beginning-search
+  zle -N down-line-or-beginning-search
+  bindkey '^[[A' up-line-or-beginning-search
+  bindkey '^[[B' down-line-or-beginning-search
+fi
+
+# Optional tools, used only when installed
+if (( $+commands[starship] )); then eval "$(starship init zsh)"; else PROMPT='%F{green}%n%f@%m %F{blue}%~%f %# '; fi
+(( $+commands[zoxide] )) && eval "$(zoxide init zsh)"
+if (( $+commands[fzf] )) && fzf --zsh >/dev/null 2>&1; then source <(fzf --zsh); fi   # fzf 0.48 or newer
+
+alias ll='ls -lah'
+alias ..='cd ..'
+
+# Not tracked: secrets and per-machine settings, sourced last
+if [[ -r "$HOME/.config/zsh/secrets.zsh" ]]; then source "$HOME/.config/zsh/secrets.zsh"; fi
+if [[ -r "$HOME/.config/zsh/local.zsh" ]]; then source "$HOME/.config/zsh/local.zsh"; fi
+
+# Optional: a tmux session chooser in new terminal tabs. Off by default; turn it on in local.zsh with
+#   export WB_TMUX_AUTOSTART=1
+# For one shell that stays outside tmux:  TMUX_NO_AUTOSTART=1 zsh
+if [[ -o interactive && -t 0 && -t 1 && -z $TMUX && -z ${TMUX_NO_AUTOSTART:-} && ${WB_TMUX_AUTOSTART:-0} == 1 ]]; then
+  [[ -r ~/.config/zsh/tmux-autostart.zsh ]] && source ~/.config/zsh/tmux-autostart.zsh
+fi

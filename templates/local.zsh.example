@@ -1,0 +1,11 @@
+# Copy to ~/.config/zsh/local.zsh for settings that differ per machine. Not tracked; sourced last by zshrc.
+
+# Extra PATH entries (prepend with path=(dir $path), append with path+=(dir)); missing dirs are harmless
+# [[ -d $HOME/go/bin ]] && path+=($HOME/go/bin)
+
+# Open a tmux session chooser in every new terminal tab (opt-in)
+# export WB_TMUX_AUTOSTART=1
+
+# A proxy, if you need one
+# export HTTPS_PROXY=http://127.0.0.1:7890
+# export HTTP_PROXY=$HTTPS_PROXY

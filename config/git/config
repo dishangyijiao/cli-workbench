@@ -1,0 +1,10 @@
+# Portable git settings for cli-workbench, included from ~/.gitconfig.
+# Identity, proxy, internal-IP url rewrites and credential-helper paths stay in ~/.gitconfig (machine-specific).
+[color]
+	ui = true
+[color "status"]
+	changed = yellow
+	untracked = red
+	added = green
+[http]
+	postBuffer = 157286400

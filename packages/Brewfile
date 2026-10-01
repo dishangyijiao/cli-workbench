@@ -1,0 +1,14 @@
+# Command-line tools the default config makes use of. Install:  brew bundle --file=packages/Brewfile
+# All of them are optional: the shell config only uses what is installed.
+brew "git"
+brew "tmux"        # >= 3.2 recommended (the workspace switcher uses display-popup)
+brew "fzf"
+brew "neovim"
+brew "ripgrep"
+brew "zoxide"
+brew "starship"
+brew "jq"          # used by the Claude Code status line
+
+# macOS apps (the default Ghostty config uses this font)
+cask "ghostty"
+cask "font-sauce-code-pro-nerd-font"
