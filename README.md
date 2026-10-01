@@ -11,7 +11,7 @@ Keep your command-line environment (zsh, tmux, Ghostty, Git, the Claude Code sta
 
 | | |
 |---|---|
-| **Platform** | **macOS** is the supported and tested platform (macOS 15, Apple Silicon). Linux is untested and may need adjustments. Windows is not supported. |
+| **Platform** | **macOS** is the primary platform (tested on macOS 15, Apple Silicon). The scripts and the zsh and tmux configs also pass the full test suite and the first-run flow on **Ubuntu 24.04** (checked in a container); the Ghostty config and the Homebrew casks are macOS-oriented. Windows is not supported. |
 | **Shell** | zsh 5.8 or newer (tested with 5.9). The scripts are bash 3.2 compatible, i.e. the macOS system bash is enough. |
 | **tmux** | 3.2 or newer recommended (tested with 3.5a). Older versions still load the config, minus the workspace switcher key. |
 | **Required** | `git` |
@@ -76,7 +76,7 @@ scripts/check            # fast, read-only: links resolve to the right sources, 
 scripts/doctor           # adds: tools, PATH duplicates and dead entries, proxy variables, repository state
 scripts/doctor --deep    # adds: really starts zsh, tmux and nvim in isolation from your live state
 scripts/link [component] [--apply] [--adopt]
-tests/run.sh             # the scripts' own tests (throwaway fixtures, no side effects on your home)
+tests/run.sh             # the scripts' own tests, including an end-to-end run of this README's quick start in a throwaway HOME
 ```
 
 Output is `PASS` / `WARN` / `FAIL`. `check` and `doctor` exit non-zero only on `FAIL`.
@@ -106,7 +106,7 @@ The links are ordinary symlinks. To go back, remove a link and move the backup i
 
 ## Contributing
 
-Issues and pull requests are welcome. Please keep scripts bash 3.2 compatible, add a test for new behaviour, and run `tests/run.sh` before sending. Do not include personal paths, names or credentials.
+Issues and pull requests are welcome. Please keep scripts bash 3.2 compatible, add a test for new behaviour, and run `tests/run.sh` before sending. A GitHub Actions workflow (`.github/workflows/tests.yml`) runs the suite on macOS and Ubuntu for every push and pull request. Do not include personal paths, names or credentials.
 
 ## License
 

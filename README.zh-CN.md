@@ -11,7 +11,7 @@
 
 | | |
 |---|---|
-| **平台** | 支持并测试过的是 **macOS**（macOS 15，Apple Silicon）。Linux 未测试，可能需要调整。不支持 Windows。 |
+| **平台** | **macOS** 是主要平台（在 macOS 15、Apple Silicon 上测试）。脚本以及 zsh、tmux 配置在 **Ubuntu 24.04** 上也通过了完整测试和首次使用流程（在容器中验证）；Ghostty 配置和 Homebrew 的 cask 是面向 macOS 的。不支持 Windows。 |
 | **Shell** | zsh 5.8 及以上（在 5.9 上测试）。脚本兼容 bash 3.2，也就是 macOS 自带的 bash 就够用。 |
 | **tmux** | 建议 3.2 及以上（在 3.5a 上测试）。更旧的版本仍能加载配置，只是少了工作台切换键。 |
 | **必需** | `git` |
@@ -76,7 +76,7 @@ scripts/check            # 快速、只读：链接是否指向正确源文件�
 scripts/doctor           # 再加：工具、PATH 重复和失效项、代理变量、仓库状态
 scripts/doctor --deep    # 再加：在与你真实环境隔离的条件下真正启动 zsh、tmux、nvim
 scripts/link [组件] [--apply] [--adopt]
-tests/run.sh             # 脚本自身的测试（用临时数据，不影响你的家目录）
+tests/run.sh             # 脚本自身的测试，包括在临时家目录里把本 README 的快速开始完整跑一遍
 ```
 
 输出为 `PASS` / `WARN` / `FAIL`。`check` 和 `doctor` 只在出现 `FAIL` 时返回非零。
@@ -106,7 +106,7 @@ tests/run.sh             # 脚本自身的测试（用临时数据，不影响�
 
 ## 参与贡献
 
-欢迎提 issue 和 pull request。请保持脚本兼容 bash 3.2，新增行为要加测试，提交前运行 `tests/run.sh`。请不要带入个人路径、姓名或任何凭据。
+欢迎提 issue 和 pull request。请保持脚本兼容 bash 3.2，新增行为要加测试，提交前运行 `tests/run.sh`。仓库里的 GitHub Actions 工作流（`.github/workflows/tests.yml`）会在每次 push 和 pull request 时，在 macOS 和 Ubuntu 上运行整套测试。请不要带入个人路径、姓名或任何凭据。
 
 ## 许可证
 

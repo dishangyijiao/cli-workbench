@@ -1,0 +1,44 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools (macOS)
+        if: runner.os == 'macOS'
+        run: brew install tmux jq
+
+      - name: Install tools (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y zsh tmux jq
+
+      - name: Show versions
+        run: |
+          zsh --version
+          tmux -V
+          bash --version | head -1
+          jq --version
+
+      # Includes tests/smoke.test.sh: the README quick start, run end to end in a throwaway HOME.
+      - name: Run tests
+        run: tests/run.sh
