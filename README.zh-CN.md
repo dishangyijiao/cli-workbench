@@ -15,7 +15,7 @@
 | **Shell** | zsh 5.8 及以上（在 5.9 上测试）。脚本兼容 bash 3.2，也就是 macOS 自带的 bash 就够用。 |
 | **tmux** | 建议 3.2 及以上（在 3.5a 上测试）。更旧的版本仍能加载配置，只是少了工作台切换键。 |
 | **必需** | `git`；如果使用 zsh 组件，还需要 `zsh`（没有它时 `doctor` 会报 FAIL） |
-| **可选** | `fzf`（0.48+ 才有 shell 集成）、`zoxide`、`starship`、`jq`（状态栏用）、[Ghostty](https://ghostty.org) 加一款 Nerd Font、Homebrew |
+| **可选** | `fzf`（0.48+ 才有 shell 集成）、`zoxide`、`starship`、`zsh-syntax-highlighting`、`jq`（状态栏用）、[Ghostty](https://ghostty.org) 加一款 Nerd Font、Homebrew |
 
 **它会在你的机器上做的改动，仅此而已：**
 
@@ -59,7 +59,7 @@ git config --global --add include.path "$PWD/config/git/config"
 这些是个人偏好，不是硬性要求。直接改 `config/` 里的文件即可；因为是软链接，改动立刻生效。
 
 - **tmux：** 前缀键是 `Ctrl-a`（不是 `Ctrl-b`）；复制模式用 vi 键位；开启鼠标；窗口从 1 开始编号。窗格内容**默认不会**保存到磁盘（那会把窗格里打印过的任何东西，包括令牌，明文存盘）；想开启的话看 `@resurrect-capture-pane-contents` 旁边的注释。
-- **zsh：** 5 万行的共享历史、补全不区分大小写、`starship`、`zoxide`、`fzf` 仅在已安装时启用。
+- **zsh：** 5 万行的共享历史、补全不区分大小写、`starship`、`zoxide`、`fzf`、`zsh-syntax-highlighting` 仅在已安装时启用。
 - **Ghostty：** Catppuccin Mocha 主题和 `SauceCodePro Nerd Font Mono` 字体（请安装该字体，或改掉这一行）。
 
 ## 改成你自己的

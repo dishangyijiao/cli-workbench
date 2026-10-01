@@ -7,6 +7,7 @@ brew "neovim"
 brew "ripgrep"
 brew "zoxide"
 brew "starship"
+brew "zsh-syntax-highlighting"
 brew "jq"          # used by the Claude Code status line
 
 # macOS apps (the default Ghostty config uses this font)

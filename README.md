@@ -15,7 +15,7 @@ Keep your command-line environment (zsh, tmux, Ghostty, Git, the Claude Code sta
 | **Shell** | zsh 5.8 or newer (tested with 5.9). The scripts are bash 3.2 compatible, i.e. the macOS system bash is enough. |
 | **tmux** | 3.2 or newer recommended (tested with 3.5a). Older versions still load the config, minus the workspace switcher key. |
 | **Required** | `git`, and `zsh` if you use the zsh component (`doctor` reports FAIL without it) |
-| **Optional** | `fzf` (0.48+ for the shell integration), `zoxide`, `starship`, `jq` (status line), [Ghostty](https://ghostty.org) and a Nerd Font, Homebrew |
+| **Optional** | `fzf` (0.48+ for the shell integration), `zoxide`, `starship`, `zsh-syntax-highlighting`, `jq` (status line), [Ghostty](https://ghostty.org) and a Nerd Font, Homebrew |
 
 **What it changes on your machine, and nothing else:**
 
@@ -59,7 +59,7 @@ Suggested order and the manual steps (Homebrew tools, tmux plugin manager) are i
 These are opinions, not requirements. Edit the files in `config/`; because they are symlinked, the change is live at once.
 
 - **tmux:** prefix is `Ctrl-a` (not `Ctrl-b`); vi-style copy mode; mouse on; windows numbered from 1. Pane contents are **not** saved to disk by default (that would store anything printed in a pane, tokens included); see the comment next to `@resurrect-capture-pane-contents` to turn it on.
-- **zsh:** 50,000-line shared history, case-insensitive completion, `starship` and `zoxide` and `fzf` only if installed.
+- **zsh:** 50,000-line shared history, case-insensitive completion, `starship`, `zoxide`, `fzf` and `zsh-syntax-highlighting` only if installed.
 - **Ghostty:** Catppuccin Mocha and `SauceCodePro Nerd Font Mono` (install the font or change the line).
 
 ## Make it yours

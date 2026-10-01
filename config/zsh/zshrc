@@ -50,6 +50,16 @@ alias ..='cd ..'
 if [[ -r "$HOME/.config/zsh/secrets.zsh" ]]; then source "$HOME/.config/zsh/secrets.zsh"; fi
 if [[ -r "$HOME/.config/zsh/local.zsh" ]]; then source "$HOME/.config/zsh/local.zsh"; fi
 
+# Optional: syntax highlighting (zsh-syntax-highlighting). It must be sourced after everything that defines widgets, so it comes last.
+# Install: brew install zsh-syntax-highlighting  (Debian/Ubuntu: apt install zsh-syntax-highlighting)
+for _wb_hl in \
+  /opt/homebrew/share/zsh-syntax-highlighting /usr/local/share/zsh-syntax-highlighting \
+  /home/linuxbrew/.linuxbrew/share/zsh-syntax-highlighting /usr/share/zsh-syntax-highlighting \
+  "$HOME/.zsh/zsh-syntax-highlighting" "$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"; do
+  if [[ -r $_wb_hl/zsh-syntax-highlighting.zsh ]]; then source "$_wb_hl/zsh-syntax-highlighting.zsh"; break; fi
+done
+unset _wb_hl
+
 # Optional: a tmux session chooser in new terminal tabs. Off by default; turn it on in local.zsh with
 #   export WB_TMUX_AUTOSTART=1
 # For one shell that stays outside tmux:  TMUX_NO_AUTOSTART=1 zsh
