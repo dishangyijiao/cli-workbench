@@ -11,7 +11,7 @@ Keep your command-line environment (zsh, tmux, Ghostty, Git, the Claude Code sta
 
 | | |
 |---|---|
-| **Platform** | **macOS** is the primary platform (tested on macOS 15, Apple Silicon). The scripts and the zsh and tmux configs also pass the full test suite and the first-run flow on **Ubuntu 24.04** (checked in a container); the Ghostty config and the Homebrew casks are macOS-oriented. Windows is not supported. |
+| **Platform** | **macOS** is the primary platform (tested on macOS 26, Apple Silicon). The scripts and the zsh and tmux configs also pass the full test suite and the first-run flow on **Ubuntu 24.04** (checked in a container); the Ghostty config and the Homebrew casks are macOS-oriented. Windows is not supported. |
 | **Shell** | zsh 5.8 or newer (tested with 5.9). The scripts are bash 3.2 compatible, i.e. the macOS system bash is enough. |
 | **tmux** | 3.2 or newer recommended (tested with 3.5a). Older versions still load the config, minus the workspace switcher key. |
 | **Required** | `git`, and `zsh` if you use the zsh component (`doctor` reports FAIL without it) |
