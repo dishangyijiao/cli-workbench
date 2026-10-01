@@ -1,5 +1,8 @@
 # cli-workbench
 
+[![tests](https://github.com/dishangyijiao/cli-workbench/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/dishangyijiao/cli-workbench/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 [English](README.md) | 简体中文
 
 把你的命令行环境（zsh、tmux、Ghostty、Git、Claude Code 状态栏）放进**同一个 Git 仓库**，并通过软链接让本机实际使用的文件**就是**仓库里的文件。几个小而经过测试的 shell 脚本负责安全地规划、应用、检查和诊断这些链接。
@@ -28,7 +31,7 @@
 ## 快速开始
 
 ```sh
-git clone <你的 fork 或本仓库地址> ~/dev/cli-workbench      # 放在哪里都可以
+git clone https://github.com/dishangyijiao/cli-workbench.git ~/dev/cli-workbench   # 或你的 fork；放在哪里都可以
 cd ~/dev/cli-workbench
 
 scripts/bootstrap                  # 只读：检查，并给出将要链接什么的计划
@@ -112,7 +115,7 @@ tests/run.sh             # 脚本自身的测试，包括在临时家目录里�
 
 ## 参与贡献
 
-欢迎提 issue 和 pull request。安全问题请看 [SECURITY.md](SECURITY.md)，不要公开提 issue。请保持脚本兼容 bash 3.2，新增行为要加测试，提交前运行 `tests/run.sh`。仓库里的 GitHub Actions 工作流（`.github/workflows/tests.yml`）会在每次 push 和 pull request 时，在 macOS 和 Ubuntu 上运行整套测试。请不要带入个人路径、姓名或任何凭据：`scripts/privacy-scan` 会检查（私钥、令牌格式、疑似密钥的赋值、`/Users/<名字>` 路径、邮箱地址、`.env`/`*.pem`/`*.key` 文件，以及你放在 `~/.config/cli-workbench/deny.txt` 里的自定义词，该文件不在仓库内）。每个克隆里启用一次提交前钩子：`git config core.hooksPath .githooks`；CI 会跑同一个扫描。确实需要的例外：在那一行写上 `wb-scan: allow`。
+欢迎提 issue 和 pull request，详见 [CONTRIBUTING.md](CONTRIBUTING.md)。安全问题请看 [SECURITY.md](SECURITY.md)，不要公开提 issue。各版本的变更见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 许可证
 

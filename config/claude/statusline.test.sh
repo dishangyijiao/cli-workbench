@@ -216,6 +216,10 @@ check "empty stdin still prints something" "yes" \
   "$( [ -n "$(cd "$CLEAN" && sh "$SCRIPT" </dev/null 2>&1)" ] && echo yes || echo no )"
 
 check "unicode and spaces in the directory name" \
+  "café über" \
+  "$(run "$(jq -n '{workspace:{project_dir:"/tmp/nonexistent/café über"}}')")"
+
+check "CJK characters and a space in the directory name" \
   "我的 项目" \
   "$(run "$(jq -n '{workspace:{project_dir:"/tmp/nonexistent/我的 项目"}}')")"
 

@@ -1,0 +1,44 @@
+name: Bug report
+description: Something does not work as the README says.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Security problems (lost files, writes outside the documented locations, exposed secrets): do **not** file them here, see SECURITY.md.
+        Before pasting output, remove tokens, internal hostnames and your user name.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran, what you expected, what you got.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. scripts/link zsh
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: scripts/doctor output
+      description: Run `scripts/doctor` (or `scripts/doctor --deep` for zsh, tmux or nvim problems) and paste the output.
+      render: text
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: macOS 26 (Apple Silicon), zsh 5.9, tmux 3.5a, commit abc1234
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      multiple: true
+      options: [scripts (link/check/doctor/bootstrap), zsh, tmux, ghostty, git, nvim, claude-statusline, other]

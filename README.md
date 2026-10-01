@@ -1,5 +1,8 @@
 # cli-workbench
 
+[![tests](https://github.com/dishangyijiao/cli-workbench/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/dishangyijiao/cli-workbench/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 English | [简体中文](README.zh-CN.md)
 
 Keep your command-line environment (zsh, tmux, Ghostty, Git, the Claude Code status line) in **one Git repository**, and make the files your machine actually uses *be* the files in that repository, through symlinks. A few small, tested shell scripts plan, apply, check and diagnose those links safely.
@@ -28,7 +31,7 @@ Keep your command-line environment (zsh, tmux, Ghostty, Git, the Claude Code sta
 ## Quick start
 
 ```sh
-git clone <your-fork-or-this-repo-url> ~/dev/cli-workbench      # any location works
+git clone https://github.com/dishangyijiao/cli-workbench.git ~/dev/cli-workbench   # or your fork; any location works
 cd ~/dev/cli-workbench
 
 scripts/bootstrap                  # read-only: check + the plan of what would be linked
@@ -112,7 +115,7 @@ The links are ordinary symlinks. To go back, remove a link and move the backup i
 
 ## Contributing
 
-Issues and pull requests are welcome. For security problems, see [SECURITY.md](SECURITY.md) instead of opening a public issue. Please keep scripts bash 3.2 compatible, add a test for new behaviour, and run `tests/run.sh` before sending. A GitHub Actions workflow (`.github/workflows/tests.yml`) runs the suite on macOS and Ubuntu for every push and pull request. Do not include personal paths, names or credentials: `scripts/privacy-scan` checks for them (private keys, token formats, secret-looking assignments, `/Users/<name>` paths, e-mail addresses, `.env`/`*.pem`/`*.key` files, and your own words from `~/.config/cli-workbench/deny.txt`, which stays outside the repo). Enable the pre-commit hook once per clone with `git config core.hooksPath .githooks`; CI runs the same scan. A deliberate exception: put `wb-scan: allow` on that line.
+Issues and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). For security problems, see [SECURITY.md](SECURITY.md) instead of opening a public issue. Changes between versions are in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

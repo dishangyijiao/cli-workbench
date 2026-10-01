@@ -1,10 +1,9 @@
 -- ~/.config/nvim/lua/lsp/init.lua
--- 简化的 LSP 配置
+-- Language servers and completion. A server is only set up when its executable is installed, unless noted.
 
 local lspconfig = require('lspconfig')
 local capabilities = require('cmp_nvim_lsp').default_capabilities()
 
--- 基本的 LSP 配置
 local on_attach = function(client, bufnr)
     local opts = { noremap=true, silent=true, buffer=bufnr }
     vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, opts)
@@ -22,7 +21,7 @@ local on_attach = function(client, bufnr)
     vim.keymap.set('n', 'gr', vim.lsp.buf.references, opts)
 end
 
--- 配置补全
+-- Completion
 local cmp = require('cmp')
 local luasnip = require('luasnip')
 
@@ -64,7 +63,6 @@ cmp.setup({
     })
 })
 
--- 配置语言服务器
 -- JavaScript/TypeScript
 lspconfig.ts_ls.setup({
     on_attach = on_attach,
@@ -89,7 +87,7 @@ if solargraph_available then
     lspconfig.solargraph.setup{
         on_attach = on_attach,
         capabilities = capabilities,
-        cmd = { "solargraph", "stdio" }, -- 默认命令，如果使用 rbenv 可以改回原来的配置
+        cmd = { "solargraph", "stdio" }, -- with rbenv you may need the full path to solargraph here
         root_dir = lspconfig.util.root_pattern("Gemfile", ".git", ".ruby-version"),
         settings = {
             solargraph = {
@@ -108,27 +106,23 @@ if solargraph_available then
     }
 end
 
--- Ruby LSP - 新的官方 Ruby LSP
+-- Ruby LSP (Shopify's ruby-lsp)
 local ruby_lsp_available = vim.fn.executable('ruby-lsp') == 1
 if ruby_lsp_available then
     lspconfig.ruby_lsp.setup({
         on_attach = function(client, bufnr)
             on_attach(client, bufnr)
-            -- 添加额外的 Rails 项目相关快捷键
             local opts = { noremap=true, silent=true, buffer=bufnr }
             vim.keymap.set('n', '<leader>rf', '<cmd>Telescope lsp_references<CR>', opts)
             vim.keymap.set('n', '<leader>ri', '<cmd>Telescope lsp_implementations<CR>', opts)
         end,
         capabilities = capabilities,
-        -- 确保识别所有 Ruby 文件类型
         filetypes = {"ruby", "eruby", "rakefile", "rb", "rake", "gemfile"},
-        -- 更智能的项目根目录判断
         root_dir = function(fname)
             return lspconfig.util.root_pattern("Gemfile", ".git", ".ruby-version", "Rakefile")(fname) or
                    lspconfig.util.find_git_ancestor(fname) or
                    vim.fn.getcwd()
         end,
-        -- Rails 项目特定的设置
         settings = {
             ruby_lsp = {
                 enabledFeatures = {
@@ -192,11 +186,8 @@ if gopls_available then
     })
 end
 
--- C/C++ - 禁用警告提示
--- 如果您将来需要使用 C/C++ 语言服务器，请取消注释以下代码
--- 并运行 :MasonInstall clangd 安装所需服务器
-
--- 禁用检查和配置，不再显示提示
+-- C/C++: disabled, so Neovim does not warn about a missing server.
+-- To use it, uncomment the block below and run :MasonInstall clangd
 --[[
 local clangd_available = vim.fn.executable('clangd') == 1
 if clangd_available then
@@ -273,11 +264,8 @@ lspconfig.yamlls.setup({
     },
 })
 
--- JSON - 禁用警告提示
--- 如果您将来需要使用 JSON 语言服务器，请取消注释以下代码
--- 并运行 :MasonInstall jsonls 安装所需服务器
-
--- 禁用检查和配置，不再显示提示
+-- JSON: disabled, so Neovim does not warn about a missing server.
+-- To use it, uncomment the block below and run :MasonInstall jsonls
 --[[
 local jsonls_available = vim.fn.executable('vscode-json-language-server') == 1
 if jsonls_available then
@@ -305,12 +293,12 @@ lspconfig.dockerls.setup({
     capabilities = capabilities,
 })
 
--- LSP相关的快捷键配置
+-- LSP pickers
 vim.keymap.set('n', '<leader>fs', '<cmd>Telescope lsp_document_symbols<CR>', 
-  { noremap = true, silent = true, desc = "文档符号搜索" })
+  { noremap = true, silent = true, desc = "Search document symbols" })
 vim.keymap.set('n', '<leader>fr', '<cmd>Telescope lsp_references<CR>', 
-  { noremap = true, silent = true, desc = "查找引用" })
+  { noremap = true, silent = true, desc = "Find references" })
 vim.keymap.set('n', '<leader>fd', '<cmd>Telescope diagnostics<CR>', 
-  { noremap = true, silent = true, desc = "文档诊断信息" })
+  { noremap = true, silent = true, desc = "Diagnostics" })
 vim.keymap.set('n', '<leader>gd', '<cmd>Telescope lsp_definitions<CR>',
-  { noremap = true, silent = true, desc = "转到定义 (Telescope)" })
+  { noremap = true, silent = true, desc = "Go to definition (Telescope)" })
