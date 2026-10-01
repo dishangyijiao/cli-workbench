@@ -109,6 +109,7 @@ tests/run.sh             # 脚本自身的测试，包括在临时家目录里�
 
 ## 排错
 
+- Debian/Ubuntu：开 shell 时出现 `compinit: initialization aborted` 或 “insecure directories”，来自系统的 `/etc/zsh/zshrc`：当 `/usr/share/zsh` 权限过宽时，它会在你的配置之前先跑一次自己的 `compinit`。本仓库的 zshrc 已经会运行 `compinit`，所以在 `~/.zshenv` 里加一行 `skip_global_compinit=1`（或者按 `compaudit` 的提示修正权限）。
 - `FAIL link ...`：运行 `scripts/link <组件>` 看计划。出现 `STOP` 表示有真实目录或外部链接挡着：先对比，再 `--adopt`。
 - tmux 配置有问题：`scripts/doctor --deep` 会在私有 socket 上加载它。
 - 更多见 [`docs/architecture.md`](docs/architecture.md)。

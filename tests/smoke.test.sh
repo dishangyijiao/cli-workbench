@@ -56,6 +56,9 @@ out=$(scripts/doctor 2>&1); assert_eq "doctor exits 0 (no FAIL)" 0 $?
 assert_contains "doctor sees a clean git clone" "PASS  repo has no uncommitted changes" "$out"
 
 echo "a fresh interactive zsh starts cleanly"
+# Debian/Ubuntu's /etc/zsh/zshrc runs its own compinit first; on CI images /usr/share/zsh is too permissive and it complains.
+# That is the system's doing, not this config's, so skip it here (the zshrc runs its own compinit).
+export skip_global_compinit=1
 zsh -i -c 'echo shell-ok' >"$T_DIR/zsh.out" 2>"$T_DIR/zsh.err" </dev/null
 assert_eq "it runs" "shell-ok" "$(cat "$T_DIR/zsh.out")"
 zsh_errs=$(grep -v -E "can.t change option: zle" "$T_DIR/zsh.err")

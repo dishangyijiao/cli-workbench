@@ -109,6 +109,7 @@ The links are ordinary symlinks. To go back, remove a link and move the backup i
 
 ## Troubleshooting
 
+- Debian/Ubuntu: `compinit: initialization aborted` or "insecure directories" at shell start comes from the system's `/etc/zsh/zshrc`, which runs its own `compinit` before yours when `/usr/share/zsh` has loose permissions. The zshrc here already runs `compinit`, so put `skip_global_compinit=1` in `~/.zshenv` (or fix the permissions, see `compaudit`).
 - `FAIL link ...`: run `scripts/link <component>` and read the plan. `STOP` means a real directory or a foreign link is in the way: compare, then `--adopt`.
 - tmux config problems: `scripts/doctor --deep` loads it on a private socket.
 - More in [`docs/architecture.md`](docs/architecture.md).
