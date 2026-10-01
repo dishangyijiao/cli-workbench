@@ -1,4 +1,4 @@
-# Portable git settings for cli-workbench, included from ~/.gitconfig.
+# Portable git settings for cli-workbench. Git reads ~/.config/git/config on its own, no include needed.
 # Identity, proxy, internal-IP url rewrites and credential-helper paths stay in ~/.gitconfig (machine-specific).
 [color]
 	ui = true

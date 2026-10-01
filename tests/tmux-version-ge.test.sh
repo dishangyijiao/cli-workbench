@@ -2,7 +2,7 @@
 set -u
 WB_SRC=$(cd "$(dirname "$0")/.." && pwd)
 . "$WB_SRC/tests/harness.sh"
-V="$WB_SRC/config/tmux/scripts/tmux-version-ge.sh"
+V="$WB_SRC/home/dot_tmux/scripts/executable_tmux-version-ge.sh"
 ge() { TMUX_VERSION_CMD="echo tmux $1" "$V" "$2" "$3" >/dev/null 2>&1; echo $?; }
 
 echo "tmux-version-ge.sh MAJOR MINOR: exit 0 when the running tmux is at least that version"

@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# chezmoi pre-apply hook (installed by home/.chezmoi.toml.tmpl): copy every file that `chezmoi apply` is about to
+# replace to ~/.cli-workbench-backup/<timestamp>/, because chezmoi itself keeps no backup.
+#
+#   - runs for every apply, including `chezmoi apply <one file>` (it may back up a little more than that one file)
+#   - does nothing, and creates nothing, for --dry-run or when no existing file would change
+#   - exit 1 on any failure, which makes chezmoi abort the apply: no backup, no overwrite
+#   - the backup directory is mode 700 (a .zshrc can hold tokens); symlinks are kept as symlinks
+#   - RESTORE inside it has one copy-paste command per file
+#
+# WB_BACKUP_DIR overrides the backup root (used by the tests).
+set -u
+
+case " ${CHEZMOI_ARGS:-} " in *" --dry-run "*|*" -n "*) exit 0 ;; esac
+dest=${CHEZMOI_DEST_DIR:-$HOME}
+exe=${CHEZMOI_EXECUTABLE:-chezmoi}
+
+# `chezmoi status` lines are "XY path"; Y is what apply would do. M = replace an existing file, D = remove one.
+status=$("$exe" status 2>/dev/null) || { echo "backup-before-apply: 'chezmoi status' failed; refusing to apply without a backup" >&2; exit 1; }
+paths=$(printf '%s\n' "$status" | awk 'length($0) > 3 && substr($0, 2, 1) ~ /[MD]/ { print substr($0, 4) }')
+[ -n "$paths" ] || exit 0
+
+root=${WB_BACKUP_DIR:-$HOME/.cli-workbench-backup}
+dir=$root/$(date +%Y%m%d-%H%M%S)
+n=0
+while [ -e "$dir" ]; do n=$((n+1)); dir=$root/$(date +%Y%m%d-%H%M%S)-$n; done
+fail() { echo "backup-before-apply: $1; refusing to apply without a backup" >&2; exit 1; }
+(umask 077; mkdir -p "$root" && mkdir "$dir") || fail "cannot create $dir"
+chmod 700 "$root" "$dir" 2>/dev/null
+
+# Directories that stay directories only change mode; a directory that becomes a file or link has content to keep.
+dirs=$("$exe" managed --include=dirs --path-style=relative 2>/dev/null) || fail "'chezmoi managed' failed"
+
+count=0
+printf 'Files replaced by chezmoi apply on %s. Restore one with the command next to it.\n\n' "$(date '+%Y-%m-%d %H:%M:%S')" > "$dir/RESTORE" || fail "cannot write $dir/RESTORE"
+while IFS= read -r rel; do
+  src=$dest/$rel
+  [ -e "$src" ] || [ -L "$src" ] || continue
+  if [ -d "$src" ] && [ ! -L "$src" ] && printf '%s\n' "$dirs" | grep -qxF -- "$rel"; then continue; fi
+  mkdir -p "$dir/$(dirname "$rel")" && cp -pPR "$src" "$dir/$rel" || fail "cannot copy $src"
+  printf 'mkdir -p %q && rm -rf %q && cp -pPR %q %q\n' "$(dirname "$src")" "$src" "$dir/$rel" "$src" >> "$dir/RESTORE"
+  count=$((count+1))
+done <<PATHS
+$paths
+PATHS
+
+if [ "$count" -eq 0 ]; then rm -rf "$dir"; exit 0; fi
+echo "cli-workbench: backed up $count file(s) that this apply replaces to $dir (see RESTORE there)" >&2

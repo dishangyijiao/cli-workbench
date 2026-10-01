@@ -2,7 +2,7 @@
 # Per-machine settings (extra PATH entries, proxies, work tools) go in ~/.config/zsh/local.zsh, which is not tracked.
 
 typeset -gU path                              # PATH without duplicate entries
-_wb_zsh_dir=${${(%):-%N}:A:h}                 # directory of this file, also when reached through the ~/.zshrc symlink
+_wb_zsh_dir=${XDG_CONFIG_HOME:-$HOME/.config}/zsh   # path.zsh and tmux-autostart.zsh are deployed here next to local.zsh
 
 export LANG=${LANG:-en_US.UTF-8}
 if (( $+commands[nvim] )); then export EDITOR=${EDITOR:-nvim}; else export EDITOR=${EDITOR:-vim}; fi
@@ -38,8 +38,9 @@ if [[ -o zle ]]; then
   bindkey '^[[B' down-line-or-beginning-search
 fi
 
-# Optional tools, used only when installed
-if (( $+commands[starship] )); then eval "$(starship init zsh)"; else PROMPT='%F{green}%n%f@%m %F{blue}%~%f %# '; fi
+# Optional tools, used only when installed. starship cannot render under TERM=dumb or with TERM unset (test harnesses,
+# some editor shells) and would print an error at every prompt there — the built-in prompt covers those cases too.
+if (( $+commands[starship] )) && [[ -n $TERM && $TERM != dumb ]]; then eval "$(starship init zsh)"; else PROMPT='%F{green}%n%f@%m %F{blue}%~%f %# '; fi
 (( $+commands[zoxide] )) && eval "$(zoxide init zsh)"
 if (( $+commands[fzf] )) && fzf --zsh >/dev/null 2>&1; then source <(fzf --zsh); fi   # fzf 0.48 or newer
 

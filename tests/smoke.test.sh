@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # End-to-end test: what a first-time user does, in a throwaway HOME. Follows the README quick start.
+if ! command -v chezmoi >/dev/null; then echo "chezmoi not installed; skipped"; exit 0; fi
 set -u
 WB_SRC=$(cd "$(dirname "$0")/.." && pwd)
 . "$WB_SRC/tests/harness.sh"
@@ -12,48 +13,39 @@ SOCK=smoke$$
 cleanup() { tmux -L "$SOCK" kill-server 2>/dev/null; case $T_DIR in /tmp/*|/var/folders/*|/private/var/folders/*) rm -rf "$T_DIR";; esac; }
 trap cleanup EXIT
 
-# the user's own files, which must survive
+# the user's own files, which chezmoi must not silently lose
 echo '# my old zshrc' > "$HOME/.zshrc"
 mkdir -p "$HOME/.config/ghostty"; echo 'font-size = 14' > "$HOME/.config/ghostty/config"
-# a clone: the working tree without .git
-mkdir "$T_DIR/wb"; (cd "$WB_SRC" && tar --exclude=.git -cf - .) | (cd "$T_DIR/wb" && tar xf -)
-cd "$T_DIR/wb" || exit 1
-git init -q && git add -A && git -c user.name=smoke -c user.email=smoke@example.invalid commit -q -m "clone"
-links() { find "$HOME" -type l 2>/dev/null | wc -l | tr -d ' '; }
-components=$(awk '!/^#/ && NF {print $1}' links.txt)
+export WB_BACKUP_DIR=$HOME/.cli-workbench-backup
+CZ=(chezmoi --no-tty)
 
-echo "bootstrap and the link dry-run are read-only"
-out=$(scripts/bootstrap 2>&1); assert_eq "bootstrap exits 0" 0 $?
-assert_contains "bootstrap explains that FAIL lines are expected on a first run" "only mean nothing is linked yet" "$out"
-scripts/link >/dev/null 2>&1;      assert_eq "link dry-run exits 0" 0 $?
-assert_eq "no links created" 0 "$(links)"
-assert_eq "existing .zshrc untouched" "# my old zshrc" "$(cat "$HOME/.zshrc")"
+echo "the README quick start: init points chezmoi at this clone"
+chezmoi init --source "$WB_SRC" --no-tty >/dev/null 2>&1; assert_eq "chezmoi init exits 0" 0 $?
 
-echo "the README quick start: apply ONE component, then check just that one"
-scripts/link tmux --apply >/dev/null 2>&1; assert_eq "apply tmux" 0 $?
-out=$(scripts/check tmux 2>&1); assert_eq "check tmux passes although the other components are not linked yet" 0 $?
-assert_contains "it reports the tmux link" "PASS  link tmux" "$out"
+echo "look first (diff), then apply"
+out=$("${CZ[@]}" diff 2>&1); assert_eq "chezmoi diff exits 0" 0 $?
+assert_eq "diff changed nothing" "# my old zshrc" "$(cat "$HOME/.zshrc")"
+"${CZ[@]}" apply --dry-run >/dev/null 2>&1; assert_eq "apply --dry-run exits 0" 0 $?
+assert_eq "dry-run changed nothing" "# my old zshrc" "$(cat "$HOME/.zshrc")"
 
-echo "every component applies"
-for c in $components; do scripts/link "$c" --apply >/dev/null 2>&1; assert_eq "apply $c" 0 $?; done
-for c in $components; do
-  tgt=$(awk -v c="$c" '$1==c {print $3}' links.txt); tgt=${tgt/#\~/$HOME}
-  [ -L "$tgt" ] && [ -e "$tgt" ]; assert_eq "$c is a working symlink" 0 $?
+echo "apply deploys every file"
+"${CZ[@]}" apply >/dev/null 2>&1; assert_eq "apply exits 0" 0 $?
+for f in .zshrc .tmux.conf .config/zsh/path.zsh .config/zsh/tmux-autostart.zsh .config/ghostty/config .config/git/config .config/nvim/init.lua .claude/statusline.sh .claude/CLAUDE.md .codex/AGENTS.md .gemini/GEMINI.md .tmux/scripts/workspace-switch.sh; do
+  assert "$f is deployed" test -f "$HOME/$f"
+done
+for f in .claude/statusline.sh .tmux/scripts/workspace-switch.sh .tmux/scripts/tmux-version-ge.sh .tmux/scripts/branch.sh; do
+  assert "$f is executable" test -x "$HOME/$f"
 done
 
 echo "the user's own files were backed up, not lost"
-assert "old .zshrc is in a backup" test -n "$(grep -rl 'my old zshrc' "$HOME/.cli-workbench-backup" 2>/dev/null | head -1)"
-assert "old ghostty config is in a backup" test -n "$(grep -rl 'font-size = 14' "$HOME/.cli-workbench-backup" 2>/dev/null | head -1)"
-assert "a RESTORE note exists" test -n "$(find "$HOME/.cli-workbench-backup" -name RESTORE | head -1)"
+assert "old .zshrc is in a backup" test -n "$(grep -rl 'my old zshrc' "$WB_BACKUP_DIR" 2>/dev/null | head -1)"
+assert "old ghostty config is in a backup" test -n "$(grep -rl 'font-size = 14' "$WB_BACKUP_DIR" 2>/dev/null | head -1)"
+assert "a RESTORE note exists" test -n "$(find "$WB_BACKUP_DIR" -name RESTORE | head -1)"
 
 echo "applying again is a no-op"
-out=$(scripts/link zsh --apply 2>&1); assert_eq "exit 0" 0 $?
-assert_contains "reports ok" "[ok]" "$out"
-
-echo "check and doctor pass"
-scripts/check >/dev/null 2>&1;  assert_eq "check exits 0" 0 $?
-out=$(scripts/doctor 2>&1); assert_eq "doctor exits 0 (no FAIL)" 0 $?
-assert_contains "doctor sees a clean git clone" "PASS  repo has no uncommitted changes" "$out"
+"${CZ[@]}" apply >/dev/null 2>&1; assert_eq "exit 0" 0 $?
+assert_eq "nothing left to change" "" "$("${CZ[@]}" status 2>&1)"
+"${CZ[@]}" verify >/dev/null 2>&1; assert_eq "chezmoi verify passes" 0 $?
 
 echo "a fresh interactive zsh starts cleanly"
 # Debian/Ubuntu's /etc/zsh/zshrc runs its own compinit first; on CI images /usr/share/zsh is too permissive and it complains.
@@ -69,6 +61,13 @@ if [ -n "$zsh_errs" ]; then   # what compinit's security audit objects to, to ma
 fi
 assert "completion cache is in the XDG cache dir" test -f "$HOME/.cache/zsh/zcompdump"
 assert_eq "no duplicate PATH entries" 0 "$(zsh -i -c 'print -l $path | sort | uniq -d | wc -l' 2>/dev/null </dev/null | tr -d ' ')"
+
+echo "the built-in prompt is used where starship cannot render"
+if command -v starship >/dev/null; then
+  builtin_prompt='%F{green}%n%f@%m %F{blue}%~%f %# '   # the fallback PROMPT from home/dot_zshrc
+  assert_eq "TERM=dumb uses it" "$builtin_prompt" "$(TERM=dumb zsh -i -c 'print -r -- $PROMPT' </dev/null 2>/dev/null)"
+  assert "a real TERM uses starship" test "$(TERM=xterm-256color zsh -i -c 'print -r -- $PROMPT' </dev/null 2>/dev/null)" != "$builtin_prompt"
+else echo "starship not installed; prompt choice skipped"; fi
 
 if command -v tmux >/dev/null; then
   echo "the tmux config loads without errors, even without tpm"

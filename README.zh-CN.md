@@ -5,118 +5,139 @@
 
 [English](README.md) | 简体中文
 
-把你的命令行环境（zsh、tmux、Ghostty、Git、Claude Code 状态栏）放进**同一个 Git 仓库**，并通过软链接让本机实际使用的文件**就是**仓库里的文件。几个小而经过测试的 shell 脚本负责安全地规划、应用、检查和诊断这些链接。
+**给 AI 编码代理用的终端工作台。** Claude Code、Codex、Gemini CLI、Grok CLI 这些都是读写纯文本的命令行程序，所以运行它们最合适的地方是一个你完全掌控的终端：每个项目一个 tmux 会话，编辑器紧挨着代理，用 ripgrep、fzf、jq 处理文本，所有设置都在一个你能读、能 diff、能 fork 的 Git 仓库里。这个仓库就是这套环境，用 [chezmoi](https://www.chezmoi.io) 部署。
 
-> **它是什么：** 一个自带合理默认配置的个人 dotfiles 框架。你 fork 或克隆它，修改 `config/`，把它变成你自己的。
-> **它不是什么：** 不是包管理器、不是一键安装器、也不是主题包。它不会安装软件，也不管理密钥。
+```
+  prefix + P  ->  选一个项目  ->  一个 tmux 会话，每个仓库一个窗口
+ ┌─────────────────┬─────────────────┐
+ │                 │  claude / codex │   第一个已安装的代理在这里启动，
+ │  nvim           │  gemini / grok  │   工作目录就是项目目录
+ │                 ├─────────────────┤
+ │                 │  shell          │
+ └─────────────────┴─────────────────┘
+```
+
+## 为什么它是工作台，而不只是 dotfiles
+
+| | |
+|---|---|
+| **项目 → 会话，代理包含在内** | `~/dev/projects` 下的每个目录是一个工作台。包含多个仓库的文件夹算**一个**工作台，每个仓库一个窗口，每个窗口都有自己的代理窗格。不需要登记：直接从目录树发现。自动探测 `claude`、`codex`、`gemini`、`grok`（用 `WORKSPACE_SWITCH_AGENTS` 扩展候选，用 `WORKSPACE_SWITCH_AGENT` 指定某一个，设为 `none` 关闭）。 |
+| **一路都是纯文本** | 设置、历史、笔记和代理的指令都是文件。工具是 `rg`、`fzf`、`jq`、`nvim` 和 `git`；没有 GUI 状态，没有会丢的数据库。**同一份指令文本部署给所有代理**（`CLAUDE.md`、`AGENTS.md`、`GEMINI.md`），你的私人规则从一个不入库的文件追加在后面。 |
+| **可以放心公开** | 代理需要 API 密钥，而密钥最容易通过 dotfiles 泄露。`scripts/privacy-scan` 在 pre-commit 钩子里运行，CI 里再跑一次，能识别 Anthropic（Claude）、OpenAI、Google（Gemini）、xAI（Grok）的密钥，以及 GitHub 和 AWS 令牌、私钥、个人路径和邮箱地址；pre-push 钩子还会扫描提交元数据（作者、提交者、提交说明）。tmux 窗格内容默认不落盘。密钥放在不入库的文件里。 |
+| **可回退** | 每次 `chezmoi apply` 之前，会把将被替换的文件备份到 `~/.cli-workbench-backup/`，并附恢复说明。 |
+| **承诺都有测试** | 下面的快速开始会在临时 home 目录里端到端运行（macOS 和 Ubuntu）。代理窗格（用替身代理）、备份和隐私扫描各有自己的测试。 |
+
+**如实说明，目前针对代理的部分有这些：** 工作台切换器可以启动这四个代理中的任何一个；状态栏（`~/.claude/statusline.sh`）只适用于 Claude Code；共享的指令文本能到达 Claude Code、Codex 和 Gemini CLI（Grok CLI 没有接入：这里不确定它读哪个指令文件）；各代理自己的设置文件（`settings.json`、`config.toml`）有意不纳入，见下文。本仓库不负责安装这些代理。
+
+> **它是什么：** 一个个人 dotfiles 仓库，结构是 chezmoi 源目录。你 fork 它，修改 `home/`，把它变成你自己的。
+> **它不是什么：** 不是包管理器、不是一键安装器、不是主题包，也不是代理框架。它不会安装软件，也不管理密钥。
 
 ## 使用条件与适用范围
 
 | | |
 |---|---|
-| **平台** | **macOS** 是主要平台（在 macOS 26、Apple Silicon 上测试）。脚本以及 zsh、tmux 配置在 **Ubuntu 24.04** 上也通过了完整测试和首次使用流程（在容器中验证）；Ghostty 配置和 Homebrew 的 cask 是面向 macOS 的。不支持 Windows。 |
-| **Shell** | zsh 5.8 及以上（在 5.9 上测试）。脚本兼容 bash 3.2，也就是 macOS 自带的 bash 就够用。 |
+| **平台** | **macOS** 是主要平台（在 macOS 26、Apple Silicon 上测试）。zsh、tmux 配置在 **Ubuntu 24.04** 上也通过了完整测试和首次使用流程（在容器中验证）；Ghostty 配置和 Homebrew 的 cask 是面向 macOS 的。不支持 Windows。 |
+| **Shell** | zsh 5.8 及以上（在 5.9 上测试）。辅助脚本兼容 bash 3.2，也就是 macOS 自带的 bash 就够用。 |
 | **tmux** | 建议 3.2 及以上（在 3.5a 上测试）。更旧的版本仍能加载配置，只是少了工作台切换键。 |
-| **必需** | `git`；如果使用 zsh 组件，还需要 `zsh`（没有它时 `doctor` 会报 FAIL） |
+| **必需** | `git` 和 [`chezmoi`](https://www.chezmoi.io/install/)（`brew install chezmoi`） |
 | **可选** | `fzf`（0.48+ 才有 shell 集成）、`zoxide`、`starship`、`zsh-syntax-highlighting`、`jq`（状态栏用）、[Ghostty](https://ghostty.org) 加一款 Nerd Font、Homebrew |
 
-**它会在你的机器上做的改动，仅此而已：**
-
-- [`links.txt`](links.txt) 中列出的软链接，并且只有你运行 `scripts/link <组件> --apply` 时才创建；
-- 被这些链接替换的文件的备份，放在 `~/.cli-workbench-backup/<时间戳>/`，附带一份 `RESTORE` 说明；
-- 使用自带 `zshrc` 后，在 `~/.cache/zsh/` 里生成 zsh 补全缓存。
-
-**它绝不会：** 删除你的文件、安装软件、不加 `--apply` 就改动任何东西，也不会碰 `links.txt` 之外的文件。
+**它会在你的机器上做的改动：** 仅限 [`home/`](home) 下由 chezmoi 部署的文件（见下表）、使用自带 `zshrc` 后 `~/.cache/zsh/` 里的 zsh 补全缓存，以及被替换文件的备份 `~/.cli-workbench-backup/<时间戳>/`（chezmoi 自己不备份，见“安全模型”）。
 
 ## 快速开始
 
 ```sh
+brew install chezmoi
 git clone https://github.com/dishangyijiao/cli-workbench.git ~/dev/cli-workbench   # 或你的 fork；放在哪里都可以
-cd ~/dev/cli-workbench
 
-scripts/bootstrap                  # 只读：检查，并给出将要链接什么的计划
-scripts/link tmux --apply          # 一次只应用一个组件，然后只验证这一个
-scripts/check tmux
+chezmoi init --source ~/dev/cli-workbench   # 把这个克隆作为源目录，并安装备份钩子（见下文）
+
+chezmoi diff                       # 只读：$HOME 里将会发生什么变化
+chezmoi apply ~/.tmux.conf         # 先只应用一个文件，看看效果
+chezmoi apply                      # 再应用全部
 ```
 
-组件（来自 `links.txt`）：
+也可以让 chezmoi 自己克隆：`chezmoi init <你的 GitHub 用户名>/cli-workbench`，然后同样 `diff`、`apply`。
 
-| 组件 | 目标 | 说明 |
+部署的内容（目录结构遵循 [chezmoi 的命名规则](https://www.chezmoi.io/reference/source-state-attributes/)：`dot_` 变成 `.`，`executable_` 设置可执行权限，`private_` 让目录权限为 700）：
+
+| `home/` 中的源 | 目标 | 说明 |
 |---|---|---|
-| `tmux`、`tmux-scripts` | `~/.tmux.conf`、`~/.tmux/scripts` | 前缀键 `Ctrl-a`、vi 键位、鼠标、工作台切换器 |
-| `zsh` | `~/.zshrc` | 会替换你现有的 `.zshrc`（先备份，不会删除）；请先把你自己的改动移到 `local.zsh`。nvm、bun 等安装器会往 `~/.zshrc` 追加内容，它现在就是本仓库的文件：请把这类行移到 `local.zsh`，不要提交 |
-| `zsh-autostart` | `~/.config/zsh/tmux-autostart.zsh` | 新标签页的 tmux 会话选择器，可选，默认关闭 |
-| `ghostty` | `~/.config/ghostty/config` | Catppuccin Mocha 主题、Nerd Font、macOS 标签式标题栏 |
-| `claude-statusline` | `~/.claude/statusline.sh` | 仅在使用 Claude Code 时需要 |
-| `nvim` | `~/.config/nvim` | 可选的 Neovim 配置（lazy.nvim、LSP、Telescope、Git、调试）；插件在首次启动时安装，需要联网。已有自己的配置就不要应用它 |
+| `dot_tmux.conf`、`dot_tmux/scripts/` | `~/.tmux.conf`、`~/.tmux/scripts` | 前缀键 `Ctrl-a`、vi 键位、鼠标、带代理窗格的工作台切换器 |
+| `dot_zshrc`、`dot_config/private_zsh/` | `~/.zshrc`、`~/.config/zsh/{path,tmux-autostart}.zsh` | **会替换你的 `.zshrc`**；先把自己的改动挪到 `~/.config/zsh/local.zsh`。安装器（nvm、bun 等）会往 `~/.zshrc` 追加内容，`chezmoi diff` 能看到，请把这类行挪进 `local.zsh` |
+| `dot_config/ghostty/config` | `~/.config/ghostty/config` | Catppuccin Mocha 主题、Nerd Font、macOS 标签式标题栏 |
+| `dot_claude/executable_statusline.sh` | `~/.claude/statusline.sh` | Claude Code 状态栏（项目、分支、模型、上下文、费用、速率限制）；仅在使用 Claude Code 时需要 |
+| `.chezmoitemplates/agent-instructions.md`、`dot_claude/CLAUDE.md.tmpl`、`dot_codex/AGENTS.md.tmpl`、`dot_gemini/GEMINI.md.tmpl` | `~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`、`~/.gemini/GEMINI.md` | 给所有代理的同一段简短文本：这个工作台怎么运作（配置在仓库里、密钥不进仓库、每个项目一个 tmux 会话）。你自己的规则见“代理指令” |
+| `dot_config/git/config` | `~/.config/git/config` | 可移植的 Git 设置；Git 会自动读取这个文件，`~/.gitconfig`（身份、凭据）仍归你自己 |
+| `dot_config/nvim/` | `~/.config/nvim` | 可选的 Neovim 配置（lazy.nvim、LSP、Telescope、Git、调试；不含 AI 插件：代理在自己的窗格里运行）；插件在首次启动时安装，需要联网。已有自己的配置，就在你的 fork 里删掉这个目录 |
 
-Git：可移植的那部分设置没有做成链接，因为各种工具会写 `~/.gitconfig`。请改用 include：
-
-```sh
-git config --global --add include.path "$PWD/config/git/config"
-```
-
-推荐的应用顺序和需要手动完成的步骤（用 Homebrew 装工具、tmux 插件管理器）见 [`docs/bootstrap.md`](docs/bootstrap.md)。
+建议的顺序和需要手动完成的步骤（Homebrew 工具、tmux 插件管理器）见 [`docs/bootstrap.md`](docs/bootstrap.md)。
 
 ## 你可能想先改的默认值
 
-这些是个人偏好，不是硬性要求。直接改 `config/` 里的文件即可；因为是软链接，改动立刻生效。
+这些是个人偏好，不是硬性要求。改 `home/` 里的文件，然后运行 `chezmoi apply`（或 `chezmoi edit --apply ~/.tmux.conf`）。
 
-- **tmux：** 前缀键是 `Ctrl-a`（不是 `Ctrl-b`）；复制模式用 vi 键位；开启鼠标；窗口从 1 开始编号。窗格内容**默认不会**保存到磁盘（那会把窗格里打印过的任何东西，包括令牌，明文存盘）；想开启的话看 `@resurrect-capture-pane-contents` 旁边的注释。
-- **zsh：** 5 万行的共享历史、补全不区分大小写、`starship`、`zoxide`、`fzf`、`zsh-syntax-highlighting` 仅在已安装时启用。
-- **Ghostty：** Catppuccin Mocha 主题和 `SauceCodePro Nerd Font Mono` 字体（请安装该字体，或改掉这一行）。
+- **tmux：** 前缀键是 `Ctrl-a`（不是 `Ctrl-b`）；vi 风格复制模式；开启鼠标；窗口从 1 开始编号。窗格内容默认**不**保存到磁盘（那样会把窗格里打印过的任何东西，包括令牌，都存下来）；想开启请看 `@resurrect-capture-pane-contents` 旁边的注释。
+- **zsh：** 50,000 行共享历史、补全不区分大小写，`starship`、`zoxide`、`fzf` 和 `zsh-syntax-highlighting` 仅在已安装时启用。
+- **Ghostty：** Catppuccin Mocha 和 `SauceCodePro Nerd Font Mono`（安装该字体，或者改掉这一行）。
 
-## 改成你自己的
+## 把它变成你的
 
-- **每台机器不同的设置**（额外的 PATH、代理、是否开启 tmux 选择器）：把 `templates/local.zsh.example` 复制为 `~/.config/zsh/local.zsh`。它不入库，并且最后加载。
+- **每台机器不同的设置**（额外的 PATH、代理、是否开启 tmux 选择器）：把 `templates/local.zsh.example` 复制为 `~/.config/zsh/local.zsh`。chezmoi 不管理它，并且它最后加载。
 - **密钥：** 把 `templates/secrets.zsh.example` 复制为 `~/.config/zsh/secrets.zsh`，权限 600，绝不提交。仓库里永远不能出现密钥或令牌。
-- **增加另一个工具：** 把它的配置放进 `config/<工具>/`，在 `links.txt` 加一行（`组件名  仓库内路径  ~/目标路径`），先运行 `scripts/link <组件>` 看计划，再加 `--apply`。
-- **Neovim：** 附带一套现成配置，作为可选的 `nvim` 组件。想用自己的，替换 `config/nvim` 并保留 `links.txt` 里的 `nvim` 那一行。
+- **添加另一个工具：** `chezmoi add ~/.config/<工具>/config` 会把文件复制进 `home/`，然后提交。
+- **会被程序自己改写的文件**（例如 `:Lazy update` 之后的 `lazy-lock.json`）：变化发生在 `$HOME` 里的副本，仓库不会变。`chezmoi diff` 能看到；用 `chezmoi re-add` 拉回 `home/`。
+- **Neovim：** 想用自己的配置，就在你的 fork 里删掉 `home/dot_config/nvim`。
 
 ## 命令
 
 ```sh
-scripts/check [组件 ...]  # 快速、只读：链接是否指向正确源文件、zsh 和 shell 脚本能否解析、状态栏测试
-                         # （指定组件名就只检查它们的链接；tmux 配置由 doctor --deep 加载）
-scripts/doctor           # 再加：工具、PATH 重复和失效项、代理变量、仓库状态
-scripts/doctor --deep    # 再加：真正启动 zsh、tmux、nvim（zsh 运行的是你自己的启动文件；tmux 用私有 socket；nvim 用你的配置）
-scripts/link [组件] [--apply] [--adopt]
-tests/run.sh             # 脚本自身的测试，包括在临时家目录里把本 README 的快速开始完整跑一遍
+chezmoi diff | status | verify   # home/ 与 $HOME 有什么差异（有差异时 verify 返回非零）
+chezmoi doctor                   # chezmoi 自带的健康检查
+tests/run.sh                     # 仓库自己的测试，包含在临时 HOME 里端到端运行本快速开始
+scripts/privacy-scan [--all]     # 扫描已暂存（或全部已跟踪）文件、或提交元数据（--commits）中的密钥、个人路径和邮箱地址
 ```
 
-输出为 `PASS` / `WARN` / `FAIL`。`check` 和 `doctor` 只在出现 `FAIL` 时返回非零。
+## 安全模型
 
-## 安全机制
+- `chezmoi diff` 和 `chezmoi apply --dry-run` 不会改动任何东西。
+- **每次 apply 之前先备份。** chezmoi 会直接覆盖内容不同的文件，不留副本。`chezmoi init` 会安装一个钩子（[`scripts/backup-before-apply`](scripts/backup-before-apply)），在 apply 之前把将被替换的文件（包括 chezmoi 写入后被你改过的文件）拷到 `~/.cli-workbench-backup/<时间戳>/`。目录权限 700，软链接按软链接保存，`RESTORE` 里每个文件一条可直接复制的恢复命令。没有要改的文件时什么都不创建；备份失败则拒绝 apply；`--dry-run` 没有任何副作用。
+- 钩子写在 `chezmoi init` 生成的配置里。如果你只是手写了 `chezmoi.toml`，或者没运行过 `init` 就用 `chezmoi apply --source ...`，则**没有**备份。
+- 它只会碰上表里的目标，除非你主动要求（`chezmoi destroy`），否则不会删除任何东西。
+- `privacy-scan` 在 pre-commit、pre-push 钩子和 CI 里都会运行，避免密钥、令牌、个人路径和邮箱地址意外进入公开的 fork——包括通过提交的元数据。
 
-- 不加 `--apply`，`scripts/link` 只是**演练**。
-- 已存在的普通文件会被**移走**而不是删除，放在 `~/.cli-workbench-backup/<时间戳>/`。
-- 目标是真实目录，或是指向别处的软链接时，`link` 会**停下**，直到你看过计划并为该组件加上 `--adopt`。
-- `--apply` 会**先检查所有选中的组件**：只要有任何一个会停下、或源文件缺失，就一个都不改。开始应用之后如果某一步失败，会报告出来，已经应用的组件保持不变。
-- 备份之后如果链接创建失败，原文件会被**自动放回**；但如果这期间那个路径上出现了新的东西，就保留备份并打印它的位置。
-- 目标如果位于本仓库内部（包括将要在仓库里创建的路径），或者包含了本仓库，**会被拒绝**，加 `--adopt` 也一样。例如 `~/.config` 软链接到了本仓库的 `config/`。
-- `scripts/bootstrap`、`check`、`doctor` 不会修改你的文件，只可能在系统临时目录里创建并删除临时文件。
-- `doctor --deep` 会真正启动程序：它运行**你自己的 zsh 启动文件**和**你的 nvim 配置与数据**，所以它们做的事（写文件、更新插件）都是真的；只有自带 `zshrc` 的缓存目录是一次性的。tmux 使用私有 socket。
+## 代理指令
+
+Claude Code、Codex 和 Gemini CLI 都会从各自的主目录读取一个纯文本指令文件。这里它们由**同一个**源 `home/.chezmoitemplates/agent-instructions.md` 生成，所以各个代理得到的是关于这台机器的同一套事实。
+
+- **你自己的规则**写在 `~/.config/cli-workbench/agent-instructions.local.md`。它不入库，所以个人偏好不会进入公开的 fork；它会被追加在三个文件的共享文本之后。删掉这个文件，下一次 `chezmoi apply` 就会移除其中的文本。
+- **已有的文件：** 你现有的 `~/.claude/CLAUDE.md`（以及另外两个）在 `apply` 时会被替换，替换前会先备份。想保持原样，请事先把内容挪进本地文件。
+- **改源，不要改部署后的文件。** 往 `~/.claude/CLAUDE.md` 追加内容的工具，会在下一次 apply 时被覆盖。生成的文件不能用 `chezmoi re-add` 拉回。
+- **有意不纳入：** `settings.json`、`config.toml`、`auth.json`、历史、会话和数据库。它们包含机器路径、代理和凭据，而且工具会自己改写。如果 `home/` 下出现这类文件，有测试会失败。
+- 想公开你自己的准则？在你的 fork 里把它们放进共享源，而不是本地文件。
 
 ## 工作台切换器（tmux）
 
-按 `prefix` 再按 `P`（`Ctrl-a P`），弹出 `~/dev/projects` 的选择列表。根目录下的每一个直接子目录就是一个工作台，以一个 tmux session 打开，左边编辑器、右边 shell。如果某个目录自己不是仓库、里面却有多个仓库（多仓库产品），它就是**一个**工作台，每个仓库一个窗口。选择已存在的工作台只会切换过去。需要 tmux 3.2+ 和 `fzf`。
+按 `前缀键` 再按 `P`（`Ctrl-a P`），弹出 `~/dev/projects` 下的选择器。根目录下的每个直接子目录都是一个工作台，会打开成一个 tmux 会话：左边编辑器，右边上面是 AI 代理、下面是 shell。不是仓库、但里面包含多个仓库的目录（多仓库产品）算**一个**工作台，每个仓库一个窗口。选择已存在的工作台只会切换过去。需要 tmux 3.2+ 和 `fzf`。
 
-要扫描别的目录，取消 `config/tmux/tmux.conf` 里 `WORKSPACE_ROOTS` 那行的注释并修改。更多细节见 `config/tmux/scripts/workspace-switch.sh` 的文件头。
+- **代理窗格：** 在项目目录里启动 `claude codex gemini grok` 中第一个已安装的。一个都没装时，窗口只有编辑器和 shell，和以前一样。`WORKSPACE_SWITCH_AGENT="claude --continue"` 指定某一个（可带参数），`none` 关闭，`WORKSPACE_SWITCH_AGENTS="aider claude"` 修改候选及顺序。在 `home/dot_tmux.conf` 里用 `set-environment -g` 设置，与 `WORKSPACE_ROOTS` 放在一起。
+- **根目录：** 取消 `home/dot_tmux.conf` 里 `WORKSPACE_ROOTS` 的注释，可以扫描其他目录。
+- 详细说明在 `home/dot_tmux/scripts/executable_workspace-switch.sh` 开头的注释里。
 
-## 卸载与恢复
+## 卸载 / 恢复
 
-这些链接就是普通的软链接。要还原，删掉链接，再把备份移回原位；`~/.cli-workbench-backup/<时间戳>/RESTORE` 列出了每个被替换文件的原路径。
+从 `~/.cli-workbench-backup/<时间戳>/RESTORE` 里按文件恢复（每个文件一条命令），或者删掉不想要的文件。`chezmoi unmanage <目标>` 可以让它不再管理某个文件。
 
-## 排错
+## 故障排查
 
-- Debian/Ubuntu：开 shell 时出现 `compinit: initialization aborted` 或 “insecure directories”，来自系统的 `/etc/zsh/zshrc`：当 `/usr/share/zsh` 权限过宽时，它会在你的配置之前先跑一次自己的 `compinit`。本仓库的 zshrc 已经会运行 `compinit`，所以在 `~/.zshenv` 里加一行 `skip_global_compinit=1`（或者按 `compaudit` 的提示修正权限）。
-- `FAIL link ...`：运行 `scripts/link <组件>` 看计划。出现 `STOP` 表示有真实目录或外部链接挡着：先对比，再 `--adopt`。
-- tmux 配置有问题：`scripts/doctor --deep` 会在私有 socket 上加载它。
-- 更多见 [`docs/architecture.md`](docs/architecture.md)。
+- Debian/Ubuntu：shell 启动时出现 `compinit: initialization aborted` 或“insecure directories”，来自系统的 `/etc/zsh/zshrc`：当 `/usr/share/zsh` 权限过松时，它会先于你的配置运行自己的 `compinit`。这里的 zshrc 已经运行了 `compinit`，所以在 `~/.zshenv` 里加上 `skip_global_compinit=1`（或者修正权限，参见 `compaudit`）。
+- `chezmoi: ... has changed since chezmoi last wrote it`：你改过已部署的文件。先 `chezmoi diff`，然后 `chezmoi re-add`（保留你的改动）或 `chezmoi apply --force`（采用仓库里的版本；你的改动会先进入备份）。
+- tmux 配置问题：`tmux -L test -f ~/.tmux.conf new-session -d` 会在独立 socket 上加载它；`tmux -L test show-messages` 会打印错误。
+- 更多内容见 [`docs/architecture.md`](docs/architecture.md)。
 
 ## 参与贡献
 
-欢迎提 issue 和 pull request，详见 [CONTRIBUTING.md](CONTRIBUTING.md)。安全问题请看 [SECURITY.md](SECURITY.md)，不要公开提 issue。各版本的变更见 [CHANGELOG.md](CHANGELOG.md)。
+欢迎提交 issue 和 pull request，详见 [CONTRIBUTING.md](CONTRIBUTING.md)。安全问题请看 [SECURITY.md](SECURITY.md)，不要公开提 issue。版本之间的变化记录在 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 许可证
 

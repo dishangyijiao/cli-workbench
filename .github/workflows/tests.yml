@@ -26,11 +26,16 @@ jobs:
 
       - name: Install tools (macOS)
         if: runner.os == 'macOS'
-        run: brew install tmux jq
+        run: brew install tmux jq chezmoi
 
       - name: Install tools (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y zsh tmux jq
+        run: |
+          sudo apt-get update && sudo apt-get install -y zsh tmux jq
+          # chezmoi is not in Ubuntu's apt: a pinned release, verified by checksum
+          curl -fsSL -o "$RUNNER_TEMP/chezmoi.deb" https://github.com/twpayne/chezmoi/releases/download/v2.72.2/chezmoi_2.72.2_linux_amd64.deb
+          echo "310a8f141b940e5dbf0fef33fe27804768c977fa1da72112e27f78797225a526  $RUNNER_TEMP/chezmoi.deb" | sha256sum -c -
+          sudo dpkg -i "$RUNNER_TEMP/chezmoi.deb"
 
       - name: Show versions
         run: |
@@ -38,6 +43,7 @@ jobs:
           tmux -V
           bash --version | head -1
           jq --version
+          chezmoi --version
 
       # Second gate behind the local pre-commit hook (which can be skipped with --no-verify).
       - name: Privacy scan (secrets, personal paths, e-mail addresses)

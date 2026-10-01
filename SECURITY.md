@@ -7,10 +7,10 @@ Please **do not open a public issue** for a security problem. Use GitHub's priva
 
 ## What counts as a security problem
 
-This tool creates symlinks and moves files inside your home directory, so these matter most:
+This repository is deployed into your home directory with chezmoi, so these matter most:
 
-- a way to **lose, overwrite or delete** a user file that the README says is safe;
-- a way to write **outside** the documented locations (`links.txt` targets, `~/.cli-workbench-backup/`, `~/.cache/zsh/`);
+- a way to **lose, overwrite or delete** a user file that the README says is safe (the README states that chezmoi overwrites differing files without a backup);
+- a way to write **outside** the documented locations (the targets listed in the README table, `~/.cache/zsh/`);
 - a default config that **exposes secrets** (for example saving terminal output or tokens to disk);
 - committed credentials or personal data.
 
@@ -18,4 +18,4 @@ This tool creates symlinks and moves files inside your home directory, so these 
 
 - Supported: the latest commit on `main`.
 - This is a personal open-source project maintained on a best-effort basis; there is no guaranteed response time.
-- Before applying anything on a machine you care about, run `scripts/link` without `--apply` (a dry run) and read the plan.
+- Before applying anything on a machine you care about, run `chezmoi diff` (read-only) and read it.
