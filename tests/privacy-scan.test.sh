@@ -27,6 +27,11 @@ scan --all >/dev/null; assert_eq "--all exits 0" 0 $?
 scan --staged >/dev/null; assert_eq "--staged exits 0" 0 $?
 t_cleanup
 
+echo "the chezmoi source tree (home/dot_*) is not mistaken for a personal path"
+mkrepo; mkdir -p "$R/home"; printf 'x\n' > "$R/home/dot_zshrc"; printf 'cp home/dot_zshrc ~/.zshrc\nsrc=$ROOT/home/dot_tmux.conf\n' > "$R/notes.sh"; git -C "$R" add -A
+scan --all >/dev/null; assert_eq "home/dot_* paths pass" 0 $?
+t_cleanup
+
 echo "each kind of leak is caught, named, and never echoed"
 check_rule() { # description, line-to-write, expected rule name, secret fragment that must NOT appear in the output
   mkrepo; printf '%s\n' "$2" > "$R/zshrc"; git -C "$R" add -A

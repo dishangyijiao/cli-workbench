@@ -19,15 +19,15 @@ body:
     attributes:
       label: Steps to reproduce
       placeholder: |
-        1. scripts/link zsh
+        1. chezmoi apply ~/.zshrc
         2. ...
     validations:
       required: true
   - type: textarea
     id: doctor
     attributes:
-      label: scripts/doctor output
-      description: Run `scripts/doctor` (or `scripts/doctor --deep` for zsh, tmux or nvim problems) and paste the output.
+      label: chezmoi doctor output
+      description: Run `chezmoi doctor` and paste the output (and `chezmoi diff` if the deployed file looks wrong).
       render: text
   - type: input
     id: env
@@ -41,4 +41,4 @@ body:
     attributes:
       label: Component
       multiple: true
-      options: [scripts (link/check/doctor/bootstrap), zsh, tmux, ghostty, git, nvim, claude-statusline, other]
+      options: [scripts (privacy-scan/tests), zsh, tmux, ghostty, git, nvim, claude-statusline, other]

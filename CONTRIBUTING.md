@@ -31,4 +31,4 @@ To keep your e-mail address out of commit metadata, commit with your GitHub nore
 
 ## Commit messages
 
-Short imperative subject, optionally with a scope, for example `feat(tmux): ...`, `fix(link): ...`, `docs: ...`.
+Short imperative subject, optionally with a scope, for example `feat(tmux): ...`, `fix(zsh): ...`, `docs: ...`.

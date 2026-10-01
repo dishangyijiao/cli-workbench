@@ -1,8 +1,0 @@
-# component          repo source                          target (~ = $HOME); three fields, no spaces
-ghostty              config/ghostty/config                ~/.config/ghostty/config
-tmux-scripts         config/tmux/scripts                  ~/.tmux/scripts
-tmux                 config/tmux/tmux.conf                ~/.tmux.conf
-claude-statusline    config/claude/statusline.sh          ~/.claude/statusline.sh
-zsh-autostart        config/zsh/tmux-autostart.zsh        ~/.config/zsh/tmux-autostart.zsh
-zsh                  config/zsh/zshrc                     ~/.zshrc
-nvim                 config/nvim                          ~/.config/nvim

@@ -1,10 +1,10 @@
 #!/bin/sh
-# Tests for statusline.sh (the copy next to this file).   Run:  sh config/claude/statusline.test.sh
+# Tests for statusline.sh (the source file under home/dot_claude).   Run:  sh tests/statusline.test.sh
 #
 # Fixtures are synthetic Claude Code payloads (context 48%, 5h 52%, 7d 8%, 11520000 ms, $4.2183).
 # Git state comes from throwaway repositories under a temp dir.
 
-SCRIPT="${STATUSLINE_SCRIPT:-$(cd "$(dirname "$0")" && pwd)/statusline.sh}"
+SCRIPT="${STATUSLINE_SCRIPT:-$(cd "$(dirname "$0")/.." && pwd)/home/dot_claude/executable_statusline.sh}"
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 ESC=$(printf '\033')

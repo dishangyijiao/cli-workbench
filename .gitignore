@@ -15,6 +15,3 @@ secrets.zsh
 *.pfx
 id_rsa
 id_ed25519
-
-# Backups made by scripts/link live in $HOME, but keep them out if someone clones into one
-.cli-workbench-backup/

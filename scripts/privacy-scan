@@ -44,7 +44,7 @@ grep -i -E -e '(API_?KEY|SECRET|TOKEN|PASSWORD|PASSWD|PRIVATE_?KEY)[A-Za-z_]*[[:
   | grep -v -i -E 'example|changeme|your[-_]|xxxx|dummy|placeholder|<[^>]*>' > "$work/assign"
 rule secret-assign '.' '' assign
 
-grep -E -e '/Users/[A-Za-z]|/home/[a-z]' "$work/lines" | grep -v 'linuxbrew' > "$work/home" || true
+grep -E -e '/Users/[A-Za-z]|/home/[a-z]' "$work/lines" | grep -v -e 'linuxbrew' -e '/home/dot_' > "$work/home"   # home/dot_* is the chezmoi source tree, not a personal path || true
 rule home-path '.' '' home
 
 # E-mail addresses, except git@host (ssh remotes), *@noreply and *@example.*

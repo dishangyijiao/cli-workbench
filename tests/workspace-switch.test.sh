@@ -3,7 +3,7 @@ set -u
 WB_SRC=$(cd "$(dirname "$0")/.." && pwd)
 . "$WB_SRC/tests/harness.sh"
 if ! command -v tmux >/dev/null; then echo "tmux not installed; skipped"; exit 0; fi
-PS="$WB_SRC/config/tmux/scripts/workspace-switch.sh"
+PS="$WB_SRC/home/dot_tmux/scripts/executable_workspace-switch.sh"
 
 T_DIR=$(cd -P "$(mktemp -d)" && pwd)
 export HOME=$T_DIR/home; mkdir -p "$HOME"                      # no ~/.tmux.conf, no real projects

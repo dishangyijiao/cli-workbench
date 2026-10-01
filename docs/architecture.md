@@ -2,51 +2,46 @@
 
 ## Source of truth
 
-Git, plain text and scripts. Not a GUI's current state, a tmux session or a shell's history.
+Git, plain text and chezmoi. Not a GUI's current state, a tmux session or a shell's history.
 
-## Why symlinks (not copies, not generated files)
+## Why chezmoi (and copies, not symlinks)
 
 | Approach | Active config vs repo | Fits |
 |---|---|---|
-| symlink | identical by construction; an edit is live at once | this project |
-| copy (as many dotfile managers do) | drifts until the next `apply` | not used |
-| generate from templates | needs re-generation after every change | only for files that must be rendered (none yet) |
+| chezmoi (copies) | differs until the next `apply`; `chezmoi diff`/`verify` show the difference | this project |
+| symlinks (earlier versions of this repo) | identical by construction | needed a home-grown linker, checker and doctor (about 600 lines of bash plus tests) |
 
-## Components
+The trade: an edit is no longer live at once (`chezmoi edit --apply`, or edit `home/` and `chezmoi apply`), and files a program rewrites in `$HOME` need `chezmoi re-add`. In return the install, diff, verify and state tracking are chezmoi's job, not this repository's. chezmoi can also grow templates and encrypted files later, if a second machine ever needs them.
 
-`links.txt` maps `component -> path in the repo -> target path`. `scripts/link` applies it one component at a time:
+## Layout
 
-- the default is a dry run that only prints the plan;
-- `--apply` checks every selected entry first: if any would stop, nothing is changed. It creates the links; an existing regular file is moved to `~/.cli-workbench-backup/<timestamp>/`, never deleted, and put back if the link cannot be created;
-- a real directory, or a symlink that points somewhere else, is a **STOP** case: nothing is touched until you read the plan and pass `--adopt` for that component;
-- a target that lives inside the repository (also a path that would be created there), or holds it, is always refused;
+`.chezmoiroot` contains `home`, so only `home/` is the source tree; `docs/`, `tests/`, `scripts/`, `templates/` and `packages/` are never deployed. Names follow chezmoi: `dot_` becomes `.`, `executable_` sets the executable bit, `private_` makes the directory mode 700 (`~/.config/zsh` holds `secrets.zsh`).
 
-Scripts find the repository from their own location, so the clone can live anywhere. Only the links themselves record where it is.
+The source directory is wherever the clone lives; `~/.config/chezmoi/chezmoi.toml` sets `sourceDir` (see the README).
 
 ## Machine differences
 
-Common settings live in the repo. Differences between machines live in untracked local files, so no config is duplicated:
+Common settings live in `home/`. Differences between machines live in files chezmoi does not manage, so no config is duplicated:
 
 - `~/.config/zsh/local.zsh`: PATH additions, proxies, opt-in switches (template: `templates/local.zsh.example`)
 - `~/.config/zsh/secrets.zsh`: API keys and tokens, mode 600 (template: `templates/secrets.zsh.example`)
-- `~/.gitconfig`: identity and credentials; it includes `config/git/config` for the portable part
+- `~/.gitconfig`: identity and credentials; Git also reads the portable part from `~/.config/git/config` by itself
 
 ## State
 
-The repository and the filesystem are authoritative. tmux sessions, editor sessions and GUI settings are runtime state and can be rebuilt.
+The repository is authoritative. chezmoi's own state (`~/.config/chezmoi/chezmoistate.boltdb`) only records what it wrote last; deleting it is harmless. tmux sessions, editor sessions and GUI settings are runtime state and can be rebuilt.
 
 ## Verification layers
 
 | Command | Scope | Side effects |
 |---|---|---|
-| `scripts/check [component ...]` | links resolve to the declared sources, zsh and shell-script files parse, the status line test; name components to limit the link checks | none, read-only (temporary files only) |
-| `scripts/doctor` | adds tool availability, PATH duplicates and dead entries, proxy variables, repository state | none, read-only |
-| `scripts/doctor --deep` | starts zsh, tmux and nvim for real. **zsh runs your real startup files** (the supplied zshrc uses a throwaway cache dir); tmux a private socket with plugins stripped; **nvim uses your real config and data** | whatever your own startup files and nvim plugins do happens for real |
-| `tests/run.sh` | the scripts themselves, against throwaway fixtures | temp files only |
+| `chezmoi diff`, `chezmoi status`, `chezmoi verify` | `$HOME` against `home/` | none |
+| `chezmoi doctor` | chezmoi's own checks | none |
+| `tests/run.sh` | the shell configs, tmux scripts, status line and privacy scanner, against throwaway HOMEs (`chezmoi apply` into a temp directory) | temp files only |
+| `scripts/privacy-scan` | secrets, personal paths, e-mail addresses in tracked files | none; also a pre-commit hook and a CI gate |
 
 ## Troubleshooting
 
-- `FAIL link X`: run `scripts/link X` and read the plan. STOP means a real directory or a foreign link is in the way: compare, then `--adopt`.
-- zsh behaves differently after a change: `scripts/zsh-snapshot ~/.zshrc > /tmp/after` and diff it against a snapshot taken before, in the same environment.
-- tmux config problems: `scripts/doctor --deep` loads it on a private socket.
-- Restore anything: see `RESTORE` in the newest `~/.cli-workbench-backup/*/`.
+- zsh behaves differently after a change: `chezmoi diff ~/.zshrc`, then start `zsh -i` in a new terminal.
+- tmux config problems: `tmux -L test -f ~/.tmux.conf new-session -d && tmux -L test show-messages`.
+- Something was overwritten: chezmoi keeps no backup; restore from your own copy or from Git history of the file's previous source.
