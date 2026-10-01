@@ -68,7 +68,7 @@ git config --global --add include.path "$PWD/config/git/config"
 - **每台机器不同的设置**（额外的 PATH、代理、是否开启 tmux 选择器）：把 `templates/local.zsh.example` 复制为 `~/.config/zsh/local.zsh`。它不入库，并且最后加载。
 - **密钥：** 把 `templates/secrets.zsh.example` 复制为 `~/.config/zsh/secrets.zsh`，权限 600，绝不提交。仓库里永远不能出现密钥或令牌。
 - **增加另一个工具：** 把它的配置放进 `config/<工具>/`，在 `links.txt` 加一行（`组件名  仓库内路径  ~/目标路径`），先运行 `scripts/link <组件>` 看计划，再加 `--apply`。
-- **Neovim：** 不附带编辑器配置。请自己添加 `config/nvim`，并取消 `links.txt` 里 `nvim` 那一行的注释。
+- **Neovim：** 附带一套现成配置，作为可选的 `nvim` 组件。想用自己的，替换 `config/nvim` 并保留 `links.txt` 里的 `nvim` 那一行。
 
 ## 命令
 
@@ -112,7 +112,7 @@ tests/run.sh             # 脚本自身的测试，包括在临时家目录里�
 
 ## 参与贡献
 
-欢迎提 issue 和 pull request。安全问题请看 [SECURITY.md](SECURITY.md)，不要公开提 issue。请保持脚本兼容 bash 3.2，新增行为要加测试，提交前运行 `tests/run.sh`。仓库里的 GitHub Actions 工作流（`.github/workflows/tests.yml`）会在每次 push 和 pull request 时，在 macOS 和 Ubuntu 上运行整套测试。请不要带入个人路径、姓名或任何凭据。
+欢迎提 issue 和 pull request。安全问题请看 [SECURITY.md](SECURITY.md)，不要公开提 issue。请保持脚本兼容 bash 3.2，新增行为要加测试，提交前运行 `tests/run.sh`。仓库里的 GitHub Actions 工作流（`.github/workflows/tests.yml`）会在每次 push 和 pull request 时，在 macOS 和 Ubuntu 上运行整套测试。请不要带入个人路径、姓名或任何凭据：`scripts/privacy-scan` 会检查（私钥、令牌格式、疑似密钥的赋值、`/Users/<名字>` 路径、邮箱地址、`.env`/`*.pem`/`*.key` 文件，以及你放在 `~/.config/cli-workbench/deny.txt` 里的自定义词，该文件不在仓库内）。每个克隆里启用一次提交前钩子：`git config core.hooksPath .githooks`；CI 会跑同一个扫描。确实需要的例外：在那一行写上 `wb-scan: allow`。
 
 ## 许可证
 

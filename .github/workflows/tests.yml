@@ -39,6 +39,10 @@ jobs:
           bash --version | head -1
           jq --version
 
+      # Second gate behind the local pre-commit hook (which can be skipped with --no-verify).
+      - name: Privacy scan (secrets, personal paths, e-mail addresses)
+        run: scripts/privacy-scan --all
+
       # Includes tests/smoke.test.sh: the README quick start, run end to end in a throwaway HOME.
       - name: Run tests
         run: tests/run.sh

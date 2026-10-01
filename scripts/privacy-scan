@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# privacy-scan [--staged | --all]
+# Refuses to let secrets or personal data reach a public repo. Used by the pre-commit hook (--staged: only the lines
+# about to be committed), by CI and by hand (--all: every tracked file). It prints WHERE a finding is, never the value.
+#
+# Rules: private keys, well-known token formats, secret-looking assignments, /Users/<name> and /home/<name> paths,
+# e-mail addresses, sensitive file names (.env, *.pem, *.key, id_rsa ...), and your own deny list.
+# Deny list: one word per line in ~/.config/cli-workbench/deny.txt (or $WB_DENY_FILE). Keep it OUT of the repo.
+# A deliberate exception: put "wb-scan: allow" on that line.
+set -u
+mode=${1:---all}
+case $mode in --staged | --all) ;; *) echo "usage: privacy-scan [--staged | --all]" >&2; exit 2 ;; esac
+root=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "privacy-scan: not a git repository" >&2; exit 2; }
+cd "$root" || exit 2
+deny=${WB_DENY_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/cli-workbench/deny.txt}
+work=$(mktemp -d) || exit 2
+trap 'rm -rf "$work"' EXIT
+
+# 1. Lines to scan, as file:line:text. The scanner and its own tests contain the patterns on purpose.
+if [ "$mode" = --staged ]; then
+  git diff --cached -U0 --no-color --diff-filter=ACMR | awk '
+    /^\+\+\+ /   { f = ($0 ~ /^\+\+\+ \/dev\/null/) ? "" : substr($0, 7); next }
+    /^@@/        { if (match($0, /\+[0-9]+/)) ln = substr($0, RSTART + 1, RLENGTH - 1) + 0; next }
+    /^\+/        { if (f != "") { print f ":" ln ":" substr($0, 2); ln++ } }'
+else
+  git grep -I -n -e '' 2>/dev/null
+fi | grep -v -E '^(scripts/privacy-scan|tests/privacy-scan\.test\.sh|tests/defaults\.test\.sh):' \
+   | grep -v 'wb-scan: allow' > "$work/lines"
+
+if [ "$mode" = --staged ]; then git diff --cached --name-only --diff-filter=ACMR; else git ls-files; fi > "$work/names"
+
+found=0
+rule() { # name, extended regex, [grep flags]
+  local m; m=$(grep -E ${3:-} -e "$2" "$work/${4:-lines}") || return 0
+  printf '%s\n' "$m" | cut -d: -f1,2 | sort -u | sed "s/^/FAIL  $1  /"
+  found=1
+}
+
+rule private-key  '-----BEGIN [A-Z ]*PRIVATE KEY-----'
+rule secret-token '(sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35})'
+
+# Secret-looking assignment with a literal value (a $VARIABLE or $(command) is fine), minus obvious placeholders.
+grep -i -E -e '(API_?KEY|SECRET|TOKEN|PASSWORD|PASSWD|PRIVATE_?KEY)[A-Za-z_]*[[:space:]]*[=:][[:space:]]*['"'"'"]?[A-Za-z0-9/+_.-]{12,}' "$work/lines" \
+  | grep -v -i -E 'example|changeme|your[-_]|xxxx|dummy|placeholder|<[^>]*>' > "$work/assign"
+rule secret-assign '.' '' assign
+
+grep -E -e '/Users/[A-Za-z]|/home/[a-z]' "$work/lines" | grep -v 'linuxbrew' > "$work/home" || true
+rule home-path '.' '' home
+
+# E-mail addresses, except git@host (ssh remotes), *@noreply and *@example.*
+sed -E 's/git@[A-Za-z0-9.-]+//g; s/[A-Za-z0-9._%+-]+@(users\.)?noreply[A-Za-z0-9.-]*//g; s/[A-Za-z0-9._%+-]+@example\.[a-z]+//g' "$work/lines" > "$work/mail_in"
+grep -E -e '[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}' "$work/mail_in" > "$work/mail" || true
+rule email '.' '' mail
+
+# Sensitive file names, even when empty. .env.example is the documented exception.
+grep -E '(^|/)\.env(\.[^/]*)?$|\.(pem|key|p12|pfx)$|(^|/)id_(rsa|dsa|ecdsa|ed25519)$' "$work/names" | grep -v -E '\.env\.example$' | sed 's/^/FAIL  sensitive-file  /' > "$work/files" || true
+if [ -s "$work/files" ]; then cat "$work/files"; found=1; fi
+
+# Your own words (names, private project names), kept outside the repo. Matched case-insensitively.
+if [ -r "$deny" ]; then
+  grep -v -E '^[[:space:]]*(#|$)' "$deny" | tr -d '\r' > "$work/deny"
+  if [ -s "$work/deny" ]; then
+    grep -i -F -f "$work/deny" "$work/lines" | cut -d: -f1,2 | sort -u | sed 's/^/FAIL  deny-list  /' > "$work/denyhits" || true
+    if [ -s "$work/denyhits" ]; then cat "$work/denyhits"; found=1; fi
+  fi
+fi
+
+if [ "$found" = 1 ]; then
+  echo "privacy-scan: findings above (values are not printed; open the file at that line)." >&2
+  echo "A deliberate exception: add 'wb-scan: allow' on that line." >&2
+  exit 1
+fi
+exit 0

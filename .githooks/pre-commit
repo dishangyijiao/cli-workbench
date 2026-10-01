@@ -1,0 +1,8 @@
+#!/bin/sh
+# Refuse commits that contain secrets or personal data. Enable once per clone:  git config core.hooksPath .githooks
+root=$(git rev-parse --show-toplevel) || exit 1
+if ! "$root/scripts/privacy-scan" --staged; then
+  echo "Commit blocked by scripts/privacy-scan. Fix the lines above, or add 'wb-scan: allow' to a deliberate exception." >&2
+  exit 1
+fi
+git diff --cached --shortstat >&2

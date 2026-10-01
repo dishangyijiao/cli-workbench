@@ -68,7 +68,7 @@ These are opinions, not requirements. Edit the files in `config/`; because they 
 - **Per-machine settings** (extra PATH entries, a proxy, turning on the tmux chooser): copy `templates/local.zsh.example` to `~/.config/zsh/local.zsh`. It is not tracked and is loaded last.
 - **Secrets**: `templates/secrets.zsh.example` to `~/.config/zsh/secrets.zsh`, mode 600. Never commit it. The repository must never contain keys or tokens.
 - **Add another tool:** put its config in `config/<tool>/`, add one line to `links.txt` (`component  path-in-repo  ~/target`), run `scripts/link <component>`, then `--apply`.
-- **Neovim:** no editor config is shipped. Add your own `config/nvim` and uncomment the `nvim` line in `links.txt`.
+- **Neovim:** a ready-made setup ships as the optional `nvim` component. To use your own instead, replace `config/nvim` and keep the `nvim` line in `links.txt`.
 
 ## Commands
 
@@ -112,7 +112,7 @@ The links are ordinary symlinks. To go back, remove a link and move the backup i
 
 ## Contributing
 
-Issues and pull requests are welcome. For security problems, see [SECURITY.md](SECURITY.md) instead of opening a public issue. Please keep scripts bash 3.2 compatible, add a test for new behaviour, and run `tests/run.sh` before sending. A GitHub Actions workflow (`.github/workflows/tests.yml`) runs the suite on macOS and Ubuntu for every push and pull request. Do not include personal paths, names or credentials.
+Issues and pull requests are welcome. For security problems, see [SECURITY.md](SECURITY.md) instead of opening a public issue. Please keep scripts bash 3.2 compatible, add a test for new behaviour, and run `tests/run.sh` before sending. A GitHub Actions workflow (`.github/workflows/tests.yml`) runs the suite on macOS and Ubuntu for every push and pull request. Do not include personal paths, names or credentials: `scripts/privacy-scan` checks for them (private keys, token formats, secret-looking assignments, `/Users/<name>` paths, e-mail addresses, `.env`/`*.pem`/`*.key` files, and your own words from `~/.config/cli-workbench/deny.txt`, which stays outside the repo). Enable the pre-commit hook once per clone with `git config core.hooksPath .githooks`; CI runs the same scan. A deliberate exception: put `wb-scan: allow` on that line.
 
 ## License
 

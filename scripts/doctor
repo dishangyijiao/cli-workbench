@@ -67,6 +67,10 @@ elif [ -n "$git_status" ]; then
 else
   wb_pass "repo has no uncommitted changes"
 fi
+if git -C "$WB_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  if [ "$(git -C "$WB_ROOT" config --get core.hooksPath)" = ".githooks" ]; then wb_pass "pre-commit privacy hook is enabled"
+  else wb_warn "pre-commit privacy hook is not enabled (if you will commit here: git config core.hooksPath .githooks)"; fi
+fi
 
 # 6. deep: real startups. zsh and tmux are isolated (throwaway cache dirs / private socket); nvim uses your real
 #    config and data on purpose, so its caches and state go to a throwaway dir but a plugin manager may still update.
