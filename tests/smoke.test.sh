@@ -58,7 +58,12 @@ assert_contains "doctor sees a clean git clone" "PASS  repo has no uncommitted c
 echo "a fresh interactive zsh starts cleanly"
 zsh -i -c 'echo shell-ok' >"$T_DIR/zsh.out" 2>"$T_DIR/zsh.err" </dev/null
 assert_eq "it runs" "shell-ok" "$(cat "$T_DIR/zsh.out")"
-assert_eq "nothing on stderr" "" "$(grep -v -E "can.t change option: zle" "$T_DIR/zsh.err")"   # shows the text if it fails
+zsh_errs=$(grep -v -E "can.t change option: zle" "$T_DIR/zsh.err")
+assert_eq "nothing on stderr" "" "$zsh_errs"   # shows the text if it fails
+if [ -n "$zsh_errs" ]; then   # what compinit's security audit objects to, to make the CI log self-explanatory
+  echo "  diag: compaudit:"; zsh -i -c 'compaudit' </dev/null 2>&1 | head -6 | sed 's/^/    /'
+  echo "  diag: fpath: $(zsh -i -c 'print -r -- $fpath' </dev/null 2>&1 | head -2)"
+fi
 assert "completion cache is in the XDG cache dir" test -f "$HOME/.cache/zsh/zcompdump"
 assert_eq "no duplicate PATH entries" 0 "$(zsh -i -c 'print -l $path | sort | uniq -d | wc -l' 2>/dev/null </dev/null | tr -d ' ')"
 
