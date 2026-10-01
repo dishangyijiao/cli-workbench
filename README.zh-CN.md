@@ -14,7 +14,7 @@
 | **平台** | **macOS** 是主要平台（在 macOS 15、Apple Silicon 上测试）。脚本以及 zsh、tmux 配置在 **Ubuntu 24.04** 上也通过了完整测试和首次使用流程（在容器中验证）；Ghostty 配置和 Homebrew 的 cask 是面向 macOS 的。不支持 Windows。 |
 | **Shell** | zsh 5.8 及以上（在 5.9 上测试）。脚本兼容 bash 3.2，也就是 macOS 自带的 bash 就够用。 |
 | **tmux** | 建议 3.2 及以上（在 3.5a 上测试）。更旧的版本仍能加载配置，只是少了工作台切换键。 |
-| **必需** | `git` |
+| **必需** | `git`；如果使用 zsh 组件，还需要 `zsh`（没有它时 `doctor` 会报 FAIL） |
 | **可选** | `fzf`（0.48+ 才有 shell 集成）、`zoxide`、`starship`、`jq`（状态栏用）、[Ghostty](https://ghostty.org) 加一款 Nerd Font、Homebrew |
 
 **它会在你的机器上做的改动，仅此而已：**
@@ -111,7 +111,7 @@ tests/run.sh             # 脚本自身的测试，包括在临时家目录里�
 
 ## 参与贡献
 
-欢迎提 issue 和 pull request。请保持脚本兼容 bash 3.2，新增行为要加测试，提交前运行 `tests/run.sh`。仓库里的 GitHub Actions 工作流（`.github/workflows/tests.yml`）会在每次 push 和 pull request 时，在 macOS 和 Ubuntu 上运行整套测试。请不要带入个人路径、姓名或任何凭据。
+欢迎提 issue 和 pull request。安全问题请看 [SECURITY.md](SECURITY.md)，不要公开提 issue。请保持脚本兼容 bash 3.2，新增行为要加测试，提交前运行 `tests/run.sh`。仓库里的 GitHub Actions 工作流（`.github/workflows/tests.yml`）会在每次 push 和 pull request 时，在 macOS 和 Ubuntu 上运行整套测试。请不要带入个人路径、姓名或任何凭据。
 
 ## 许可证
 

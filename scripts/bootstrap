@@ -4,6 +4,7 @@
 set -u
 here=$(dirname "$0")
 echo "== check"
+echo "(On a first run, FAIL lines about missing links only mean nothing is linked yet.)"
 "$here/check" || echo "(check reported failures; expected until links are applied)"
 echo
 echo "== link plan (dry-run)"

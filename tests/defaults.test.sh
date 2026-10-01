@@ -15,6 +15,12 @@ echo "zsh defaults are not intrusive"
 assert "tmux autostart is opt-in" grep -q 'WB_TMUX_AUTOSTART:-0' config/zsh/zshrc
 refute "the default zshrc sets no proxy" grep -q -i 'proxy' config/zsh/zshrc
 
+echo ".gitignore keeps secrets and per-machine files out of the repo"
+for pat in local.zsh secrets.zsh .env '*.pem' '*.key' '*.p12' .DS_Store; do
+  assert ".gitignore lists $pat" grep -qxF "$pat" .gitignore
+done
+refute "the tracked templates are not ignored by those patterns" grep -qxF 'templates' .gitignore
+
 echo "no absolute home directories in tracked files"
 hits=$(grep -rn -I -E '/Users/[A-Za-z]|/home/[a-z]' . --exclude-dir=.git --exclude=defaults.test.sh | grep -v 'linuxbrew' | head -3)
 assert_eq "no /Users/<name> or /home/<name>" "" "$hits"

@@ -14,7 +14,7 @@ Keep your command-line environment (zsh, tmux, Ghostty, Git, the Claude Code sta
 | **Platform** | **macOS** is the primary platform (tested on macOS 15, Apple Silicon). The scripts and the zsh and tmux configs also pass the full test suite and the first-run flow on **Ubuntu 24.04** (checked in a container); the Ghostty config and the Homebrew casks are macOS-oriented. Windows is not supported. |
 | **Shell** | zsh 5.8 or newer (tested with 5.9). The scripts are bash 3.2 compatible, i.e. the macOS system bash is enough. |
 | **tmux** | 3.2 or newer recommended (tested with 3.5a). Older versions still load the config, minus the workspace switcher key. |
-| **Required** | `git` |
+| **Required** | `git`, and `zsh` if you use the zsh component (`doctor` reports FAIL without it) |
 | **Optional** | `fzf` (0.48+ for the shell integration), `zoxide`, `starship`, `jq` (status line), [Ghostty](https://ghostty.org) and a Nerd Font, Homebrew |
 
 **What it changes on your machine, and nothing else:**
@@ -111,7 +111,7 @@ The links are ordinary symlinks. To go back, remove a link and move the backup i
 
 ## Contributing
 
-Issues and pull requests are welcome. Please keep scripts bash 3.2 compatible, add a test for new behaviour, and run `tests/run.sh` before sending. A GitHub Actions workflow (`.github/workflows/tests.yml`) runs the suite on macOS and Ubuntu for every push and pull request. Do not include personal paths, names or credentials.
+Issues and pull requests are welcome. For security problems, see [SECURITY.md](SECURITY.md) instead of opening a public issue. Please keep scripts bash 3.2 compatible, add a test for new behaviour, and run `tests/run.sh` before sending. A GitHub Actions workflow (`.github/workflows/tests.yml`) runs the suite on macOS and Ubuntu for every push and pull request. Do not include personal paths, names or credentials.
 
 ## License
 

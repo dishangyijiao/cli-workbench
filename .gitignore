@@ -1,1 +1,20 @@
+# OS
 .DS_Store
+
+# Per-machine settings and secrets must never be committed (the templates/*.example files are the tracked versions)
+local.zsh
+secrets.zsh
+
+# Environment files and key material
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+
+# Backups made by scripts/link live in $HOME, but keep them out if someone clones into one
+.cli-workbench-backup/

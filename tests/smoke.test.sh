@@ -23,7 +23,8 @@ links() { find "$HOME" -type l 2>/dev/null | wc -l | tr -d ' '; }
 components=$(awk '!/^#/ && NF {print $1}' links.txt)
 
 echo "bootstrap and the link dry-run are read-only"
-scripts/bootstrap >/dev/null 2>&1; assert_eq "bootstrap exits 0" 0 $?
+out=$(scripts/bootstrap 2>&1); assert_eq "bootstrap exits 0" 0 $?
+assert_contains "bootstrap explains that FAIL lines are expected on a first run" "only mean nothing is linked yet" "$out"
 scripts/link >/dev/null 2>&1;      assert_eq "link dry-run exits 0" 0 $?
 assert_eq "no links created" 0 "$(links)"
 assert_eq "existing .zshrc untouched" "# my old zshrc" "$(cat "$HOME/.zshrc")"
