@@ -38,8 +38,9 @@ if [[ -o zle ]]; then
   bindkey '^[[B' down-line-or-beginning-search
 fi
 
-# Optional tools, used only when installed
-if (( $+commands[starship] )); then eval "$(starship init zsh)"; else PROMPT='%F{green}%n%f@%m %F{blue}%~%f %# '; fi
+# Optional tools, used only when installed. starship cannot render under TERM=dumb or with TERM unset (test harnesses,
+# some editor shells) and would print an error at every prompt there — the built-in prompt covers those cases too.
+if (( $+commands[starship] )) && [[ -n $TERM && $TERM != dumb ]]; then eval "$(starship init zsh)"; else PROMPT='%F{green}%n%f@%m %F{blue}%~%f %# '; fi
 (( $+commands[zoxide] )) && eval "$(zoxide init zsh)"
 if (( $+commands[fzf] )) && fzf --zsh >/dev/null 2>&1; then source <(fzf --zsh); fi   # fzf 0.48 or newer
 

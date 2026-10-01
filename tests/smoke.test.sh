@@ -62,6 +62,13 @@ fi
 assert "completion cache is in the XDG cache dir" test -f "$HOME/.cache/zsh/zcompdump"
 assert_eq "no duplicate PATH entries" 0 "$(zsh -i -c 'print -l $path | sort | uniq -d | wc -l' 2>/dev/null </dev/null | tr -d ' ')"
 
+echo "the built-in prompt is used where starship cannot render"
+if command -v starship >/dev/null; then
+  builtin_prompt='%F{green}%n%f@%m %F{blue}%~%f %# '   # the fallback PROMPT from home/dot_zshrc
+  assert_eq "TERM=dumb uses it" "$builtin_prompt" "$(TERM=dumb zsh -i -c 'print -r -- $PROMPT' </dev/null 2>/dev/null)"
+  assert "a real TERM uses starship" test "$(TERM=xterm-256color zsh -i -c 'print -r -- $PROMPT' </dev/null 2>/dev/null)" != "$builtin_prompt"
+else echo "starship not installed; prompt choice skipped"; fi
+
 if command -v tmux >/dev/null; then
   echo "the tmux config loads without errors, even without tpm"
   tmux -L "$SOCK" -f "$HOME/.tmux.conf" new-session -d -s t 2>"$T_DIR/tmux.err"; assert_eq "tmux starts" 0 $?

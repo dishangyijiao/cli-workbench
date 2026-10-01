@@ -25,6 +25,10 @@ All notable changes to this project are documented here. The format follows [Kee
 - The Neovim `avante.nvim` AI plugin and its six plugin dependencies: it called a model API directly (a hard-coded outdated model id, and an API key stored in plain text), a second path next to the CLI agents. Run `:Lazy clean` to remove the leftovers.
 - `scripts/link`, `scripts/check`, `scripts/doctor`, `scripts/bootstrap`, `scripts/zsh-snapshot`, `scripts/lib.sh`, `links.txt` and their tests; chezmoi's `diff`, `verify` and `doctor` replace them. The `--deep` startup check of the old `doctor` has no replacement; the test suite still starts zsh, tmux and nvim in throwaway HOMEs.
 
+### Fixed
+
+- `zshrc`: starship is no longer started under `TERM=dumb` or with `TERM` unset (test harnesses, some editor shells). It cannot render there and printed an error at every prompt; the built-in prompt is used instead, so a fresh interactive zsh starts silently again. The smoke test pins the choice for both TERMs.
+
 ## [0.0.1] - 2026-10-01
 
 First public release.
