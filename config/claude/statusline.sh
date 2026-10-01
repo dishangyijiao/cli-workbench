@@ -2,10 +2,10 @@
 # Claude Code status line, two lines:
 #
 #   project ⎇ branch !changed ?untracked
-#   Model · effort · ctx NN% · 14h29m · $13.91 · 5h NN% · 7d NN%
+#   Model · effort · ctx NN% · 3h12m · $4.22 · 5h NN% · 7d NN%
 #
 # Claude Code runs this on every refresh and writes the session as JSON to stdin.
-# Fields used (checked against a real payload):
+# Fields used (see statusline.test.sh for the payload shape):
 #   workspace.project_dir  project root of the session (the project name comes from here,
 #                          so cd-ing into a subdirectory does not change it)
 #   workspace.current_dir  current directory (the branch comes from here); cwd is the fallback

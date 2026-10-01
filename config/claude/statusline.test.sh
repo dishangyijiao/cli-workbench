@@ -1,8 +1,8 @@
 #!/bin/sh
 # Tests for statusline.sh (the copy next to this file).   Run:  sh config/claude/statusline.test.sh
 #
-# Fixtures use the real numbers of a captured Claude Code payload (context 48%, 5h 52%, 7d 8%,
-# 52194315 ms, $13.9149...). Git state comes from throwaway repositories under a temp dir.
+# Fixtures are synthetic Claude Code payloads (context 48%, 5h 52%, 7d 8%, 11520000 ms, $4.2183).
+# Git state comes from throwaway repositories under a temp dir.
 
 SCRIPT="${STATUSLINE_SCRIPT:-$(cd "$(dirname "$0")" && pwd)/statusline.sh}"
 T=$(mktemp -d)
@@ -49,7 +49,7 @@ payload() { # payload <dir> [extra jq object merged in]
     workspace: {current_dir: $d, project_dir: $d},
     model: {display_name: "Sonnet 5.5"},
     effort: {level: "medium"},
-    cost: {total_cost_usd: 13.914977599999995, total_duration_ms: 52194315},
+    cost: {total_cost_usd: 4.2183, total_duration_ms: 11520000},
     context_window: {used_percentage: 48},
     rate_limits: {five_hour: {used_percentage: 52}, seven_day: {used_percentage: 8}}
   }'
@@ -69,15 +69,15 @@ mkdir -p "$PLAIN"
 
 # ---- layout ----
 check "full payload, dirty repo: two lines" \
-  "dirty-proj ⎇ main !1 ?2${NL}Sonnet 5.5 · medium · ctx 48% · 14h29m · \$13.91 · 5h 52% · 7d 8%" \
+  "dirty-proj ⎇ main !1 ?2${NL}Sonnet 5.5 · medium · ctx 48% · 3h12m · \$4.22 · 5h 52% · 7d 8%" \
   "$(run "$(payload "$DIRTY")")"
 
 check "clean repo: no change counters" \
-  "clean-proj ⎇ main${NL}Sonnet 5.5 · medium · ctx 48% · 14h29m · \$13.91 · 5h 52% · 7d 8%" \
+  "clean-proj ⎇ main${NL}Sonnet 5.5 · medium · ctx 48% · 3h12m · \$4.22 · 5h 52% · 7d 8%" \
   "$(run "$(payload "$CLEAN")")"
 
 check "not a repository: no branch segment" \
-  "not-a-repo${NL}Sonnet 5.5 · medium · ctx 48% · 14h29m · \$13.91 · 5h 52% · 7d 8%" \
+  "not-a-repo${NL}Sonnet 5.5 · medium · ctx 48% · 3h12m · \$4.22 · 5h 52% · 7d 8%" \
   "$(run "$(payload "$PLAIN")")"
 
 check "minimal payload: only model on line 2" \
@@ -171,19 +171,19 @@ check "cost: rounds just below half down" '$0.02' "$(cost 0.0249)"
 
 # ---- percentages ----
 check "percentages are rounded to integers" \
-  "Sonnet 5.5 · medium · ctx 48% · 14h29m · \$13.91 · 5h 53% · 7d 9%" \
+  "Sonnet 5.5 · medium · ctx 48% · 3h12m · \$4.22 · 5h 53% · 7d 9%" \
   "$(run "$(payload "$CLEAN" | jq '.context_window.used_percentage=47.6 | .rate_limits.five_hour.used_percentage=52.5 | .rate_limits.seven_day.used_percentage=8.5')" | sed -n '2p')"
 
 check "only the 5h limit present" \
-  "Sonnet 5.5 · medium · ctx 48% · 14h29m · \$13.91 · 5h 52%" \
+  "Sonnet 5.5 · medium · ctx 48% · 3h12m · \$4.22 · 5h 52%" \
   "$(run "$(payload "$CLEAN" | jq 'del(.rate_limits.seven_day)')" | sed -n '2p')"
 
 check "no rate limits: segment omitted" \
-  "Sonnet 5.5 · medium · ctx 48% · 14h29m · \$13.91" \
+  "Sonnet 5.5 · medium · ctx 48% · 3h12m · \$4.22" \
   "$(run "$(payload "$CLEAN" | jq 'del(.rate_limits)')" | sed -n '2p')"
 
 check "no context percentage yet: segment omitted" \
-  "Sonnet 5.5 · medium · 14h29m · \$13.91 · 5h 52% · 7d 8%" \
+  "Sonnet 5.5 · medium · 3h12m · \$4.22 · 5h 52% · 7d 8%" \
   "$(run "$(payload "$CLEAN" | jq 'del(.context_window)')" | sed -n '2p')"
 
 # ---- colors: green < 60, yellow 60..84, red >= 85 ----

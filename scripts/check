@@ -6,7 +6,7 @@ set -u
 . "$(dirname "$0")/lib.sh"
 
 # 1. every link resolves to the exact source declared in links.txt
-while read -r comp src tgt; do
+while IFS=$'\t' read -r comp src tgt; do
   case $(wb_state "$src" "$tgt") in
     ok)      wb_pass "link $comp -> $src" ;;
     missing) wb_fail "link $comp: $tgt does not exist (run: scripts/link $comp --apply)" ;;

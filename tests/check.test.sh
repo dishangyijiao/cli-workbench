@@ -75,13 +75,42 @@ if command -v nvim >/dev/null; then
   t_cleanup
 else t_ok "nvim not installed; skipped"; fi
 
+# Content-aware hash of a directory tree: names, file contents and link targets. cksum is POSIX, so this
+# works on macOS and Linux (the earlier version used md5, which Linux lacks, and hashed names only).
+tree_hash() {
+  ( cd "$1" && {
+      find . | LC_ALL=C sort
+      find . -type f -exec cksum {} + | LC_ALL=C sort
+      find . -type l -exec sh -c 'for l; do printf "%s -> %s\n" "$l" "$(readlink "$l")"; done' sh {} + | LC_ALL=C sort
+    } | cksum )
+}
+EMPTY_HASH="4294967295 0"
+
+echo "the HOME hash notices a content change, not only a renamed file"
+t_fixture
+printf 'a\n' > "$T_HOME/f"; h1=$(tree_hash "$T_HOME")
+printf 'b\n' > "$T_HOME/f"; h2=$(tree_hash "$T_HOME")
+[ "$h1" != "$h2" ]; assert_eq "hash changed" 0 $?
+[ "$h1" != "$EMPTY_HASH" ]; assert_eq "hash is not the empty-input hash" 0 $?
+t_cleanup
+
 echo "check does not write to HOME"
 fixture_check
 LINK --apply >/dev/null
-before=$(cd "$T_HOME" && find . | sort | md5)
+before=$(tree_hash "$T_HOME")
 CHECK >/dev/null 2>&1
-after=$(cd "$T_HOME" && find . | sort | md5)
-assert_eq "HOME listing unchanged" "$before" "$after"
+after=$(tree_hash "$T_HOME")
+[ "$before" != "$EMPTY_HASH" ]; assert_eq "the hash tool really ran" 0 $?
+assert_eq "HOME unchanged (names, contents, links)" "$before" "$after"
+t_cleanup
+
+echo "a clone whose path contains spaces is checked correctly"
+fixture_check
+mv "$T_REPO" "$T_DIR/my repo"; T_REPO="$T_DIR/my repo"
+LINK --apply >/dev/null 2>&1
+out=$(CHECK 2>&1); rc=$?
+assert_eq "exit 0" 0 "$rc"
+assert_contains "alpha passes" "PASS  link alpha" "$out"
 t_cleanup
 
 t_done

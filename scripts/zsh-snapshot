@@ -48,6 +48,7 @@ cat > "$tmp/zsh-launch" <<EOF
 #!/bin/sh
 exec env -i HOME='$HOME' USER='${USER:-}' LOGNAME='${USER:-}' TERM=xterm-256color LANG=en_US.UTF-8 \\
   PATH=/usr/bin:/bin:/usr/sbin:/sbin ZDOTDIR='$tmp/zd' GIT_CONFIG_GLOBAL='$tmp/gitconfig' \\
+  XDG_CACHE_HOME='$tmp/xdg-cache' XDG_STATE_HOME='$tmp/xdg-state' \\
   SSH_AUTH_SOCK='$tmp/agent.sock' WB_NAMES_FILE='$names_file' ${term_program:+TERM_PROGRAM=$term_program} \\
   zsh -l -i "\$@"
 EOF

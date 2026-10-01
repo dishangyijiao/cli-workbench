@@ -46,24 +46,33 @@ wb_manifest_check() {
   return $rc
 }
 
-# One line per entry: component, absolute repo source, absolute target.
+# One line per entry, tab-separated (paths may contain spaces): component, absolute repo source, absolute target.
+# Read it with:  while IFS=$'\t' read -r comp src tgt; do ...; done < <(wb_manifest)
 wb_manifest() {
   local c s t
   while read -r c s t; do
     case $c in ''|'#'*) continue ;; esac
-    printf '%s %s %s\n' "$c" "$WB_ROOT/$s" "$(wb_expand "$t")"
+    printf '%s\t%s\t%s\n' "$c" "$WB_ROOT/$s" "$(wb_expand "$t")"
   done < "$WB_MANIFEST"
 }
 
-# Classify a target: ok | missing | file | dir | foreign-link | broken-link
+# Classify a target: ok | missing | file | dir | foreign-link | broken-link | inside-source | contains-source
+# inside-source / contains-source: the target is part of the repo source, or holds it (e.g. ~/.config is a symlink
+# to the repo's config/). Moving such a target would move the repo itself, so link refuses it.
 wb_state() {
   local src=$1 tgt=$2 a b
   if [ -L "$tgt" ]; then
     a=$(wb_resolve "$tgt") || { echo broken-link; return; }
     b=$(wb_resolve "$src") || { echo foreign-link; return; }
     if [ "$a" = "$b" ]; then echo ok; else echo foreign-link; fi
-  elif [ -d "$tgt" ]; then echo dir
-  elif [ -e "$tgt" ]; then echo file
+  elif [ -e "$tgt" ]; then
+    a=$(wb_resolve "$tgt"); b=$(wb_resolve "$src")
+    if [ -n "$a" ] && [ -n "$b" ]; then
+      if [ "$a" = "$b" ]; then echo ok; return; fi                 # the same file, reached through a symlinked parent
+      case $a in "$b"/*) echo inside-source; return ;; esac
+      case $b in "$a"/*) echo contains-source; return ;; esac
+    fi
+    if [ -d "$tgt" ]; then echo dir; else echo file; fi
   else echo missing
   fi
 }

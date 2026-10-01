@@ -123,4 +123,52 @@ env -u HOME "$T_REPO/scripts/link" >/dev/null 2>&1; rc=$?
 assert "non-zero without HOME" test "$rc" -ne 0
 t_cleanup
 
+echo "a target that reaches the repo source through a symlinked parent is left alone"
+t_fixture
+ln -s "$T_REPO/config" "$T_HOME/.cfg"                       # ~/.cfg -> <repo>/config
+printf 'gamma config/a/file ~/.cfg/a/file\n' >> "$T_REPO/links.txt"
+LINK gamma --apply >/dev/null 2>&1; rc=$?
+assert_eq "exit 0 (it already is that file)" 0 "$rc"
+assert_eq "repo source untouched" "from-repo" "$(cat "$T_REPO/config/a/file" 2>/dev/null)"
+refute "no backup was made" test -e "$T_HOME/.cli-workbench-backup"
+t_cleanup
+
+echo "a target inside the source tree is refused, even with --adopt"
+t_fixture
+ln -s "$T_REPO/config/dir" "$T_HOME/.sub"                   # ~/.sub -> <repo>/config/dir
+printf 'delta config/dir ~/.sub/x\n' >> "$T_REPO/links.txt"
+LINK delta --apply --adopt >/dev/null 2>&1; rc=$?
+assert_eq "refused with exit 1" 1 "$rc"
+assert_eq "repo file untouched" "from-repo" "$(cat "$T_REPO/config/dir/x" 2>/dev/null)"
+refute "no backup was made" test -e "$T_HOME/.cli-workbench-backup"
+t_cleanup
+
+echo "one STOP in the selection stops the whole apply before anything is changed"
+t_fixture
+mkdir -p "$T_HOME/.config/beta"; printf 'local\n' > "$T_HOME/.config/beta/only-here"
+LINK --apply >/dev/null 2>&1; rc=$?
+assert_eq "exit 1" 1 "$rc"
+refute "alpha was not linked either" test -L "$T_HOME/.alpha"
+refute "no backup dir" test -e "$T_HOME/.cli-workbench-backup"
+assert_eq "the real directory is untouched" "local" "$(cat "$T_HOME/.config/beta/only-here")"
+t_cleanup
+
+echo "if the link cannot be created, the backup is put back"
+t_fixture
+printf 'mine\n' > "$T_HOME/.alpha"
+mkdir -p "$T_DIR/bin"; printf '#!/bin/sh\nexit 1\n' > "$T_DIR/bin/ln"; chmod +x "$T_DIR/bin/ln"
+PATH="$T_DIR/bin:$PATH" LINK alpha --apply >/dev/null 2>&1; rc=$?
+assert_eq "exit 1" 1 "$rc"
+assert_eq "original file is back in place" "mine" "$(cat "$T_HOME/.alpha" 2>/dev/null)"
+t_cleanup
+
+echo "a clone whose path contains spaces works"
+t_fixture
+mv "$T_REPO" "$T_DIR/my repo"; T_REPO="$T_DIR/my repo"
+LINK --apply >/dev/null 2>&1; rc=$?
+assert_eq "exit 0" 0 "$rc"
+assert_eq "alpha points into the clone" "$T_REPO/config/a/file" "$(readlink "$T_HOME/.alpha")"
+assert "the link resolves" test -e "$T_HOME/.alpha"
+t_cleanup
+
 t_done

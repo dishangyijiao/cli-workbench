@@ -18,6 +18,7 @@ mkdir -p "$HOME/.config/ghostty"; echo 'font-size = 14' > "$HOME/.config/ghostty
 # a clone: the working tree without .git
 mkdir "$T_DIR/wb"; (cd "$WB_SRC" && tar --exclude=.git -cf - .) | (cd "$T_DIR/wb" && tar xf -)
 cd "$T_DIR/wb" || exit 1
+git init -q && git add -A && git -c user.name=smoke -c user.email=smoke@example.invalid commit -q -m "clone"
 links() { find "$HOME" -type l 2>/dev/null | wc -l | tr -d ' '; }
 components=$(awk '!/^#/ && NF {print $1}' links.txt)
 
@@ -45,7 +46,8 @@ assert_contains "reports ok" "[ok]" "$out"
 
 echo "check and doctor pass"
 scripts/check >/dev/null 2>&1;  assert_eq "check exits 0" 0 $?
-scripts/doctor >/dev/null 2>&1; assert_eq "doctor exits 0 (no FAIL)" 0 $?
+out=$(scripts/doctor 2>&1); assert_eq "doctor exits 0 (no FAIL)" 0 $?
+assert_contains "doctor sees a clean git clone" "PASS  repo has no uncommitted changes" "$out"
 
 echo "a fresh interactive zsh starts cleanly"
 zsh -i -c 'echo shell-ok' >"$T_DIR/zsh.out" 2>"$T_DIR/zsh.err" </dev/null

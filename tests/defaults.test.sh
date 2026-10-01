@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Guards for what a stranger gets by default. These fail if a risky default or a machine-specific path sneaks back in.
+set -u
+WB_SRC=$(cd "$(dirname "$0")/.." && pwd)
+. "$WB_SRC/tests/harness.sh"
+cd "$WB_SRC" || exit 1
+
+echo "tmux does not save pane contents to disk by default"
+case $(grep -E "^set .*@resurrect-capture-pane-contents" config/tmux/tmux.conf) in      # real settings only, not comments
+  *"'on'"*) t_fail "pane contents are saved by default (could store tokens in plaintext)" ;;
+  *) t_ok "pane content capture is not on by default" ;;
+esac
+
+echo "zsh defaults are not intrusive"
+assert "tmux autostart is opt-in" grep -q 'WB_TMUX_AUTOSTART:-0' config/zsh/zshrc
+refute "the default zshrc sets no proxy" grep -q -i 'proxy' config/zsh/zshrc
+
+echo "no absolute home directories in tracked files"
+hits=$(grep -rn -I -E '/Users/[A-Za-z]|/home/[a-z]' . --exclude-dir=.git --exclude=defaults.test.sh | grep -v 'linuxbrew' | head -3)
+assert_eq "no /Users/<name> or /home/<name>" "" "$hits"
+
+t_done

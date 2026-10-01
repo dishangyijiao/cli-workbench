@@ -24,7 +24,7 @@ if [ "$adopt" = 1 ] && [ -z "$want" ]; then
 fi
 
 wb_manifest_check || exit 2
-known=$(wb_manifest | awk '{print $1}')
+known=$(wb_manifest | awk -F'\t' '{print $1}')
 for w in $want; do
   printf '%s\n' "$known" | grep -qx "$w" || { echo "link: unknown component: $w" >&2; exit 2; }
 done
@@ -59,8 +59,47 @@ backup_and_move() { # $1 target
 
 make_link() { mkdir -p "$(dirname "$2")" && ln -s "$1" "$2"; }
 
+# Back up the target, then link. If the link cannot be created, put the original back.
+backup_and_link() { # $1 source, $2 target
+  backup_and_move "$2" || return 1
+  make_link "$1" "$2" && return 0
+  if mv "$backup_root$2" "$2" 2>/dev/null; then
+    echo "link: could not create $2; the original was put back" >&2
+    printf '  (restored automatically: the link could not be created)\n' >> "$backup_root/RESTORE"
+  else
+    echo "link: could not create $2 and could not restore it; the original is $backup_root$2 (see RESTORE)" >&2
+  fi
+  return 1
+}
+
+# Would applying this entry stop? Prints the reason and returns 1 if so.
+blocked() { # $1 component, $2 target, $3 state
+  case $3 in
+    inside-source|contains-source)
+      echo "[STOP] $1: $2 is inside the repository (or contains it); refusing, even with --adopt"; return 1 ;;
+    dir|foreign-link|broken-link)
+      [ "$adopt" = 1 ] && return 0
+      echo "[STOP] $1: $2 is a $3. Review the differences above, then: link $1 --apply --adopt"; return 1 ;;
+  esac
+  return 0
+}
+
+# --apply is all-or-nothing: if any selected entry would stop or fail, change nothing at all.
+if [ "$apply" = 1 ]; then
+  pre=0
+  while IFS=$'\t' read -r comp src tgt; do
+    selected "$comp" || continue
+    if [ ! -e "$src" ]; then echo "[FAIL] $comp: source missing: $src"; pre=1; continue; fi
+    blocked "$comp" "$tgt" "$(wb_state "$src" "$tgt")" || pre=1
+  done < <(wb_manifest)
+  if [ "$pre" = 1 ]; then
+    echo "link: nothing was changed. Fix the entries above, or name only the components you want, and run again."
+    exit 1
+  fi
+fi
+
 rc=0
-while read -r comp src tgt; do
+while IFS=$'\t' read -r comp src tgt; do
   selected "$comp" || continue
   if [ ! -e "$src" ]; then echo "[FAIL] $comp: source missing: $src"; rc=1; continue; fi
   state=$(wb_state "$src" "$tgt")
@@ -75,20 +114,17 @@ while read -r comp src tgt; do
     file)
       inventory "$src" "$tgt"
       if [ "$apply" = 1 ]; then
-        if backup_and_move "$tgt" && make_link "$src" "$tgt"; then echo "[done] $comp: $tgt -> $src (backup: $backup_root)"
-        else echo "[FAIL] $comp: backup or link failed; $tgt left as is or see RESTORE"; rc=1; fi
+        if backup_and_link "$src" "$tgt"; then echo "[done] $comp: $tgt -> $src (backup: $backup_root)"
+        else echo "[FAIL] $comp: backup or link failed; $tgt is as before, or see RESTORE"; rc=1; fi
       else echo "[plan] $comp: back up $tgt, then link -> $src"; fi ;;
-    dir|foreign-link|broken-link)
+    dir|foreign-link|broken-link|inside-source|contains-source)
       inventory "$src" "$tgt"
-      if [ "$adopt" = 1 ]; then
+      if blocked "$comp" "$tgt" "$state"; then            # reachable only with --adopt
         if [ "$apply" = 1 ]; then
-          if backup_and_move "$tgt" && make_link "$src" "$tgt"; then echo "[done] $comp: adopted $tgt -> $src (backup: $backup_root)"
+          if backup_and_link "$src" "$tgt"; then echo "[done] $comp: adopted $tgt -> $src (backup: $backup_root)"
           else echo "[FAIL] $comp: backup or link failed; see RESTORE"; rc=1; fi
         else echo "[plan] $comp: adopt: back up $state $tgt, then link -> $src"; fi
-      else
-        echo "[STOP] $comp: $tgt is a $state. Review the differences above, then: link $comp --apply --adopt"
-        rc=1
-      fi ;;
+      else rc=1; fi ;;
   esac
 done < <(wb_manifest)
 

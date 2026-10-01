@@ -22,7 +22,7 @@ jobs:
       matrix:
         os: [macos-latest, ubuntu-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
 
       - name: Install tools (macOS)
         if: runner.os == 'macOS'
@@ -42,3 +42,12 @@ jobs:
       # Includes tests/smoke.test.sh: the README quick start, run end to end in a throwaway HOME.
       - name: Run tests
         run: tests/run.sh
+
+      # The scripts promise bash 3.2 compatibility; enforce it by running the suite with the macOS system bash.
+      - name: Run tests with the macOS system bash (3.2)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p "$RUNNER_TEMP/bash32"
+          ln -s /bin/bash "$RUNNER_TEMP/bash32/bash"
+          PATH="$RUNNER_TEMP/bash32:$PATH" bash --version | head -1
+          PATH="$RUNNER_TEMP/bash32:$PATH" tests/run.sh

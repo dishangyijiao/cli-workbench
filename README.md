@@ -58,7 +58,7 @@ Suggested order and the manual steps (Homebrew tools, tmux plugin manager) are i
 
 These are opinions, not requirements. Edit the files in `config/`; because they are symlinked, the change is live at once.
 
-- **tmux:** prefix is `Ctrl-a` (not `Ctrl-b`); vi-style copy mode; mouse on; windows numbered from 1.
+- **tmux:** prefix is `Ctrl-a` (not `Ctrl-b`); vi-style copy mode; mouse on; windows numbered from 1. Pane contents are **not** saved to disk by default (that would store anything printed in a pane, tokens included); see the comment next to `@resurrect-capture-pane-contents` to turn it on.
 - **zsh:** 50,000-line shared history, case-insensitive completion, `starship` and `zoxide` and `fzf` only if installed.
 - **Ghostty:** Catppuccin Mocha and `SauceCodePro Nerd Font Mono` (install the font or change the line).
 
@@ -74,7 +74,7 @@ These are opinions, not requirements. Edit the files in `config/`; because they 
 ```sh
 scripts/check            # fast, read-only: links resolve to the right sources, files parse, status line test
 scripts/doctor           # adds: tools, PATH duplicates and dead entries, proxy variables, repository state
-scripts/doctor --deep    # adds: really starts zsh, tmux and nvim in isolation from your live state
+scripts/doctor --deep    # adds: really starts zsh, tmux and nvim (zsh and tmux are isolated; nvim uses your real config)
 scripts/link [component] [--apply] [--adopt]
 tests/run.sh             # the scripts' own tests, including an end-to-end run of this README's quick start in a throwaway HOME
 ```
@@ -86,7 +86,11 @@ Output is `PASS` / `WARN` / `FAIL`. `check` and `doctor` exit non-zero only on `
 - `scripts/link` is a **dry run** unless you pass `--apply`.
 - An existing regular file is **moved**, not deleted, to `~/.cli-workbench-backup/<timestamp>/`.
 - A real directory, or a symlink that points somewhere else, makes `link` **stop** until you read the plan and pass `--adopt` for that component.
-- `scripts/bootstrap`, `check` and `doctor` never change your files.
+- `--apply` is **all-or-nothing**: if any selected component would stop (or its source is missing), nothing is changed at all.
+- If a link cannot be created after the backup, the original file is **put back** automatically.
+- A target that is part of this repository, or that contains it (for example `~/.config` symlinked to `config/`), is **refused**, even with `--adopt`.
+- `scripts/bootstrap`, `check` and `doctor` do not modify your files. They may create and remove temporary files in the system temp directory.
+- `doctor --deep` really starts programs. zsh runs with a throwaway cache directory and tmux on a private socket. **nvim uses your real config and data**, so a plugin manager may update its own files.
 
 ## Workspace switcher (tmux)
 

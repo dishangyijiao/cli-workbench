@@ -58,13 +58,16 @@ else
 fi
 
 # 5. repo state
-if [ -n "$(git -C "$WB_ROOT" status --porcelain 2>/dev/null)" ]; then
+if ! git -C "$WB_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  wb_warn "not a git repository (installed from an archive, or git is missing); cannot tell whether files were edited"
+elif [ -n "$(git -C "$WB_ROOT" status --porcelain 2>/dev/null)" ]; then
   wb_warn "repo has uncommitted changes (local edits not yet synced to Git)"
 else
   wb_pass "repo has no uncommitted changes"
 fi
 
-# 6. deep: real startups, isolated from live state
+# 6. deep: real startups. zsh and tmux are isolated (throwaway cache dirs / private socket); nvim uses your real
+#    config and data on purpose, so its caches and state go to a throwaway dir but a plugin manager may still update.
 if [ "$deep" = 1 ]; then
   if command -v zsh >/dev/null 2>&1; then
     snap=$("$WB_ROOT/scripts/zsh-snapshot" "$WB_ROOT/config/zsh/zshrc" 2>&1); zrc=$?
@@ -94,11 +97,13 @@ if [ "$deep" = 1 ]; then
   fi
 
   if command -v nvim >/dev/null 2>&1; then
-    if err=$(nvim --headless -i NONE +qa 2>&1); then
+    nvtmp=$(mktemp -d)
+    if err=$(XDG_STATE_HOME="$nvtmp/state" XDG_CACHE_HOME="$nvtmp/cache" nvim --headless -i NONE +qa 2>&1); then
       [ -z "$err" ] && wb_pass "nvim starts cleanly" || wb_warn "nvim startup printed: $(printf '%s' "$err" | head -1)"
     else
       wb_fail "nvim startup failed: $(printf '%s' "$err" | head -1)"
     fi
+    case $nvtmp in /tmp/*|/var/folders/*|/private/var/folders/*) rm -rf "$nvtmp" ;; esac
   fi
 fi
 

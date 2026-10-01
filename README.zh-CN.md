@@ -58,7 +58,7 @@ git config --global --add include.path "$PWD/config/git/config"
 
 这些是个人偏好，不是硬性要求。直接改 `config/` 里的文件即可；因为是软链接，改动立刻生效。
 
-- **tmux：** 前缀键是 `Ctrl-a`（不是 `Ctrl-b`）；复制模式用 vi 键位；开启鼠标；窗口从 1 开始编号。
+- **tmux：** 前缀键是 `Ctrl-a`（不是 `Ctrl-b`）；复制模式用 vi 键位；开启鼠标；窗口从 1 开始编号。窗格内容**默认不会**保存到磁盘（那会把窗格里打印过的任何东西，包括令牌，明文存盘）；想开启的话看 `@resurrect-capture-pane-contents` 旁边的注释。
 - **zsh：** 5 万行的共享历史、补全不区分大小写、`starship`、`zoxide`、`fzf` 仅在已安装时启用。
 - **Ghostty：** Catppuccin Mocha 主题和 `SauceCodePro Nerd Font Mono` 字体（请安装该字体，或改掉这一行）。
 
@@ -74,7 +74,7 @@ git config --global --add include.path "$PWD/config/git/config"
 ```sh
 scripts/check            # 快速、只读：链接是否指向正确源文件、文件能否解析、状态栏测试
 scripts/doctor           # 再加：工具、PATH 重复和失效项、代理变量、仓库状态
-scripts/doctor --deep    # 再加：在与你真实环境隔离的条件下真正启动 zsh、tmux、nvim
+scripts/doctor --deep    # 再加：真正启动 zsh、tmux、nvim（zsh 和 tmux 是隔离的，nvim 使用你真实的配置）
 scripts/link [组件] [--apply] [--adopt]
 tests/run.sh             # 脚本自身的测试，包括在临时家目录里把本 README 的快速开始完整跑一遍
 ```
@@ -86,7 +86,11 @@ tests/run.sh             # 脚本自身的测试，包括在临时家目录里�
 - 不加 `--apply`，`scripts/link` 只是**演练**。
 - 已存在的普通文件会被**移走**而不是删除，放在 `~/.cli-workbench-backup/<时间戳>/`。
 - 目标是真实目录，或是指向别处的软链接时，`link` 会**停下**，直到你看过计划并为该组件加上 `--adopt`。
-- `scripts/bootstrap`、`check`、`doctor` 不会改动你的任何文件。
+- `--apply` 是**全有或全无**：只要选中的组件里有任何一个会停下（或源文件缺失），就一个都不改。
+- 备份之后如果链接创建失败，原文件会被**自动放回**。
+- 目标如果属于本仓库、或包含了本仓库（例如 `~/.config` 软链接到了 `config/`），**会被拒绝**，加 `--adopt` 也一样。
+- `scripts/bootstrap`、`check`、`doctor` 不会修改你的文件，只可能在系统临时目录里创建并删除临时文件。
+- `doctor --deep` 会真正启动程序：zsh 使用一次性的缓存目录，tmux 使用私有 socket，**nvim 使用你真实的配置和数据**，所以插件管理器可能会更新它自己的文件。
 
 ## 工作台切换器（tmux）
 
