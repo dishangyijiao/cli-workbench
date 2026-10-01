@@ -32,8 +32,8 @@ git clone <你的 fork 或本仓库地址> ~/dev/cli-workbench      # 放在哪�
 cd ~/dev/cli-workbench
 
 scripts/bootstrap                  # 只读：检查，并给出将要链接什么的计划
-scripts/link tmux --apply          # 一次只应用一个组件，然后验证
-scripts/check
+scripts/link tmux --apply          # 一次只应用一个组件，然后只验证这一个
+scripts/check tmux
 ```
 
 组件（来自 `links.txt`）：
@@ -72,9 +72,10 @@ git config --global --add include.path "$PWD/config/git/config"
 ## 命令
 
 ```sh
-scripts/check            # 快速、只读：链接是否指向正确源文件、文件能否解析、状态栏测试
+scripts/check [组件 ...]  # 快速、只读：链接是否指向正确源文件、zsh 和 shell 脚本能否解析、状态栏测试
+                         # （指定组件名就只检查它们的链接；tmux 配置由 doctor --deep 加载）
 scripts/doctor           # 再加：工具、PATH 重复和失效项、代理变量、仓库状态
-scripts/doctor --deep    # 再加：真正启动 zsh、tmux、nvim（zsh 和 tmux 是隔离的，nvim 使用你真实的配置）
+scripts/doctor --deep    # 再加：真正启动 zsh、tmux、nvim（zsh 运行的是你自己的启动文件；tmux 用私有 socket；nvim 用你的配置）
 scripts/link [组件] [--apply] [--adopt]
 tests/run.sh             # 脚本自身的测试，包括在临时家目录里把本 README 的快速开始完整跑一遍
 ```
@@ -86,11 +87,11 @@ tests/run.sh             # 脚本自身的测试，包括在临时家目录里�
 - 不加 `--apply`，`scripts/link` 只是**演练**。
 - 已存在的普通文件会被**移走**而不是删除，放在 `~/.cli-workbench-backup/<时间戳>/`。
 - 目标是真实目录，或是指向别处的软链接时，`link` 会**停下**，直到你看过计划并为该组件加上 `--adopt`。
-- `--apply` 是**全有或全无**：只要选中的组件里有任何一个会停下（或源文件缺失），就一个都不改。
-- 备份之后如果链接创建失败，原文件会被**自动放回**。
-- 目标如果属于本仓库、或包含了本仓库（例如 `~/.config` 软链接到了 `config/`），**会被拒绝**，加 `--adopt` 也一样。
+- `--apply` 会**先检查所有选中的组件**：只要有任何一个会停下、或源文件缺失，就一个都不改。开始应用之后如果某一步失败，会报告出来，已经应用的组件保持不变。
+- 备份之后如果链接创建失败，原文件会被**自动放回**；但如果这期间那个路径上出现了新的东西，就保留备份并打印它的位置。
+- 目标如果位于本仓库内部（包括将要在仓库里创建的路径），或者包含了本仓库，**会被拒绝**，加 `--adopt` 也一样。例如 `~/.config` 软链接到了本仓库的 `config/`。
 - `scripts/bootstrap`、`check`、`doctor` 不会修改你的文件，只可能在系统临时目录里创建并删除临时文件。
-- `doctor --deep` 会真正启动程序：zsh 使用一次性的缓存目录，tmux 使用私有 socket，**nvim 使用你真实的配置和数据**，所以插件管理器可能会更新它自己的文件。
+- `doctor --deep` 会真正启动程序：它运行**你自己的 zsh 启动文件**和**你的 nvim 配置与数据**，所以它们做的事（写文件、更新插件）都是真的；只有自带 `zshrc` 的缓存目录是一次性的。tmux 使用私有 socket。
 
 ## 工作台切换器（tmux）
 

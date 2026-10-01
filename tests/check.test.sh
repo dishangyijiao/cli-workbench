@@ -15,7 +15,7 @@ fixture_check() {
   printf '#!/bin/sh\nexit 0\n' > "$T_REPO/config/claude/statusline.test.sh"
   printf -- '-- init\n' > "$T_REPO/config/nvim/init.lua"
 }
-CHECK() { HOME=$T_HOME "$T_REPO/scripts/check"; }
+CHECK() { HOME=$T_HOME "$T_REPO/scripts/check" "$@"; }
 LINK()  { HOME=$T_HOME "$T_REPO/scripts/link" "$@"; }
 
 echo "all links correct -> exit 0"
@@ -111,6 +111,17 @@ LINK --apply >/dev/null 2>&1
 out=$(CHECK 2>&1); rc=$?
 assert_eq "exit 0" 0 "$rc"
 assert_contains "alpha passes" "PASS  link alpha" "$out"
+t_cleanup
+
+echo "check can be limited to some components (the README quick start applies one at a time)"
+fixture_check
+LINK alpha --apply >/dev/null
+out=$(CHECK alpha 2>&1); rc=$?
+assert_eq "exit 0 although beta is not linked yet" 0 "$rc"
+assert_contains "alpha is checked" "PASS  link alpha" "$out"
+case $out in *"link beta"*) t_fail "beta must not be checked";; *) t_ok "beta is not checked";; esac
+CHECK >/dev/null 2>&1; assert_eq "checking everything still fails" 1 $?
+CHECK nope >/dev/null 2>&1; assert_eq "unknown component -> exit 2" 2 $?
 t_cleanup
 
 t_done

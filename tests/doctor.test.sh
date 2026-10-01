@@ -74,4 +74,12 @@ refute "no zsh cache created in HOME" test -e "$T_HOME/.cache/zsh"
 refute "no nvim state created in HOME" test -e "$T_HOME/.local/state/nvim"
 t_cleanup
 
+echo "a git failure is not reported as a clean repository"
+fixture_doctor
+printf 'garbage' > "$T_REPO/.git/index"
+out=$(DOCTOR 2>&1)
+assert_contains "warns that git status failed" "WARN  git status failed" "$out"
+case $out in *"PASS  repo has no uncommitted changes"*) t_fail "must not claim a clean repo when git fails";; *) t_ok "no false PASS";; esac
+t_cleanup
+
 t_done

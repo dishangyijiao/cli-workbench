@@ -171,4 +171,49 @@ assert_eq "alpha points into the clone" "$T_REPO/config/a/file" "$(readlink "$T_
 assert "the link resolves" test -e "$T_HOME/.alpha"
 t_cleanup
 
+echo "a target that is a DIFFERENT repo file (reached through a symlinked parent) is refused"
+t_fixture
+ln -s "$T_REPO/config" "$T_HOME/.cfg"
+printf 'eps config/dir/x ~/.cfg/a/file\n' >> "$T_REPO/links.txt"      # target resolves to config/a/file, not to eps's source
+LINK eps --apply >/dev/null 2>&1; rc=$?
+assert_eq "refused with exit 1" 1 "$rc"
+assert_eq "the other repo file is untouched" "from-repo" "$(cat "$T_REPO/config/a/file" 2>/dev/null)"
+refute "no backup was made" test -e "$T_HOME/.cli-workbench-backup"
+t_cleanup
+
+echo "a missing target below a source directory is not created inside the repo"
+t_fixture
+ln -s "$T_REPO/config/dir" "$T_HOME/.sub"
+printf 'zeta config/dir ~/.sub/newlink\n' >> "$T_REPO/links.txt"
+LINK zeta --apply >/dev/null 2>&1; rc=$?
+assert_eq "refused with exit 1" 1 "$rc"
+refute "nothing was created in the repo" test -e "$T_REPO/config/dir/newlink"
+refute "no dangling link in the repo" test -L "$T_REPO/config/dir/newlink"
+t_cleanup
+
+echo "the rollback never overwrites a file that appeared in the meantime"
+t_fixture
+printf 'mine\n' > "$T_HOME/.alpha"
+mkdir -p "$T_DIR/bin"
+cat > "$T_DIR/bin/ln" <<'SH'
+#!/bin/sh
+for last; do :; done
+printf 'theirs\n' > "$last"            # another program creates the target, then ln fails
+exit 1
+SH
+chmod +x "$T_DIR/bin/ln"
+PATH="$T_DIR/bin:$PATH" LINK alpha --apply >/dev/null 2>&1; rc=$?
+assert_eq "exit 1" 1 "$rc"
+assert_eq "the newer file is kept" "theirs" "$(cat "$T_HOME/.alpha" 2>/dev/null)"
+assert "your original is still in the backup" test -n "$(grep -rl '^mine$' "$T_HOME/.cli-workbench-backup" 2>/dev/null | head -1)"
+t_cleanup
+
+echo "a path with a tab is refused with a clear message"
+t_fixture
+tabdir="$T_DIR/tab$(printf '\t')dir"; mv "$T_REPO" "$tabdir"; T_REPO=$tabdir
+out=$(LINK 2>&1); rc=$?
+assert_eq "exit 2" 2 "$rc"
+assert_contains "explains why" "tab" "$out"
+t_cleanup
+
 t_done

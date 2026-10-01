@@ -63,11 +63,14 @@ make_link() { mkdir -p "$(dirname "$2")" && ln -s "$1" "$2"; }
 backup_and_link() { # $1 source, $2 target
   backup_and_move "$2" || return 1
   make_link "$1" "$2" && return 0
-  if mv "$backup_root$2" "$2" 2>/dev/null; then
+  # Put the original back, but never over something that appeared at the target in the meantime (mv -n does not
+  # overwrite; BSD mv still exits 0 when it skips, so the result is verified).
+  if [ ! -e "$2" ] && [ ! -L "$2" ] && mv -n "$backup_root$2" "$2" 2>/dev/null \
+     && [ ! -e "$backup_root$2" ] && [ ! -L "$backup_root$2" ]; then
     echo "link: could not create $2; the original was put back" >&2
     printf '  (restored automatically: the link could not be created)\n' >> "$backup_root/RESTORE"
   else
-    echo "link: could not create $2 and could not restore it; the original is $backup_root$2 (see RESTORE)" >&2
+    echo "link: could not create $2 and could not safely restore it; your original is $backup_root$2 (see RESTORE)" >&2
   fi
   return 1
 }

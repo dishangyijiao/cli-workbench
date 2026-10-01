@@ -32,8 +32,8 @@ git clone <your-fork-or-this-repo-url> ~/dev/cli-workbench      # any location w
 cd ~/dev/cli-workbench
 
 scripts/bootstrap                  # read-only: check + the plan of what would be linked
-scripts/link tmux --apply          # apply ONE component at a time, then verify
-scripts/check
+scripts/link tmux --apply          # apply ONE component at a time, then verify just that one
+scripts/check tmux
 ```
 
 Components (from `links.txt`):
@@ -72,9 +72,10 @@ These are opinions, not requirements. Edit the files in `config/`; because they 
 ## Commands
 
 ```sh
-scripts/check            # fast, read-only: links resolve to the right sources, files parse, status line test
+scripts/check [component ...]   # fast, read-only: links resolve to the right sources, zsh and shell-script files parse, status line test
+                                # (name components to check only their links; the tmux config is loaded by doctor --deep)
 scripts/doctor           # adds: tools, PATH duplicates and dead entries, proxy variables, repository state
-scripts/doctor --deep    # adds: really starts zsh, tmux and nvim (zsh and tmux are isolated; nvim uses your real config)
+scripts/doctor --deep    # adds: really starts zsh, tmux and nvim (zsh runs YOUR startup files; tmux uses a private socket; nvim uses your config)
 scripts/link [component] [--apply] [--adopt]
 tests/run.sh             # the scripts' own tests, including an end-to-end run of this README's quick start in a throwaway HOME
 ```
@@ -86,11 +87,11 @@ Output is `PASS` / `WARN` / `FAIL`. `check` and `doctor` exit non-zero only on `
 - `scripts/link` is a **dry run** unless you pass `--apply`.
 - An existing regular file is **moved**, not deleted, to `~/.cli-workbench-backup/<timestamp>/`.
 - A real directory, or a symlink that points somewhere else, makes `link` **stop** until you read the plan and pass `--adopt` for that component.
-- `--apply` is **all-or-nothing**: if any selected component would stop (or its source is missing), nothing is changed at all.
-- If a link cannot be created after the backup, the original file is **put back** automatically.
-- A target that is part of this repository, or that contains it (for example `~/.config` symlinked to `config/`), is **refused**, even with `--adopt`.
+- `--apply` checks **every selected component first**: if any would stop, or its source is missing, nothing is changed at all. Once applying has started, a failure is reported and components already applied stay applied.
+- If a link cannot be created after the backup, the original file is **put back**, unless something new has appeared at that path meanwhile; then the backup is kept and its location is printed.
+- A target that lives inside this repository (including a path that would be created there), or that holds it, is **refused**, even with `--adopt`. Example: `~/.config` symlinked to this repo's `config/`.
 - `scripts/bootstrap`, `check` and `doctor` do not modify your files. They may create and remove temporary files in the system temp directory.
-- `doctor --deep` really starts programs. zsh runs with a throwaway cache directory and tmux on a private socket. **nvim uses your real config and data**, so a plugin manager may update its own files.
+- `doctor --deep` really starts programs. It runs **your real zsh startup files** and **your nvim config and data**, so whatever they do (writing files, updating plugins) happens for real; only the cache directory of the supplied `zshrc` is a throwaway one. tmux runs on a private socket.
 
 ## Workspace switcher (tmux)
 

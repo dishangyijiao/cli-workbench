@@ -5,8 +5,17 @@
 set -u
 . "$(dirname "$0")/lib.sh"
 
+# Usage: check [component ...]   Limits the link checks (section 1) to those components; the syntax checks always run.
+want="$*"
+selected() { [ -z "$want" ] && return 0; case " $want " in *" $1 "*) return 0 ;; esac; return 1; }
+known=$(wb_manifest | awk -F'\t' '{print $1}')
+for w in $want; do
+  printf '%s\n' "$known" | grep -qx "$w" || { echo "check: unknown component: $w" >&2; exit 2; }
+done
+
 # 1. every link resolves to the exact source declared in links.txt
 while IFS=$'\t' read -r comp src tgt; do
+  selected "$comp" || continue
   case $(wb_state "$src" "$tgt") in
     ok)      wb_pass "link $comp -> $src" ;;
     missing) wb_fail "link $comp: $tgt does not exist (run: scripts/link $comp --apply)" ;;

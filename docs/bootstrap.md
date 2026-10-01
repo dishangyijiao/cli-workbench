@@ -4,7 +4,7 @@
 
 ## Apply order
 
-Apply one component at a time and run `scripts/check` after each. zsh goes last, because it changes every new shell.
+Apply one component at a time and run `scripts/check <component>` after each. zsh goes last, because it changes every new shell.
 
 ```sh
 scripts/link ghostty --apply

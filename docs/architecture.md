@@ -17,9 +17,9 @@ Git, plain text and scripts. Not a GUI's current state, a tmux session or a shel
 `links.txt` maps `component -> path in the repo -> target path`. `scripts/link` applies it one component at a time:
 
 - the default is a dry run that only prints the plan;
-- `--apply` is all-or-nothing: if any selected entry would stop, nothing is changed. It creates the links; an existing regular file is moved to `~/.cli-workbench-backup/<timestamp>/`, never deleted, and put back if the link cannot be created;
+- `--apply` checks every selected entry first: if any would stop, nothing is changed. It creates the links; an existing regular file is moved to `~/.cli-workbench-backup/<timestamp>/`, never deleted, and put back if the link cannot be created;
 - a real directory, or a symlink that points somewhere else, is a **STOP** case: nothing is touched until you read the plan and pass `--adopt` for that component;
-- a target that is part of the repository, or contains it, is always refused;
+- a target that lives inside the repository (also a path that would be created there), or holds it, is always refused;
 
 Scripts find the repository from their own location, so the clone can live anywhere. Only the links themselves record where it is.
 
@@ -39,9 +39,9 @@ The repository and the filesystem are authoritative. tmux sessions, editor sessi
 
 | Command | Scope | Side effects |
 |---|---|---|
-| `scripts/check` | links resolve to the declared sources, shell and tmux files parse, the status line test | none, read-only |
+| `scripts/check [component ...]` | links resolve to the declared sources, zsh and shell-script files parse, the status line test; name components to limit the link checks | none, read-only (temporary files only) |
 | `scripts/doctor` | adds tool availability, PATH duplicates and dead entries, proxy variables, repository state | none, read-only |
-| `scripts/doctor --deep` | starts zsh, tmux and nvim for real. zsh uses a throwaway cache dir; tmux a private socket with plugins stripped; **nvim uses your real config and data** | none for zsh and tmux; a plugin manager may update nvim's own files |
+| `scripts/doctor --deep` | starts zsh, tmux and nvim for real. **zsh runs your real startup files** (the supplied zshrc uses a throwaway cache dir); tmux a private socket with plugins stripped; **nvim uses your real config and data** | whatever your own startup files and nvim plugins do happens for real |
 | `tests/run.sh` | the scripts themselves, against throwaway fixtures | temp files only |
 
 ## Troubleshooting

@@ -5,6 +5,11 @@ WB_ROOT=$(cd -P "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 WB_MANIFEST=${WB_MANIFEST:-$WB_ROOT/links.txt}
 WB_FAILS=0
 
+# The manifest is passed between scripts as tab-separated lines, so a tab or newline in these paths cannot be represented.
+case $WB_ROOT${HOME:-} in
+  *$'\t'*|*$'\n'*) echo "cli-workbench: the repository path or HOME contains a tab or newline character, which is not supported" >&2; exit 2 ;;
+esac
+
 wb_pass() { printf 'PASS  %s\n' "$1"; }
 wb_warn() { printf 'WARN  %s\n' "$1"; }
 wb_fail() { printf 'FAIL  %s\n' "$1"; WB_FAILS=$((WB_FAILS+1)); }
@@ -56,22 +61,34 @@ wb_manifest() {
   done < "$WB_MANIFEST"
 }
 
+# Physical path of the directory that holds $1, even if $1 does not exist yet (the nearest existing ancestor).
+wb_parent_real() {
+  local d; d=$(dirname "$1")
+  while [ ! -d "$d" ] && [ "$d" != / ] && [ "$d" != . ]; do d=$(dirname "$d"); done
+  ( cd -P "$d" 2>/dev/null && pwd )
+}
+
 # Classify a target: ok | missing | file | dir | foreign-link | broken-link | inside-source | contains-source
-# inside-source / contains-source: the target is part of the repo source, or holds it (e.g. ~/.config is a symlink
-# to the repo's config/). Moving such a target would move the repo itself, so link refuses it.
+# inside-source: the target physically lives inside the repository (so it IS part of the repo, for example when
+# ~/.config is a symlink to the repo's config/), or would be created there. contains-source: the target is a
+# directory that holds the repository source. Moving or creating such a target would modify the repo itself, so
+# link refuses both, even with --adopt. Equality of two paths uses file identity (-ef), not spelling, so a
+# differently cased path on a case-insensitive filesystem cannot slip through.
 wb_state() {
-  local src=$1 tgt=$2 a b
+  local src=$1 tgt=$2 a b p root inside=0
+  root=$(cd -P "$WB_ROOT" && pwd); p=$(wb_parent_real "$tgt")
+  case $p/ in "$root"/*) inside=1 ;; esac
   if [ -L "$tgt" ]; then
-    a=$(wb_resolve "$tgt") || { echo broken-link; return; }
+    a=$(wb_resolve "$tgt") || { if [ $inside = 1 ]; then echo inside-source; else echo broken-link; fi; return; }
     b=$(wb_resolve "$src") || { echo foreign-link; return; }
-    if [ "$a" = "$b" ]; then echo ok; else echo foreign-link; fi
+    if [ "$a" = "$b" ] || [ "$a" -ef "$b" ]; then echo ok
+    elif [ $inside = 1 ]; then echo inside-source
+    else echo foreign-link; fi
+  elif [ -e "$tgt" ] && [ "$tgt" -ef "$src" ]; then echo ok            # the same file, reached through a symlinked parent
+  elif [ $inside = 1 ]; then echo inside-source
   elif [ -e "$tgt" ]; then
     a=$(wb_resolve "$tgt"); b=$(wb_resolve "$src")
-    if [ -n "$a" ] && [ -n "$b" ]; then
-      if [ "$a" = "$b" ]; then echo ok; return; fi                 # the same file, reached through a symlinked parent
-      case $a in "$b"/*) echo inside-source; return ;; esac
-      case $b in "$a"/*) echo contains-source; return ;; esac
-    fi
+    case $b in "$a"/*) echo contains-source; return ;; esac
     if [ -d "$tgt" ]; then echo dir; else echo file; fi
   else echo missing
   fi

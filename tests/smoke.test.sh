@@ -28,6 +28,11 @@ scripts/link >/dev/null 2>&1;      assert_eq "link dry-run exits 0" 0 $?
 assert_eq "no links created" 0 "$(links)"
 assert_eq "existing .zshrc untouched" "# my old zshrc" "$(cat "$HOME/.zshrc")"
 
+echo "the README quick start: apply ONE component, then check just that one"
+scripts/link tmux --apply >/dev/null 2>&1; assert_eq "apply tmux" 0 $?
+out=$(scripts/check tmux 2>&1); assert_eq "check tmux passes although the other components are not linked yet" 0 $?
+assert_contains "it reports the tmux link" "PASS  link tmux" "$out"
+
 echo "every component applies"
 for c in $components; do scripts/link "$c" --apply >/dev/null 2>&1; assert_eq "apply $c" 0 $?; done
 for c in $components; do
