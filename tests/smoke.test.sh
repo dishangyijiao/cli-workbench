@@ -16,22 +16,31 @@ trap cleanup EXIT
 # the user's own files, which chezmoi must not silently lose
 echo '# my old zshrc' > "$HOME/.zshrc"
 mkdir -p "$HOME/.config/ghostty"; echo 'font-size = 14' > "$HOME/.config/ghostty/config"
-CZ=(chezmoi --source "$WB_SRC" --destination "$HOME" --no-tty --cache "$HOME/.chezmoi-cache" --persistent-state "$HOME/.chezmoi-state")
+export WB_BACKUP_DIR=$HOME/.cli-workbench-backup
+CZ=(chezmoi --no-tty)
 
-echo "the README quick start: look first (diff), then apply"
+echo "the README quick start: init points chezmoi at this clone"
+chezmoi init --source "$WB_SRC" --no-tty >/dev/null 2>&1; assert_eq "chezmoi init exits 0" 0 $?
+
+echo "look first (diff), then apply"
 out=$("${CZ[@]}" diff 2>&1); assert_eq "chezmoi diff exits 0" 0 $?
 assert_eq "diff changed nothing" "# my old zshrc" "$(cat "$HOME/.zshrc")"
 "${CZ[@]}" apply --dry-run >/dev/null 2>&1; assert_eq "apply --dry-run exits 0" 0 $?
 assert_eq "dry-run changed nothing" "# my old zshrc" "$(cat "$HOME/.zshrc")"
 
 echo "apply deploys every file"
-"${CZ[@]}" apply --force >/dev/null 2>&1; assert_eq "apply exits 0" 0 $?
+"${CZ[@]}" apply >/dev/null 2>&1; assert_eq "apply exits 0" 0 $?
 for f in .zshrc .tmux.conf .config/zsh/path.zsh .config/zsh/tmux-autostart.zsh .config/ghostty/config .config/git/config .config/nvim/init.lua .claude/statusline.sh .tmux/scripts/workspace-switch.sh; do
   assert "$f is deployed" test -f "$HOME/$f"
 done
 for f in .claude/statusline.sh .tmux/scripts/workspace-switch.sh .tmux/scripts/tmux-version-ge.sh .tmux/scripts/branch.sh; do
   assert "$f is executable" test -x "$HOME/$f"
 done
+
+echo "the user's own files were backed up, not lost"
+assert "old .zshrc is in a backup" test -n "$(grep -rl 'my old zshrc' "$WB_BACKUP_DIR" 2>/dev/null | head -1)"
+assert "old ghostty config is in a backup" test -n "$(grep -rl 'font-size = 14' "$WB_BACKUP_DIR" 2>/dev/null | head -1)"
+assert "a RESTORE note exists" test -n "$(find "$WB_BACKUP_DIR" -name RESTORE | head -1)"
 
 echo "applying again is a no-op"
 "${CZ[@]}" apply >/dev/null 2>&1; assert_eq "exit 0" 0 $?

@@ -17,7 +17,11 @@ The trade: an edit is no longer live at once (`chezmoi edit --apply`, or edit `h
 
 `.chezmoiroot` contains `home`, so only `home/` is the source tree; `docs/`, `tests/`, `scripts/`, `templates/` and `packages/` are never deployed. Names follow chezmoi: `dot_` becomes `.`, `executable_` sets the executable bit, `private_` makes the directory mode 700 (`~/.config/zsh` holds `secrets.zsh`).
 
-The source directory is wherever the clone lives; `~/.config/chezmoi/chezmoi.toml` sets `sourceDir` (see the README).
+`home/.chezmoi.toml.tmpl` is what `chezmoi init --source <clone>` renders into `~/.config/chezmoi/chezmoi.toml`: `sourceDir` (the clone can live anywhere) and the `hooks.apply.pre` backup hook. It lives under `home/` because that is the source root; chezmoi does not deploy it.
+
+## Backup before apply
+
+chezmoi overwrites differing files and keeps no copy. `scripts/backup-before-apply` is configured as the `apply.pre` hook (a `run_before_` script would not do: chezmoi skips scripts for `chezmoi apply <one file>` and for `--dry-run`, but runs hooks). It asks `chezmoi status` which existing files an apply would replace, copies them to `~/.cli-workbench-backup/<timestamp>/` (mode 700, paths mirrored, symlinks preserved, a `RESTORE` note), and exits non-zero on any failure, which makes chezmoi abort. It does nothing for `--dry-run` or when nothing would change. Because it ignores which targets you named, applying one file may back up a few more.
 
 ## Machine differences
 
@@ -37,6 +41,7 @@ The repository is authoritative. chezmoi's own state (`~/.config/chezmoi/chezmoi
 |---|---|---|
 | `chezmoi diff`, `chezmoi status`, `chezmoi verify` | `$HOME` against `home/` | none |
 | `chezmoi doctor` | chezmoi's own checks | none |
+| `scripts/backup-before-apply` | the pre-apply hook; tested in `tests/backup.test.sh` | writes only under `~/.cli-workbench-backup/` |
 | `tests/run.sh` | the shell configs, tmux scripts, status line and privacy scanner, against throwaway HOMEs (`chezmoi apply` into a temp directory) | temp files only |
 | `scripts/privacy-scan` | secrets, personal paths, e-mail addresses in tracked files | none; also a pre-commit hook and a CI gate |
 
@@ -44,4 +49,4 @@ The repository is authoritative. chezmoi's own state (`~/.config/chezmoi/chezmoi
 
 - zsh behaves differently after a change: `chezmoi diff ~/.zshrc`, then start `zsh -i` in a new terminal.
 - tmux config problems: `tmux -L test -f ~/.tmux.conf new-session -d && tmux -L test show-messages`.
-- Something was overwritten: chezmoi keeps no backup; restore from your own copy or from Git history of the file's previous source.
+- Something was overwritten: `~/.cli-workbench-backup/<timestamp>/RESTORE` has the command. No backup there means `chezmoi init` was never run on this machine (the hook comes from it).

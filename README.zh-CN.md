@@ -20,7 +20,7 @@
 | **必需** | `git` 和 [`chezmoi`](https://www.chezmoi.io/install/)（`brew install chezmoi`） |
 | **可选** | `fzf`（0.48+ 才有 shell 集成）、`zoxide`、`starship`、`zsh-syntax-highlighting`、`jq`（状态栏用）、[Ghostty](https://ghostty.org) 加一款 Nerd Font、Homebrew |
 
-**它会在你的机器上做的改动：** 仅限 [`home/`](home) 下由 chezmoi 部署的文件（见下表），以及使用自带 `zshrc` 后 `~/.cache/zsh/` 里的 zsh 补全缓存。**chezmoi 不会备份被它替换的文件。** 务必先运行 `chezmoi diff`，把舍不得丢的内容在 `apply` 之前自己拷走。
+**它会在你的机器上做的改动：** 仅限 [`home/`](home) 下由 chezmoi 部署的文件（见下表）、使用自带 `zshrc` 后 `~/.cache/zsh/` 里的 zsh 补全缓存，以及被替换文件的备份 `~/.cli-workbench-backup/<时间戳>/`（chezmoi 自己不备份，见“安全模型”）。
 
 ## 快速开始
 
@@ -28,15 +28,14 @@
 brew install chezmoi
 git clone https://github.com/dishangyijiao/cli-workbench.git ~/dev/cli-workbench   # 或你的 fork；放在哪里都可以
 
-mkdir -p ~/.config/chezmoi
-printf 'sourceDir = "%s"\n' ~/dev/cli-workbench > ~/.config/chezmoi/chezmoi.toml  # 把这个克隆作为源目录
+chezmoi init --source ~/dev/cli-workbench   # 把这个克隆作为源目录，并安装备份钩子（见下文）
 
 chezmoi diff                       # 只读：$HOME 里将会发生什么变化
 chezmoi apply ~/.tmux.conf         # 先只应用一个文件，看看效果
 chezmoi apply                      # 再应用全部
 ```
 
-也可以让 chezmoi 自己克隆：`chezmoi init --apply <你的 GitHub 用户名>/cli-workbench`。
+也可以让 chezmoi 自己克隆：`chezmoi init <你的 GitHub 用户名>/cli-workbench`，然后同样 `diff`、`apply`。
 
 部署的内容（目录结构遵循 [chezmoi 的命名规则](https://www.chezmoi.io/reference/source-state-attributes/)：`dot_` 变成 `.`，`executable_` 设置可执行权限，`private_` 让目录权限为 700）：
 
@@ -79,7 +78,8 @@ scripts/privacy-scan [--all]     # 扫描已暂存（或全部已跟踪）文件
 ## 安全模型
 
 - `chezmoi diff` 和 `chezmoi apply --dry-run` 不会改动任何东西。
-- 内容与源不同的文件会被 **chezmoi 直接覆盖，且不备份**。先看 diff。（chezmoi 之前写入、之后被你改过的文件，它会停下来询问。）
+- **每次 apply 之前先备份。** chezmoi 会直接覆盖内容不同的文件，不留副本。`chezmoi init` 会安装一个钩子（[`scripts/backup-before-apply`](scripts/backup-before-apply)），在 apply 之前把将被替换的文件（包括 chezmoi 写入后被你改过的文件）拷到 `~/.cli-workbench-backup/<时间戳>/`。目录权限 700，软链接按软链接保存，`RESTORE` 里每个文件一条可直接复制的恢复命令。没有要改的文件时什么都不创建；备份失败则拒绝 apply；`--dry-run` 没有任何副作用。
+- 钩子写在 `chezmoi init` 生成的配置里。如果你只是手写了 `chezmoi.toml`，或者没运行过 `init` 就用 `chezmoi apply --source ...`，则**没有**备份。
 - 它只会碰上表里的目标，除非你主动要求（`chezmoi destroy`），否则不会删除任何东西。
 - `privacy-scan` 在 pre-commit 钩子和 CI 里都会运行，避免密钥、令牌、个人路径和邮箱地址意外进入公开的 fork。
 
@@ -91,12 +91,12 @@ scripts/privacy-scan [--all]     # 扫描已暂存（或全部已跟踪）文件
 
 ## 卸载 / 恢复
 
-chezmoi 留下的是普通文件。恢复你在 `apply` 之前自己保留的副本，或者删掉不想要的文件。`chezmoi unmanage <目标>` 可以让它不再管理某个文件。
+从 `~/.cli-workbench-backup/<时间戳>/RESTORE` 里按文件恢复（每个文件一条命令），或者删掉不想要的文件。`chezmoi unmanage <目标>` 可以让它不再管理某个文件。
 
 ## 故障排查
 
 - Debian/Ubuntu：shell 启动时出现 `compinit: initialization aborted` 或“insecure directories”，来自系统的 `/etc/zsh/zshrc`：当 `/usr/share/zsh` 权限过松时，它会先于你的配置运行自己的 `compinit`。这里的 zshrc 已经运行了 `compinit`，所以在 `~/.zshenv` 里加上 `skip_global_compinit=1`（或者修正权限，参见 `compaudit`）。
-- `chezmoi: ... has changed since chezmoi last wrote it`：你改过已部署的文件。先 `chezmoi diff`，然后 `chezmoi re-add`（保留你的改动）或 `chezmoi apply --force`（采用仓库里的版本）。
+- `chezmoi: ... has changed since chezmoi last wrote it`：你改过已部署的文件。先 `chezmoi diff`，然后 `chezmoi re-add`（保留你的改动）或 `chezmoi apply --force`（采用仓库里的版本；你的改动会先进入备份）。
 - tmux 配置问题：`tmux -L test -f ~/.tmux.conf new-session -d` 会在独立 socket 上加载它；`tmux -L test show-messages` 会打印错误。
 - 更多内容见 [`docs/architecture.md`](docs/architecture.md)。
 

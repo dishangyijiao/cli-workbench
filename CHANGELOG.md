@@ -6,11 +6,15 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Changed
 
-- **Breaking:** deployment moved from the home-grown symlink tooling to [chezmoi](https://www.chezmoi.io). The repository is now a chezmoi source tree under `home/` (`.chezmoiroot`); `config/` is gone. Files are copied, not symlinked, so an edit takes effect after `chezmoi apply`, and chezmoi does not back up files it replaces: run `chezmoi diff` first. To migrate from the symlink setup, remove the old links, point `sourceDir` at your clone, and `chezmoi apply` (see the README).
+- **Breaking:** deployment moved from the home-grown symlink tooling to [chezmoi](https://www.chezmoi.io). The repository is now a chezmoi source tree under `home/` (`.chezmoiroot`); `config/` is gone. Files are copied, not symlinked, so an edit takes effect after `chezmoi apply`, and chezmoi itself keeps no backup of files it replaces, so `scripts/backup-before-apply` (a `hooks.apply.pre` hook written by `chezmoi init`) does it. To migrate from the symlink setup, remove the old links, run `chezmoi init --source <clone>`, and `chezmoi apply` (see the README).
 - The portable Git settings are now deployed to `~/.config/git/config`, which Git reads by itself; the `include.path` line in `~/.gitconfig` is no longer needed.
 - `zshrc` loads `path.zsh` from `~/.config/zsh/` instead of from next to itself; `~/.config/zsh` is created with mode 700.
 - CI installs chezmoi (macOS: Homebrew; Ubuntu: a pinned, checksum-verified release).
 - `privacy-scan` no longer mistakes `home/dot_*` for a personal `/home/<name>` path.
+
+### Added
+
+- `scripts/backup-before-apply` and `home/.chezmoi.toml.tmpl`: before every `chezmoi apply` (including `apply <one file>`), files that would be replaced, including ones edited since chezmoi wrote them, are copied to `~/.cli-workbench-backup/<timestamp>/` (mode 700, symlinks preserved, `RESTORE` note). Nothing is created when nothing changes, `--dry-run` has no side effects, and a failed backup refuses the apply.
 
 ### Removed
 

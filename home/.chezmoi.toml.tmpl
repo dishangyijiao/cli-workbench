@@ -1,0 +1,6 @@
+{{- /* Written by `chezmoi init --source <this clone>` (or `chezmoi init <user>/cli-workbench`). Not deployed to $HOME. */ -}}
+sourceDir = {{ .chezmoi.sourceDir | dir | quote }}
+
+# chezmoi keeps no backup of files it replaces; this hook does, before every apply.
+[hooks.apply.pre]
+command = {{ joinPath (.chezmoi.sourceDir | dir) "scripts" "backup-before-apply" | quote }}

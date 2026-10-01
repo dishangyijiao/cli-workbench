@@ -20,7 +20,7 @@ Keep your command-line environment (zsh, tmux, Ghostty, Git, the Claude Code sta
 | **Required** | `git` and [`chezmoi`](https://www.chezmoi.io/install/) (`brew install chezmoi`) |
 | **Optional** | `fzf` (0.48+ for the shell integration), `zoxide`, `starship`, `zsh-syntax-highlighting`, `jq` (status line), [Ghostty](https://ghostty.org) and a Nerd Font, Homebrew |
 
-**What it changes on your machine:** exactly the files under [`home/`](home) that chezmoi deploys (the table below), plus a zsh completion cache in `~/.cache/zsh/`. **chezmoi does not back up files it replaces.** Always run `chezmoi diff` first, and copy away anything you would miss before `apply`.
+**What it changes on your machine:** exactly the files under [`home/`](home) that chezmoi deploys (the table below), a zsh completion cache in `~/.cache/zsh/`, and backups of the files it replaces in `~/.cli-workbench-backup/<timestamp>/` (chezmoi itself keeps none; see Safety model).
 
 ## Quick start
 
@@ -28,15 +28,14 @@ Keep your command-line environment (zsh, tmux, Ghostty, Git, the Claude Code sta
 brew install chezmoi
 git clone https://github.com/dishangyijiao/cli-workbench.git ~/dev/cli-workbench   # or your fork; any location works
 
-mkdir -p ~/.config/chezmoi
-printf 'sourceDir = "%s"\n' ~/dev/cli-workbench > ~/.config/chezmoi/chezmoi.toml  # use this clone as the source
+chezmoi init --source ~/dev/cli-workbench   # use this clone as the source, and install the backup hook (below)
 
 chezmoi diff                       # read-only: what would change in $HOME
 chezmoi apply ~/.tmux.conf         # apply ONE file first, then look at the result
 chezmoi apply                      # then everything
 ```
 
-Or let chezmoi do the clone: `chezmoi init --apply <your-github-user>/cli-workbench`.
+Or let chezmoi do the clone: `chezmoi init <your-github-user>/cli-workbench`, then the same `diff` and `apply`.
 
 What gets deployed (the layout follows [chezmoi's naming](https://www.chezmoi.io/reference/source-state-attributes/): `dot_` becomes `.`, `executable_` sets the mode, `private_` makes the directory 700):
 
@@ -79,7 +78,8 @@ scripts/privacy-scan [--all]     # secrets, personal paths and e-mail addresses 
 ## Safety model
 
 - `chezmoi diff` and `chezmoi apply --dry-run` change nothing.
-- **chezmoi overwrites** a file whose content differs from the source, without a backup. Read the diff first. (A file chezmoi wrote earlier and you edited since makes it stop and ask instead.)
+- **Backup before every apply.** chezmoi overwrites a differing file without keeping a copy. `chezmoi init` installs a hook ([`scripts/backup-before-apply`](scripts/backup-before-apply)) that copies every file the apply is about to replace, including files you edited after chezmoi wrote them, to `~/.cli-workbench-backup/<timestamp>/` first. Directory mode 700, symlinks kept as symlinks, a `RESTORE` note with one copy-paste command per file. If nothing would change, nothing is created. If the backup fails, the apply is refused. `--dry-run` has no side effects.
+- The hook is part of the config `chezmoi init` writes. If you only create `chezmoi.toml` by hand, or run `chezmoi apply --source ...` without having run `init`, there is **no** backup.
 - It only touches the targets in the table above, and it deletes nothing unless you ask for it (`chezmoi destroy`).
 - `privacy-scan` runs in the pre-commit hook and in CI, so keys, tokens, personal paths and e-mail addresses do not reach a public fork by accident.
 
@@ -91,12 +91,12 @@ To scan other directories, uncomment `WORKSPACE_ROOTS` in `home/dot_tmux.conf`. 
 
 ## Uninstall / restore
 
-chezmoi leaves ordinary files behind. Restore your own copies (made before `apply`), or delete what you no longer want. `chezmoi unmanage <target>` stops managing one file.
+Restore from `~/.cli-workbench-backup/<timestamp>/RESTORE` (one command per file), or delete what you no longer want. `chezmoi unmanage <target>` stops managing one file.
 
 ## Troubleshooting
 
 - Debian/Ubuntu: `compinit: initialization aborted` or "insecure directories" at shell start comes from the system's `/etc/zsh/zshrc`, which runs its own `compinit` before yours when `/usr/share/zsh` has loose permissions. The zshrc here already runs `compinit`, so put `skip_global_compinit=1` in `~/.zshenv` (or fix the permissions, see `compaudit`).
-- `chezmoi: ... has changed since chezmoi last wrote it`: you edited the deployed file. Run `chezmoi diff`, then `chezmoi re-add` (keep your edit) or `chezmoi apply --force` (take the repository's).
+- `chezmoi: ... has changed since chezmoi last wrote it`: you edited the deployed file. Run `chezmoi diff`, then `chezmoi re-add` (keep your edit) or `chezmoi apply --force` (take the repository's; your edit goes to the backup first).
 - tmux config problems: `tmux -L test -f ~/.tmux.conf new-session -d` loads it on a private socket; `tmux -L test show-messages` prints errors.
 - More in [`docs/architecture.md`](docs/architecture.md).
 
