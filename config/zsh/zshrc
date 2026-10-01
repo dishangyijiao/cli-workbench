@@ -43,6 +43,8 @@ if (( $+commands[starship] )); then eval "$(starship init zsh)"; else PROMPT='%F
 (( $+commands[zoxide] )) && eval "$(zoxide init zsh)"
 if (( $+commands[fzf] )) && fzf --zsh >/dev/null 2>&1; then source <(fzf --zsh); fi   # fzf 0.48 or newer
 
+if ls --color=auto / >/dev/null 2>&1; then alias ls='ls --color=auto'; else alias ls='ls -G'; fi   # GNU or BSD (macOS)
+alias grep='grep --color=auto'
 alias ll='ls -lah'
 alias ..='cd ..'
 

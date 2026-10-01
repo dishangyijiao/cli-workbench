@@ -41,7 +41,7 @@ scripts/check tmux
 | 组件 | 目标 | 说明 |
 |---|---|---|
 | `tmux`、`tmux-scripts` | `~/.tmux.conf`、`~/.tmux/scripts` | 前缀键 `Ctrl-a`、vi 键位、鼠标、工作台切换器 |
-| `zsh` | `~/.zshrc` | 会替换你现有的 `.zshrc`（先备份，不会删除）；请先把你自己的改动移到 `local.zsh` |
+| `zsh` | `~/.zshrc` | 会替换你现有的 `.zshrc`（先备份，不会删除）；请先把你自己的改动移到 `local.zsh`。nvm、bun 等安装器会往 `~/.zshrc` 追加内容，它现在就是本仓库的文件：请把这类行移到 `local.zsh`，不要提交 |
 | `zsh-autostart` | `~/.config/zsh/tmux-autostart.zsh` | 新标签页的 tmux 会话选择器，可选，默认关闭 |
 | `ghostty` | `~/.config/ghostty/config` | Catppuccin Mocha 主题、Nerd Font、macOS 标签式标题栏 |
 | `claude-statusline` | `~/.claude/statusline.sh` | 仅在使用 Claude Code 时需要 |

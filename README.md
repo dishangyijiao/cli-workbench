@@ -41,7 +41,7 @@ Components (from `links.txt`):
 | Component | Target | Notes |
 |---|---|---|
 | `tmux`, `tmux-scripts` | `~/.tmux.conf`, `~/.tmux/scripts` | prefix `Ctrl-a`, vi keys, mouse, workspace switcher |
-| `zsh` | `~/.zshrc` | replaces your `.zshrc` (backed up, not deleted); move your own tweaks to `local.zsh` first |
+| `zsh` | `~/.zshrc` | replaces your `.zshrc` (backed up, not deleted); move your own tweaks to `local.zsh` first. Installers (nvm, bun, ...) append to `~/.zshrc`, which is this repo's file now: move such lines into `local.zsh` instead of committing them |
 | `zsh-autostart` | `~/.config/zsh/tmux-autostart.zsh` | optional tmux session chooser for new tabs, off by default |
 | `ghostty` | `~/.config/ghostty/config` | Catppuccin Mocha, Nerd Font, macOS tabs title bar |
 | `claude-statusline` | `~/.claude/statusline.sh` | only if you use Claude Code |
