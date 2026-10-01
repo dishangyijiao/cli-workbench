@@ -136,14 +136,15 @@ check "counters are cached within the TTL" "cache-proj ⎇ main ?1" "$second"
 check "first call sees the real state" "cache-proj ⎇ main ?1" "$first"
 check "TTL 0 bypasses the cache" "cache-proj ⎇ main ?2" "$fresh"
 
-# cache boundary: an entry exactly TTL seconds old is expired, one second younger still counts
+# cache boundary: an entry exactly TTL seconds old is expired; a clearly younger one (3 s of slack, so a busy
+# machine cannot age it past the TTL between touch and read) still counts. A 1 s margin made this test flaky.
 ago() { date -v-"$1"S +%Y%m%d%H%M.%S 2>/dev/null || date -d "$1 seconds ago" +%Y%m%d%H%M.%S; }
 D6=$(make_repo cache-edge-proj)
 echo a > "$D6/u1"
 J6=$(jq -n --arg d "$D6" '{cwd:$d}')
 printf '%s' "$J6" | STATUSLINE_CACHE_DIR="$T/cache6" sh "$SCRIPT" >/dev/null
 echo b > "$D6/u2"
-touch -t "$(ago 4)" "$T"/cache6/*
+touch -t "$(ago 2)" "$T"/cache6/*
 check "a cache entry younger than the TTL is still used" "cache-edge-proj ⎇ main ?1" \
   "$(printf '%s' "$J6" | STATUSLINE_CACHE_DIR="$T/cache6" sh "$SCRIPT" | strip)"
 touch -t "$(ago 5)" "$T"/cache6/*
