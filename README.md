@@ -5,10 +5,32 @@
 
 English | [简体中文](README.zh-CN.md)
 
-Keep your command-line environment (zsh, tmux, Ghostty, Git, the Claude Code status line, optionally Neovim) in **one Git repository** and deploy it with [chezmoi](https://www.chezmoi.io). The repository is a chezmoi source tree: fork it, edit it, run `chezmoi apply`.
+**A terminal workbench for AI coding agents.** Claude Code, Codex, Gemini CLI, Grok CLI and the like are command-line programs that read and write plain text, so the best place to run them is a terminal you control: tmux sessions per project, an editor beside the agent, ripgrep, fzf and jq for text, and every setting in a Git repository you can read, diff and fork. This repository is that environment, deployed with [chezmoi](https://www.chezmoi.io).
 
-> **What this is:** a personal-dotfiles repository with sensible default configs, laid out as a chezmoi source tree. You fork it, edit `home/`, and keep it as your own.
-> **What this is not:** a package manager, a one-click installer, or a theme pack. It does not install software and it does not manage secrets.
+```
+  prefix + P  ->  pick a project  ->  one tmux session, one window per repository
+ ┌─────────────────┬─────────────────┐
+ │                 │  claude / codex │   the first installed agent starts here,
+ │  nvim           │  gemini / grok  │   in the project's directory
+ │                 ├─────────────────┤
+ │                 │  shell          │
+ └─────────────────┴─────────────────┘
+```
+
+## What makes it a workbench, not just dotfiles
+
+| | |
+|---|---|
+| **Project → session, agent included** | A directory under `~/dev/projects` is a workspace. A folder holding several repositories is **one** workspace with a window per repository, each with its own agent pane. Nothing to register: it is discovered from the directory tree. Auto-detects `claude`, `codex`, `gemini`, `grok` (extend the list with `WORKSPACE_SWITCH_AGENTS`, pick one with `WORKSPACE_SWITCH_AGENT`, turn off with `none`). |
+| **Plain text all the way down** | Settings, history, notes and agent instructions are files. `rg`, `fzf`, `jq`, `nvim` and `git` are the tools; there is no GUI state and no database to lose. |
+| **Safe to make public** | Agents need API keys, and keys leak through dotfiles. `scripts/privacy-scan` runs as a pre-commit hook and again in CI, and recognises Anthropic (Claude), OpenAI, Google (Gemini) and xAI (Grok) keys, GitHub and AWS tokens, private keys, personal paths and e-mail addresses. tmux pane contents are not saved to disk by default. Secrets live in an untracked file. |
+| **Reversible** | Before every `chezmoi apply`, the files it would replace are backed up to `~/.cli-workbench-backup/` with a restore note. |
+| **The promises are tested** | The quick start below is run end to end in a throwaway home directory on macOS and Ubuntu. The agent pane (with stand-in agents), the backup and the privacy scanner each have their own tests. |
+
+**What is agent-specific today, honestly:** the workspace switcher starts any of the four agents; the status line (`~/.claude/statusline.sh`) is for Claude Code only; Gemini CLI and Grok CLI have no settings of their own here yet. The agents themselves are not installed by this repository.
+
+> **What this is:** a personal-dotfiles repository laid out as a chezmoi source tree. You fork it, edit `home/`, and keep it as your own.
+> **What this is not:** a package manager, a one-click installer, a theme pack, or an agent framework. It does not install software and it does not manage secrets.
 
 ## Requirements and scope
 
@@ -41,12 +63,12 @@ What gets deployed (the layout follows [chezmoi's naming](https://www.chezmoi.io
 
 | Source in `home/` | Target | Notes |
 |---|---|---|
-| `dot_tmux.conf`, `dot_tmux/scripts/` | `~/.tmux.conf`, `~/.tmux/scripts` | prefix `Ctrl-a`, vi keys, mouse, workspace switcher |
+| `dot_tmux.conf`, `dot_tmux/scripts/` | `~/.tmux.conf`, `~/.tmux/scripts` | prefix `Ctrl-a`, vi keys, mouse, workspace switcher with the agent pane |
 | `dot_zshrc`, `dot_config/private_zsh/` | `~/.zshrc`, `~/.config/zsh/{path,tmux-autostart}.zsh` | **replaces your `.zshrc`**; move your own tweaks to `~/.config/zsh/local.zsh` first. Installers (nvm, bun, ...) append to `~/.zshrc`; `chezmoi diff` shows that, so move such lines into `local.zsh` |
 | `dot_config/ghostty/config` | `~/.config/ghostty/config` | Catppuccin Mocha, Nerd Font, macOS tabs title bar |
-| `dot_claude/executable_statusline.sh` | `~/.claude/statusline.sh` | only if you use Claude Code |
+| `dot_claude/executable_statusline.sh` | `~/.claude/statusline.sh` | the Claude Code status line (project, branch, model, context, cost, rate limits); only if you use Claude Code |
 | `dot_config/git/config` | `~/.config/git/config` | portable Git settings; Git reads this file by itself, and `~/.gitconfig` (identity, credentials) stays yours |
-| `dot_config/nvim/` | `~/.config/nvim` | optional Neovim setup (lazy.nvim, LSP, Telescope, Git, debugging); plugins install on first launch and need network access. Delete the directory from your fork if you have your own |
+| `dot_config/nvim/` | `~/.config/nvim` | optional Neovim setup (lazy.nvim, LSP, Telescope, Git, debugging; no AI plugin: agents run in their own pane); plugins install on first launch and need network access. Delete the directory from your fork if you have your own |
 
 Suggested order and the manual steps (Homebrew tools, tmux plugin manager) are in [`docs/bootstrap.md`](docs/bootstrap.md).
 
@@ -85,9 +107,11 @@ scripts/privacy-scan [--all]     # secrets, personal paths and e-mail addresses 
 
 ## Workspace switcher (tmux)
 
-Press `prefix` then `P` (`Ctrl-a P`) for a picker over `~/dev/projects`. Every directory directly under a root is a workspace, opened as one tmux session with the editor on the left and a shell on the right. A directory that is not a repository but contains several (a multi-repo product) is **one** workspace with one window per repository. Choosing an existing workspace only switches to it. It needs tmux 3.2+ and `fzf`.
+Press `prefix` then `P` (`Ctrl-a P`) for a picker over `~/dev/projects`. Every directory directly under a root is a workspace, opened as one tmux session: the editor on the left, on the right an AI agent over a shell. A directory that is not a repository but contains several (a multi-repo product) is **one** workspace with one window per repository. Choosing an existing workspace only switches to it. It needs tmux 3.2+ and `fzf`.
 
-To scan other directories, uncomment `WORKSPACE_ROOTS` in `home/dot_tmux.conf`. Details are in the header of `home/dot_tmux/scripts/executable_workspace-switch.sh`.
+- **Agent pane:** the first installed of `claude codex gemini grok` is started in the project directory. If none is installed, the window has just the editor and a shell, as before. `WORKSPACE_SWITCH_AGENT="claude --continue"` picks one (with arguments), `none` turns it off, `WORKSPACE_SWITCH_AGENTS="aider claude"` changes the candidates and their order. Set these with `set-environment -g` in `home/dot_tmux.conf`, next to `WORKSPACE_ROOTS`.
+- **Roots:** uncomment `WORKSPACE_ROOTS` in `home/dot_tmux.conf` to scan other directories.
+- Details are in the header of `home/dot_tmux/scripts/executable_workspace-switch.sh`.
 
 ## Uninstall / restore
 

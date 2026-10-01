@@ -37,7 +37,7 @@ rule() { # name, extended regex, [grep flags]
 }
 
 rule private-key  '-----BEGIN [A-Z ]*PRIVATE KEY-----'
-rule secret-token '(sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35})'
+rule secret-token '(sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}|xai-[A-Za-z0-9_-]{20,})'
 
 # Secret-looking assignment with a literal value (a $VARIABLE or $(command) is fine), minus obvious placeholders.
 grep -i -E -e '(API_?KEY|SECRET|TOKEN|PASSWORD|PASSWD|PRIVATE_?KEY)[A-Za-z_]*[[:space:]]*[=:][[:space:]]*['"'"'"]?[A-Za-z0-9/+_.-]{12,}' "$work/lines" \

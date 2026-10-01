@@ -18,6 +18,9 @@ scan() { (cd "$R" && WB_DENY_FILE=$DENY scripts/privacy-scan "$@" 2>&1); }
 KEY="sk-""abcdefghijklmnopqrstuvwxyz0123456789"
 GH="ghp_""abcdefghijklmnopqrstuvwxyz0123456789"
 AWS="AKIA""ABCDEFGHIJKLMNOP"
+ANT="sk-ant-""api03-abcdefghijklmnopqrstuvwxyz0123456789"      # Claude
+GOOG="AIza""SyAbcdefghijklmnopqrstuvwxyz0123456789"           # Gemini
+XAI="xai-""abcdefghijklmnopqrstuvwxyzABCDEFGHIJ0123456789"     # Grok
 PEM="-----BEGIN RSA PRIVATE"" KEY-----"
 HOMEPATH="/Users/""alice/.local/bin"
 
@@ -43,6 +46,9 @@ check_rule() { # description, line-to-write, expected rule name, secret fragment
   t_cleanup
 }
 check_rule "API key"        "export OPENAI_API_KEY=$KEY"            "secret-token"  "$KEY"
+check_rule "Anthropic key (Claude)" "export ANTHROPIC_API_KEY=$ANT"   "secret-token"  "$ANT"
+check_rule "Google key (Gemini)"    "export GEMINI_API_KEY=$GOOG"    "secret-token"  "$GOOG"
+check_rule "xAI key (Grok)"         "export XAI_API_KEY=$XAI"        "secret-token"  "$XAI"
 check_rule "GitHub token"   "export GH=$GH"                          "secret-token"  "$GH"
 check_rule "AWS key id"     "aws=$AWS"                               "secret-token"  "$AWS"
 check_rule "private key"    "$PEM"                                   "private-key"   "PRIVATE"

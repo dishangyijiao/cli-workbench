@@ -12,7 +12,7 @@ mkdir -p "$ROOT/alpha/.git" "$ROOT/dotted.name/.git" "$ROOT/plain" "$ROOT2/alpha
 mkdir -p "$ROOT/group/beta/.git" "$ROOT/group/group-api/.git" "$ROOT/group/notes"
 mkdir -p "$ROOT/group/wt"; echo "gitdir: /elsewhere" > "$ROOT/group/wt/.git"      # a worktree: .git is a file
 mkdir -p "$ROOT/mono/mono-a/.git" "$ROOT/mono/mono/.git"                                  # main repo is named like the group
-export WORKSPACE_ROOTS="$ROOT $ROOT2" WORKSPACE_SWITCH_EDITOR="" WORKSPACE_SWITCH_NO_ATTACH=1
+export WORKSPACE_ROOTS="$ROOT $ROOT2" WORKSPACE_SWITCH_EDITOR="" WORKSPACE_SWITCH_AGENT="" WORKSPACE_SWITCH_NO_ATTACH=1
 export WORKSPACE_SWITCH_SOCKET=wbtest$$
 unset TMUX
 cleanup() { tmux -L "$WORKSPACE_SWITCH_SOCKET" kill-server 2>/dev/null; case $T_DIR in /tmp/*|/var/folders/*|/private/var/folders/*) rm -rf "$T_DIR";; esac; }
@@ -101,5 +101,44 @@ assert_eq "no duplicate session" 1 "$(X list-sessions -F '#S' | grep -c 'byhand'
 echo "bad input is refused"
 "$PS" --open "$ROOT/nope" >/dev/null 2>&1; assert_eq "missing dir -> exit 1" 1 $?
 "$PS" --bogus >/dev/null 2>&1; assert_eq "unknown option -> exit 2" 2 $?
+
+echo "an AI CLI agent gets its own pane: editor | agent over shell"
+FAKE=$T_DIR/fakebin; mkdir -p "$FAKE"
+for a in fakeclaude fakecodex; do printf '#!/bin/sh\necho "AGENT-STARTED %s in $(pwd -P | sed "s#.*/##")"\nexec sleep 300\n' "$a" > "$FAKE/$a"; chmod +x "$FAKE/$a"; done
+export PATH="$FAKE:$PATH"
+mkdir -p "$ROOT/ag1/.git" "$ROOT/ag2/.git" "$ROOT/ag3/.git" "$ROOT/ag4/.git" "$ROOT/ag5/.git"
+agent_text() { local i t; for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do t=$(X capture-pane -p -t "$1" 2>/dev/null); case $t in *AGENT-STARTED*) break;; esac; sleep 0.1; done; echo "$t"; }
+WORKSPACE_SWITCH_AGENT=fakeclaude "$PS" --open "$ROOT/ag1" >/dev/null
+assert_eq "three panes" 3 "$(panes '=ag1:main')"
+assert_contains "the agent is started in the project directory" "AGENT-STARTED fakeclaude in ag1" "$(agent_text "$(X list-panes -t '=ag1:main' -F '#{pane_id}' | sed -n 2p)")"
+assert_eq "the shell pane under it started nothing" "" "$(X capture-pane -p -t "$(X list-panes -t '=ag1:main' -F '#{pane_id}' | sed -n 3p)" | grep AGENT-STARTED)"
+geo=$(X list-panes -t '=ag1:main' -F '#{pane_left} #{pane_top}' | tr '\n' ';')
+assert_eq "editor left; agent and shell stacked on the right" 1 "$(echo "$geo" | awk -F';' '{split($1,e," "); split($2,a," "); split($3,s," "); print (e[1]==0 && a[1]>0 && a[1]==s[1] && s[2]>a[2]) ? 1 : 0}')"
+
+echo "auto-detect takes the first installed candidate, in the given order"
+WORKSPACE_SWITCH_AGENT=auto WORKSPACE_SWITCH_AGENTS="not-installed-x fakecodex fakeclaude" "$PS" --open "$ROOT/ag2" >/dev/null
+assert_contains "second candidate chosen" "AGENT-STARTED fakecodex" "$(agent_text "$(X list-panes -t '=ag2:main' -F '#{pane_id}' | sed -n 2p)")"
+
+echo "no candidate installed: the usual two panes"
+WORKSPACE_SWITCH_AGENT=auto WORKSPACE_SWITCH_AGENTS="not-installed-x not-installed-y" "$PS" --open "$ROOT/ag3" >/dev/null
+assert_eq "two panes" 2 "$(panes '=ag3:main')"
+
+echo "an explicitly named agent that is missing is reported, not fatal"
+err=$(WORKSPACE_SWITCH_AGENT="not-installed-x --flag" "$PS" --open "$ROOT/ag4" 2>&1 >/dev/null)
+assert_contains "says so" "agent 'not-installed-x' is not installed" "$err"
+assert_eq "two panes" 2 "$(panes '=ag4:main')"
+
+echo "the agent can be switched off, and takes arguments"
+WORKSPACE_SWITCH_AGENT=none WORKSPACE_SWITCH_AGENTS="fakeclaude" "$PS" --open "$ROOT/ag5" >/dev/null
+assert_eq "none: two panes although an agent is installed" 2 "$(panes '=ag5:main')"
+mkdir -p "$ROOT/ag6/.git"
+WORKSPACE_SWITCH_AGENT="fakeclaude --continue" "$PS" --open "$ROOT/ag6" >/dev/null
+assert_eq "a command with arguments is accepted" 3 "$(panes '=ag6:main')"
+
+echo "a group gets an agent in every repo window"
+mkdir -p "$ROOT/team/t-one/.git" "$ROOT/team/t-two/.git"
+WORKSPACE_SWITCH_AGENT=fakeclaude "$PS" --open "$ROOT/team" >/dev/null
+assert_eq "t-one has three panes" 3 "$(panes '=team:t-one')"
+assert_eq "t-two has three panes" 3 "$(panes '=team:t-two')"
 
 t_done

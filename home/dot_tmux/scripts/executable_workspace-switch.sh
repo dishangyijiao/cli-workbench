@@ -5,7 +5,8 @@
 #   workspace-switch.sh --open DIR      open/switch to DIR's session without fzf
 #   workspace-switch.sh --info DIR      one-screen summary used as the fzf preview
 # A workspace is every directory directly under a root ($WORKSPACE_ROOTS, space separated; default ~/dev/projects).
-#   * a git repo or a plain directory -> one session, one window: editor left (~60%), shell right (~40%)
+#   * a git repo or a plain directory -> one session, one window: editor left (~60%), shell right (~40%);
+#     with an AI CLI agent: editor left (50%), the agent top right, a shell under it
 #   * a group directory (not a git repo itself, but with git repos inside, e.g. my-product/)
 #     -> one session rooted at the group; one window per direct git repo, each with the same two panes.
 #     The repo named like the group comes first. Git worktrees (a .git *file*) get no window of their own.
@@ -14,11 +15,16 @@
 # Why not sesh/tmuxp: their group/window layouts are static config per project; the point here is that a group
 # is discovered from the directory tree, with no per-project registry to maintain.
 #   WORKSPACE_SWITCH_EDITOR   command started in each left pane (default: nvim; empty = plain shell)
+#   WORKSPACE_SWITCH_AGENT    command started in the agent pane. Unset = the first installed of WORKSPACE_SWITCH_AGENTS,
+#                             none installed = no agent pane; "none" or empty = never; anything else = that command
+#                             (e.g. "claude --continue"; if its program is missing, a note is printed and there is no agent pane)
+#   WORKSPACE_SWITCH_AGENTS   candidates for auto-detection, in order (default: claude codex gemini grok)
 #   WORKSPACE_SWITCH_SOCKET   use `tmux -L <name>` (tests)      WORKSPACE_SWITCH_NO_ATTACH=1  do not attach/switch
 #   WORKSPACE_SWITCH_TMUX     tmux binary to use (tests: fault injection)
 set -u
 ROOTS=${WORKSPACE_ROOTS:-$HOME/dev/projects}
 EDITOR_CMD=${WORKSPACE_SWITCH_EDITOR-nvim}
+AGENT_CANDIDATES=${WORKSPACE_SWITCH_AGENTS:-claude codex gemini grok}
 TMUX_BIN=${WORKSPACE_SWITCH_TMUX:-tmux}
 NAME=$(basename "$0")
 
@@ -37,6 +43,17 @@ group_repos() {   # direct subdirectories that are git repos (a .git DIRECTORY; 
   local s g; g=$(basename "$1")
   [ -d "$1/$g/.git" ] && echo "$1/$g"
   for s in "$1"/*/; do s=${s%/}; [ "$s" = "$1/$g" ] && continue; [ -d "$s/.git" ] && echo "$s"; done
+}
+
+have() { ( PATH="$PATH:$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin"; command -v "$1" >/dev/null 2>&1 ); }   # a menu-launched popup may lack these
+
+agent_cmd() {     # the agent command to start, or nothing
+  local a=${WORKSPACE_SWITCH_AGENT-auto} c
+  case $a in
+    ""|none) ;;
+    auto) for c in $AGENT_CANDIDATES; do if have "$c"; then echo "$c"; return 0; fi; done ;;
+    *) if have "${a%% *}"; then echo "$a"; else die "agent '${a%% *}' is not installed; opening without an agent pane"; fi ;;
+  esac
 }
 
 is_group() { [ ! -e "$1/.git" ] && [ -n "$(group_repos "$1")" ]; }
@@ -76,16 +93,23 @@ pick_name() {     # a session name that is free, or already belongs to this dire
   echo "${base}_${h}"
 }
 
-two_panes() {     # $1 = window id, $2 = directory: editor on the left, shell on the right
-  local left
+two_panes() {     # $1 = window id, $2 = directory: editor on the left; on the right a shell, or (AGENT set) an agent over a shell
+  local left right
   left=$(T display-message -p -t "$1" '#{pane_id}') || return 1
-  T split-window -h -l 40% -t "$left" -c "$2" || return 1
+  if [ -z "$AGENT" ]; then
+    T split-window -h -l 40% -t "$left" -c "$2" || return 1
+  else
+    right=$(T split-window -h -l 50% -t "$left" -c "$2" -P -F '#{pane_id}') || return 1
+    T split-window -v -l 25% -t "$right" -c "$2" || return 1
+    T send-keys -t "$right" "$AGENT" Enter || return 1
+  fi
   [ -n "$EDITOR_CMD" ] && { T send-keys -t "$left" "$EDITOR_CMD" Enter || return 1; }
   T select-pane -t "$left"
 }
 
 create_workspace() {   # $1 = dir, $2 = session name
   local dir=$1 name=$2 gname wn r wid first="" out repos
+  AGENT=$(agent_cmd)
   gname=$(basename "$dir")
   if is_group "$dir"; then repos=$(group_repos "$dir"); else repos=$dir; fi
   while read -r r; do

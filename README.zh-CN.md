@@ -5,10 +5,32 @@
 
 [English](README.md) | 简体中文
 
-把你的命令行环境（zsh、tmux、Ghostty、Git、Claude Code 状态栏，以及可选的 Neovim）放进**同一个 Git 仓库**，并用 [chezmoi](https://www.chezmoi.io) 部署。这个仓库就是一个 chezmoi 源目录：fork、修改，然后 `chezmoi apply`。
+**给 AI 编码代理用的终端工作台。** Claude Code、Codex、Gemini CLI、Grok CLI 这些都是读写纯文本的命令行程序，所以运行它们最合适的地方是一个你完全掌控的终端：每个项目一个 tmux 会话，编辑器紧挨着代理，用 ripgrep、fzf、jq 处理文本，所有设置都在一个你能读、能 diff、能 fork 的 Git 仓库里。这个仓库就是这套环境，用 [chezmoi](https://www.chezmoi.io) 部署。
 
-> **它是什么：** 一个自带合理默认配置的个人 dotfiles 仓库，结构是 chezmoi 源目录。你 fork 它，修改 `home/`，把它变成你自己的。
-> **它不是什么：** 不是包管理器、不是一键安装器、也不是主题包。它不会安装软件，也不管理密钥。
+```
+  prefix + P  ->  选一个项目  ->  一个 tmux 会话，每个仓库一个窗口
+ ┌─────────────────┬─────────────────┐
+ │                 │  claude / codex │   第一个已安装的代理在这里启动，
+ │  nvim           │  gemini / grok  │   工作目录就是项目目录
+ │                 ├─────────────────┤
+ │                 │  shell          │
+ └─────────────────┴─────────────────┘
+```
+
+## 为什么它是工作台，而不只是 dotfiles
+
+| | |
+|---|---|
+| **项目 → 会话，代理包含在内** | `~/dev/projects` 下的每个目录是一个工作台。包含多个仓库的文件夹算**一个**工作台，每个仓库一个窗口，每个窗口都有自己的代理窗格。不需要登记：直接从目录树发现。自动探测 `claude`、`codex`、`gemini`、`grok`（用 `WORKSPACE_SWITCH_AGENTS` 扩展候选，用 `WORKSPACE_SWITCH_AGENT` 指定某一个，设为 `none` 关闭）。 |
+| **一路都是纯文本** | 设置、历史、笔记和代理的指令都是文件。工具是 `rg`、`fzf`、`jq`、`nvim` 和 `git`；没有 GUI 状态，没有会丢的数据库。 |
+| **可以放心公开** | 代理需要 API 密钥，而密钥最容易通过 dotfiles 泄露。`scripts/privacy-scan` 在 pre-commit 钩子里运行，CI 里再跑一次，能识别 Anthropic（Claude）、OpenAI、Google（Gemini）、xAI（Grok）的密钥，以及 GitHub 和 AWS 令牌、私钥、个人路径和邮箱地址。tmux 窗格内容默认不落盘。密钥放在不入库的文件里。 |
+| **可回退** | 每次 `chezmoi apply` 之前，会把将被替换的文件备份到 `~/.cli-workbench-backup/`，并附恢复说明。 |
+| **承诺都有测试** | 下面的快速开始会在临时 home 目录里端到端运行（macOS 和 Ubuntu）。代理窗格（用替身代理）、备份和隐私扫描各有自己的测试。 |
+
+**如实说明，目前针对代理的部分有这些：** 工作台切换器可以启动这四个代理中的任何一个；状态栏（`~/.claude/statusline.sh`）只适用于 Claude Code；Gemini CLI 和 Grok CLI 在这里还没有自己的设置。本仓库不负责安装这些代理。
+
+> **它是什么：** 一个个人 dotfiles 仓库，结构是 chezmoi 源目录。你 fork 它，修改 `home/`，把它变成你自己的。
+> **它不是什么：** 不是包管理器、不是一键安装器、不是主题包，也不是代理框架。它不会安装软件，也不管理密钥。
 
 ## 使用条件与适用范围
 
@@ -41,12 +63,12 @@ chezmoi apply                      # 再应用全部
 
 | `home/` 中的源 | 目标 | 说明 |
 |---|---|---|
-| `dot_tmux.conf`、`dot_tmux/scripts/` | `~/.tmux.conf`、`~/.tmux/scripts` | 前缀键 `Ctrl-a`、vi 键位、鼠标、工作台切换器 |
+| `dot_tmux.conf`、`dot_tmux/scripts/` | `~/.tmux.conf`、`~/.tmux/scripts` | 前缀键 `Ctrl-a`、vi 键位、鼠标、带代理窗格的工作台切换器 |
 | `dot_zshrc`、`dot_config/private_zsh/` | `~/.zshrc`、`~/.config/zsh/{path,tmux-autostart}.zsh` | **会替换你的 `.zshrc`**；先把自己的改动挪到 `~/.config/zsh/local.zsh`。安装器（nvm、bun 等）会往 `~/.zshrc` 追加内容，`chezmoi diff` 能看到，请把这类行挪进 `local.zsh` |
 | `dot_config/ghostty/config` | `~/.config/ghostty/config` | Catppuccin Mocha 主题、Nerd Font、macOS 标签式标题栏 |
-| `dot_claude/executable_statusline.sh` | `~/.claude/statusline.sh` | 仅在使用 Claude Code 时需要 |
+| `dot_claude/executable_statusline.sh` | `~/.claude/statusline.sh` | Claude Code 状态栏（项目、分支、模型、上下文、费用、速率限制）；仅在使用 Claude Code 时需要 |
 | `dot_config/git/config` | `~/.config/git/config` | 可移植的 Git 设置；Git 会自动读取这个文件，`~/.gitconfig`（身份、凭据）仍归你自己 |
-| `dot_config/nvim/` | `~/.config/nvim` | 可选的 Neovim 配置（lazy.nvim、LSP、Telescope、Git、调试）；插件在首次启动时安装，需要联网。已有自己的配置，就在你的 fork 里删掉这个目录 |
+| `dot_config/nvim/` | `~/.config/nvim` | 可选的 Neovim 配置（lazy.nvim、LSP、Telescope、Git、调试；不含 AI 插件：代理在自己的窗格里运行）；插件在首次启动时安装，需要联网。已有自己的配置，就在你的 fork 里删掉这个目录 |
 
 建议的顺序和需要手动完成的步骤（Homebrew 工具、tmux 插件管理器）见 [`docs/bootstrap.md`](docs/bootstrap.md)。
 
@@ -85,9 +107,11 @@ scripts/privacy-scan [--all]     # 扫描已暂存（或全部已跟踪）文件
 
 ## 工作台切换器（tmux）
 
-按 `前缀键` 再按 `P`（`Ctrl-a P`），弹出 `~/dev/projects` 下的选择器。根目录下的每个直接子目录都是一个工作台，会打开成一个 tmux 会话：左边编辑器，右边 shell。不是仓库、但里面包含多个仓库的目录（多仓库产品）算**一个**工作台，每个仓库一个窗口。选择已存在的工作台只会切换过去。需要 tmux 3.2+ 和 `fzf`。
+按 `前缀键` 再按 `P`（`Ctrl-a P`），弹出 `~/dev/projects` 下的选择器。根目录下的每个直接子目录都是一个工作台，会打开成一个 tmux 会话：左边编辑器，右边上面是 AI 代理、下面是 shell。不是仓库、但里面包含多个仓库的目录（多仓库产品）算**一个**工作台，每个仓库一个窗口。选择已存在的工作台只会切换过去。需要 tmux 3.2+ 和 `fzf`。
 
-要扫描其他目录，取消 `home/dot_tmux.conf` 里 `WORKSPACE_ROOTS` 的注释。详细说明在 `home/dot_tmux/scripts/executable_workspace-switch.sh` 开头的注释里。
+- **代理窗格：** 在项目目录里启动 `claude codex gemini grok` 中第一个已安装的。一个都没装时，窗口只有编辑器和 shell，和以前一样。`WORKSPACE_SWITCH_AGENT="claude --continue"` 指定某一个（可带参数），`none` 关闭，`WORKSPACE_SWITCH_AGENTS="aider claude"` 修改候选及顺序。在 `home/dot_tmux.conf` 里用 `set-environment -g` 设置，与 `WORKSPACE_ROOTS` 放在一起。
+- **根目录：** 取消 `home/dot_tmux.conf` 里 `WORKSPACE_ROOTS` 的注释，可以扫描其他目录。
+- 详细说明在 `home/dot_tmux/scripts/executable_workspace-switch.sh` 开头的注释里。
 
 ## 卸载 / 恢复
 
