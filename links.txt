@@ -5,4 +5,4 @@ tmux                 config/tmux/tmux.conf                ~/.tmux.conf
 claude-statusline    config/claude/statusline.sh          ~/.claude/statusline.sh
 zsh-autostart        config/zsh/tmux-autostart.zsh        ~/.config/zsh/tmux-autostart.zsh
 zsh                  config/zsh/zshrc                     ~/.zshrc
-# nvim            config/nvim                          ~/.config/nvim      # add your own config/nvim, then uncomment
+nvim                 config/nvim                          ~/.config/nvim

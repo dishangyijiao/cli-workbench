@@ -45,6 +45,7 @@ Components (from `links.txt`):
 | `zsh-autostart` | `~/.config/zsh/tmux-autostart.zsh` | optional tmux session chooser for new tabs, off by default |
 | `ghostty` | `~/.config/ghostty/config` | Catppuccin Mocha, Nerd Font, macOS tabs title bar |
 | `claude-statusline` | `~/.claude/statusline.sh` | only if you use Claude Code |
+| `nvim` | `~/.config/nvim` | optional Neovim setup (lazy.nvim, LSP, Telescope, Git, debugging); plugins install on first launch and need network access. Skip it if you have your own |
 
 Git: the portable settings are not linked, because tools write to `~/.gitconfig`. Include them instead:
 

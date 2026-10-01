@@ -45,6 +45,7 @@ scripts/check tmux
 | `zsh-autostart` | `~/.config/zsh/tmux-autostart.zsh` | 新标签页的 tmux 会话选择器，可选，默认关闭 |
 | `ghostty` | `~/.config/ghostty/config` | Catppuccin Mocha 主题、Nerd Font、macOS 标签式标题栏 |
 | `claude-statusline` | `~/.claude/statusline.sh` | 仅在使用 Claude Code 时需要 |
+| `nvim` | `~/.config/nvim` | 可选的 Neovim 配置（lazy.nvim、LSP、Telescope、Git、调试）；插件在首次启动时安装，需要联网。已有自己的配置就不要应用它 |
 
 Git：可移植的那部分设置没有做成链接，因为各种工具会写 `~/.gitconfig`。请改用 include：
 

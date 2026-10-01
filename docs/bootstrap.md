@@ -13,6 +13,7 @@ scripts/link tmux --apply
 scripts/link claude-statusline --apply     # only if you use Claude Code
 scripts/link zsh-autostart --apply
 scripts/link zsh --apply
+scripts/link nvim --apply                  # optional; skip it if you have your own Neovim config
 scripts/check
 ```
 
