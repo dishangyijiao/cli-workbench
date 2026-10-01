@@ -23,7 +23,7 @@ English | [简体中文](README.zh-CN.md)
 |---|---|
 | **Project → session, agent included** | A directory under `~/dev/projects` is a workspace. A folder holding several repositories is **one** workspace with a window per repository, each with its own agent pane. Nothing to register: it is discovered from the directory tree. Auto-detects `claude`, `codex`, `gemini`, `grok` (extend the list with `WORKSPACE_SWITCH_AGENTS`, pick one with `WORKSPACE_SWITCH_AGENT`, turn off with `none`). |
 | **Plain text all the way down** | Settings, history, notes and agent instructions are files. `rg`, `fzf`, `jq`, `nvim` and `git` are the tools; there is no GUI state and no database to lose. **One instruction text is deployed to every agent** (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`), with your private rules appended from an untracked file. |
-| **Safe to make public** | Agents need API keys, and keys leak through dotfiles. `scripts/privacy-scan` runs as a pre-commit hook and again in CI, and recognises Anthropic (Claude), OpenAI, Google (Gemini) and xAI (Grok) keys, GitHub and AWS tokens, private keys, personal paths and e-mail addresses. tmux pane contents are not saved to disk by default. Secrets live in an untracked file. |
+| **Safe to make public** | Agents need API keys, and keys leak through dotfiles. `scripts/privacy-scan` runs as a pre-commit hook and again in CI, and recognises Anthropic (Claude), OpenAI, Google (Gemini) and xAI (Grok) keys, GitHub and AWS tokens, private keys, personal paths and e-mail addresses. A pre-push hook scans commit metadata (author, committer, message) too. tmux pane contents are not saved to disk by default. Secrets live in an untracked file. |
 | **Reversible** | Before every `chezmoi apply`, the files it would replace are backed up to `~/.cli-workbench-backup/` with a restore note. |
 | **The promises are tested** | The quick start below is run end to end in a throwaway home directory on macOS and Ubuntu. The agent pane (with stand-in agents), the backup and the privacy scanner each have their own tests. |
 
@@ -95,7 +95,7 @@ These are opinions, not requirements. Edit the files in `home/` and run `chezmoi
 chezmoi diff | status | verify   # what differs between home/ and $HOME (verify exits non-zero if anything does)
 chezmoi doctor                   # chezmoi's own health check
 tests/run.sh                     # the repository's tests, including an end-to-end run of this quick start in a throwaway HOME
-scripts/privacy-scan [--all]     # secrets, personal paths and e-mail addresses in staged (or all tracked) files
+scripts/privacy-scan [--all]     # secrets, personal paths and e-mail addresses in staged (or all tracked) files, or in commit metadata (--commits)
 ```
 
 ## Safety model
@@ -104,7 +104,7 @@ scripts/privacy-scan [--all]     # secrets, personal paths and e-mail addresses 
 - **Backup before every apply.** chezmoi overwrites a differing file without keeping a copy. `chezmoi init` installs a hook ([`scripts/backup-before-apply`](scripts/backup-before-apply)) that copies every file the apply is about to replace, including files you edited after chezmoi wrote them, to `~/.cli-workbench-backup/<timestamp>/` first. Directory mode 700, symlinks kept as symlinks, a `RESTORE` note with one copy-paste command per file. If nothing would change, nothing is created. If the backup fails, the apply is refused. `--dry-run` has no side effects.
 - The hook is part of the config `chezmoi init` writes. If you only create `chezmoi.toml` by hand, or run `chezmoi apply --source ...` without having run `init`, there is **no** backup.
 - It only touches the targets in the table above, and it deletes nothing unless you ask for it (`chezmoi destroy`).
-- `privacy-scan` runs in the pre-commit hook and in CI, so keys, tokens, personal paths and e-mail addresses do not reach a public fork by accident.
+- `privacy-scan` runs in the pre-commit and pre-push hooks and in CI, so keys, tokens, personal paths and e-mail addresses do not reach a public fork by accident — including through the metadata of a commit.
 
 ## Agent instructions
 

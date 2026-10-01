@@ -3,12 +3,13 @@ set -u
 WB_SRC=$(cd "$(dirname "$0")/.." && pwd)
 . "$WB_SRC/tests/harness.sh"
 
-# A throwaway git repo with the scanner and the hook copied in. Sets R (repo) and DENY (a deny-list path that does not exist yet).
+# A throwaway git repo with the scanner and the hooks copied in. Sets R (repo) and DENY (a deny-list path that does not exist yet).
 mkrepo() {
   T_DIR=$(cd -P "$(mktemp -d)" && pwd); R=$T_DIR/repo; DENY=$T_DIR/deny.txt
   mkdir -p "$R/scripts" "$R/.githooks"
   cp "$WB_SRC/scripts/privacy-scan" "$R/scripts/" 2>/dev/null
   cp "$WB_SRC/.githooks/pre-commit" "$R/.githooks/" 2>/dev/null
+  cp "$WB_SRC/.githooks/pre-push" "$R/.githooks/" 2>/dev/null
   git -C "$R" init -q 2>/dev/null
   git -C "$R" config user.name t; git -C "$R" config user.email t@example.com
   git -C "$R" config core.hooksPath .githooks
@@ -86,6 +87,52 @@ out=$(scan --staged); rc=$?
 assert_eq "a denied word is caught, case-insensitively" 1 "$rc"
 assert_contains "names the rule" "deny-list" "$out"
 case $out in *"Acme-Secret"*) t_fail "the denied word was printed";; *) t_ok "the denied word is not printed";; esac
+t_cleanup
+
+echo "--commits scans commit metadata (author, committer, message) instead of files"
+mkrepo; git -C "$R" commit -q --no-verify --allow-empty -m clean
+out=$(scan --commits HEAD); rc=$?
+assert_eq "clean metadata passes" 0 "$rc"
+assert_contains "a missing deny list warns" "no deny list" "$out"
+git -C "$R" -c user.email=alice@private.dev commit -q --no-verify --allow-empty -m "identity is the author's choice"
+scan --commits HEAD >/dev/null; assert_eq "a commit's own address is not policed" 0 $?
+t_cleanup
+
+echo "private words in commit metadata come from the deny list"
+mkrepo; printf 'bob@corp-internal.io\n' > "$DENY"
+git -C "$R" -c user.email=bob@corp-internal.io commit -q --no-verify --allow-empty -m "using the work address"
+out=$(scan --commits HEAD); rc=$?
+assert_eq "a denied address in the author metadata is caught" 1 "$rc"
+assert_contains "names the rule" "deny-list" "$out"
+assert_contains "points at the commit" "$(git -C "$R" rev-parse --short HEAD):" "$out"
+case $out in *"bob@corp"*) t_fail "the address was printed";; *) t_ok "the address is not printed";; esac
+t_cleanup
+
+echo "secrets pasted into a commit message are caught"
+mkrepo
+git -C "$R" commit -q --no-verify --allow-empty -m "rotate: the old key was $KEY"
+out=$(scan --commits HEAD); rc=$?
+assert_eq "a token in a message is caught" 1 "$rc"
+assert_contains "names the rule" "secret-token" "$out"
+case $out in *"$KEY"*) t_fail "the message token was printed";; *) t_ok "the message token is not printed";; esac
+t_cleanup
+mkrepo
+git -C "$R" commit -q --no-verify --allow-empty -m "logs live in $HOMEPATH now"
+scan --commits HEAD >/dev/null; assert_eq "a personal path in a message is caught" 1 $?
+t_cleanup
+
+echo "the pre-push hook blocks a push whose commit metadata leaks"
+mkrepo
+git -C "$R" init -q --bare "$T_DIR/remote.git"
+git -C "$R" remote add origin "$T_DIR/remote.git"
+printf 'bob@corp-internal.io\n' > "$DENY"
+git -C "$R" -c user.email=bob@corp-internal.io commit -q --no-verify --allow-empty -m "using the work address"
+out=$(cd "$R" && WB_DENY_FILE=$DENY git push origin HEAD 2>&1); rc=$?
+assert_eq "the push is refused" 1 "$rc"
+assert_eq "the remote received nothing" 0 "$(git -C "$T_DIR/remote.git" rev-list --all --count)"
+assert_contains "says how to fix it" "privacy-scan" "$out"
+git -C "$R" commit -q --no-verify --allow-empty --amend --reset-author -m clean
+(cd "$R" && WB_DENY_FILE=$DENY git push -q origin HEAD >/dev/null 2>&1); assert_eq "a clean push goes through" 0 $?
 t_cleanup
 
 echo "the pre-commit hook blocks the commit"

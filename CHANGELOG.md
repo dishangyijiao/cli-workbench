@@ -14,6 +14,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
+- A pre-push hook and a `privacy-scan --commits` mode: before every push, the author, the committer and the message of each commit the push would add are scanned for token formats, private keys and your private words from the deny list (`~/.config/cli-workbench/deny.txt`) — metadata that file scans never see. The e-mail rule does not apply there (a commit's own address is the author's choice); a missing deny list warns, since commit metadata is then only checked against the token formats.
 - One instruction text for every agent CLI: `home/.chezmoitemplates/agent-instructions.md` is rendered to `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` and `~/.gemini/GEMINI.md`, with `~/.config/cli-workbench/agent-instructions.local.md` (untracked) appended when present. Existing files are backed up before they are replaced. A test keeps agent credentials, histories, sessions and settings files out of `home/`.
 - Workspace switcher: an AI CLI agent pane (editor left, agent over a shell on the right). The first installed of `claude codex gemini grok` is started in the project directory; `WORKSPACE_SWITCH_AGENT` picks one (with arguments) or `none`, `WORKSPACE_SWITCH_AGENTS` sets the candidates. Without an installed agent the layout is unchanged.
 - `privacy-scan` recognises xAI (Grok) keys; tests also cover Anthropic and Google (Gemini) keys.

@@ -48,6 +48,7 @@ The repository is authoritative. chezmoi's own state (`~/.config/chezmoi/chezmoi
 | `scripts/backup-before-apply` | the pre-apply hook; tested in `tests/backup.test.sh` | writes only under `~/.cli-workbench-backup/` |
 | `tests/run.sh` | the shell configs, tmux scripts, status line and privacy scanner, against throwaway HOMEs (`chezmoi apply` into a temp directory) | temp files only |
 | `scripts/privacy-scan` | secrets, personal paths, e-mail addresses in tracked files | none; also a pre-commit hook and a CI gate |
+| `.githooks/pre-push` | commit metadata (author, committer, message) of every commit a push would add, via `privacy-scan --commits` | none |
 
 ## Troubleshooting
 

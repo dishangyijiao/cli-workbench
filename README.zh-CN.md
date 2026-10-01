@@ -23,7 +23,7 @@
 |---|---|
 | **项目 → 会话，代理包含在内** | `~/dev/projects` 下的每个目录是一个工作台。包含多个仓库的文件夹算**一个**工作台，每个仓库一个窗口，每个窗口都有自己的代理窗格。不需要登记：直接从目录树发现。自动探测 `claude`、`codex`、`gemini`、`grok`（用 `WORKSPACE_SWITCH_AGENTS` 扩展候选，用 `WORKSPACE_SWITCH_AGENT` 指定某一个，设为 `none` 关闭）。 |
 | **一路都是纯文本** | 设置、历史、笔记和代理的指令都是文件。工具是 `rg`、`fzf`、`jq`、`nvim` 和 `git`；没有 GUI 状态，没有会丢的数据库。**同一份指令文本部署给所有代理**（`CLAUDE.md`、`AGENTS.md`、`GEMINI.md`），你的私人规则从一个不入库的文件追加在后面。 |
-| **可以放心公开** | 代理需要 API 密钥，而密钥最容易通过 dotfiles 泄露。`scripts/privacy-scan` 在 pre-commit 钩子里运行，CI 里再跑一次，能识别 Anthropic（Claude）、OpenAI、Google（Gemini）、xAI（Grok）的密钥，以及 GitHub 和 AWS 令牌、私钥、个人路径和邮箱地址。tmux 窗格内容默认不落盘。密钥放在不入库的文件里。 |
+| **可以放心公开** | 代理需要 API 密钥，而密钥最容易通过 dotfiles 泄露。`scripts/privacy-scan` 在 pre-commit 钩子里运行，CI 里再跑一次，能识别 Anthropic（Claude）、OpenAI、Google（Gemini）、xAI（Grok）的密钥，以及 GitHub 和 AWS 令牌、私钥、个人路径和邮箱地址；pre-push 钩子还会扫描提交元数据（作者、提交者、提交说明）。tmux 窗格内容默认不落盘。密钥放在不入库的文件里。 |
 | **可回退** | 每次 `chezmoi apply` 之前，会把将被替换的文件备份到 `~/.cli-workbench-backup/`，并附恢复说明。 |
 | **承诺都有测试** | 下面的快速开始会在临时 home 目录里端到端运行（macOS 和 Ubuntu）。代理窗格（用替身代理）、备份和隐私扫描各有自己的测试。 |
 
@@ -95,7 +95,7 @@ chezmoi apply                      # 再应用全部
 chezmoi diff | status | verify   # home/ 与 $HOME 有什么差异（有差异时 verify 返回非零）
 chezmoi doctor                   # chezmoi 自带的健康检查
 tests/run.sh                     # 仓库自己的测试，包含在临时 HOME 里端到端运行本快速开始
-scripts/privacy-scan [--all]     # 扫描已暂存（或全部已跟踪）文件中的密钥、个人路径和邮箱地址
+scripts/privacy-scan [--all]     # 扫描已暂存（或全部已跟踪）文件、或提交元数据（--commits）中的密钥、个人路径和邮箱地址
 ```
 
 ## 安全模型
@@ -104,7 +104,7 @@ scripts/privacy-scan [--all]     # 扫描已暂存（或全部已跟踪）文件
 - **每次 apply 之前先备份。** chezmoi 会直接覆盖内容不同的文件，不留副本。`chezmoi init` 会安装一个钩子（[`scripts/backup-before-apply`](scripts/backup-before-apply)），在 apply 之前把将被替换的文件（包括 chezmoi 写入后被你改过的文件）拷到 `~/.cli-workbench-backup/<时间戳>/`。目录权限 700，软链接按软链接保存，`RESTORE` 里每个文件一条可直接复制的恢复命令。没有要改的文件时什么都不创建；备份失败则拒绝 apply；`--dry-run` 没有任何副作用。
 - 钩子写在 `chezmoi init` 生成的配置里。如果你只是手写了 `chezmoi.toml`，或者没运行过 `init` 就用 `chezmoi apply --source ...`，则**没有**备份。
 - 它只会碰上表里的目标，除非你主动要求（`chezmoi destroy`），否则不会删除任何东西。
-- `privacy-scan` 在 pre-commit 钩子和 CI 里都会运行，避免密钥、令牌、个人路径和邮箱地址意外进入公开的 fork。
+- `privacy-scan` 在 pre-commit、pre-push 钩子和 CI 里都会运行，避免密钥、令牌、个人路径和邮箱地址意外进入公开的 fork——包括通过提交的元数据。
 
 ## 代理指令
 
