@@ -30,7 +30,7 @@ assert_eq "dry-run changed nothing" "# my old zshrc" "$(cat "$HOME/.zshrc")"
 
 echo "apply deploys every file"
 "${CZ[@]}" apply >/dev/null 2>&1; assert_eq "apply exits 0" 0 $?
-for f in .zshrc .tmux.conf .config/zsh/path.zsh .config/zsh/tmux-autostart.zsh .config/ghostty/config .config/git/config .config/nvim/init.lua .claude/statusline.sh .tmux/scripts/workspace-switch.sh; do
+for f in .zshrc .tmux.conf .config/zsh/path.zsh .config/zsh/tmux-autostart.zsh .config/ghostty/config .config/git/config .config/nvim/init.lua .claude/statusline.sh .claude/CLAUDE.md .codex/AGENTS.md .gemini/GEMINI.md .tmux/scripts/workspace-switch.sh; do
   assert "$f is deployed" test -f "$HOME/$f"
 done
 for f in .claude/statusline.sh .tmux/scripts/workspace-switch.sh .tmux/scripts/tmux-version-ge.sh .tmux/scripts/branch.sh; do

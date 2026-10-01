@@ -23,6 +23,10 @@ The trade: an edit is no longer live at once (`chezmoi edit --apply`, or edit `h
 
 chezmoi overwrites differing files and keeps no copy. `scripts/backup-before-apply` is configured as the `apply.pre` hook (a `run_before_` script would not do: chezmoi skips scripts for `chezmoi apply <one file>` and for `--dry-run`, but runs hooks). It asks `chezmoi status` which existing files an apply would replace, copies them to `~/.cli-workbench-backup/<timestamp>/` (mode 700, paths mirrored, symlinks preserved, a `RESTORE` note), and exits non-zero on any failure, which makes chezmoi abort. It does nothing for `--dry-run` or when nothing would change. Because it ignores which targets you named, applying one file may back up a few more.
 
+## Agent instructions
+
+Claude Code, Codex and Gemini CLI read `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` and `~/.gemini/GEMINI.md`. The three targets are one-line templates (`{{ template "agent-instructions.md" . }}`) over `home/.chezmoitemplates/agent-instructions.md`, so the text has exactly one source. That template appends `~/.config/cli-workbench/agent-instructions.local.md` when it exists (chezmoi's `stat`/`include`): the personal layer, never tracked. Rendered files are not re-addable; edit the source. The agents' own settings and state (`settings.json`, `config.toml`, `auth.json`, histories, sessions) are out of scope on purpose, and `tests/defaults.test.sh` fails if such files enter `home/`.
+
 ## Machine differences
 
 Common settings live in `home/`. Differences between machines live in files chezmoi does not manage, so no config is duplicated:

@@ -22,12 +22,12 @@ English | [简体中文](README.zh-CN.md)
 | | |
 |---|---|
 | **Project → session, agent included** | A directory under `~/dev/projects` is a workspace. A folder holding several repositories is **one** workspace with a window per repository, each with its own agent pane. Nothing to register: it is discovered from the directory tree. Auto-detects `claude`, `codex`, `gemini`, `grok` (extend the list with `WORKSPACE_SWITCH_AGENTS`, pick one with `WORKSPACE_SWITCH_AGENT`, turn off with `none`). |
-| **Plain text all the way down** | Settings, history, notes and agent instructions are files. `rg`, `fzf`, `jq`, `nvim` and `git` are the tools; there is no GUI state and no database to lose. |
+| **Plain text all the way down** | Settings, history, notes and agent instructions are files. `rg`, `fzf`, `jq`, `nvim` and `git` are the tools; there is no GUI state and no database to lose. **One instruction text is deployed to every agent** (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`), with your private rules appended from an untracked file. |
 | **Safe to make public** | Agents need API keys, and keys leak through dotfiles. `scripts/privacy-scan` runs as a pre-commit hook and again in CI, and recognises Anthropic (Claude), OpenAI, Google (Gemini) and xAI (Grok) keys, GitHub and AWS tokens, private keys, personal paths and e-mail addresses. tmux pane contents are not saved to disk by default. Secrets live in an untracked file. |
 | **Reversible** | Before every `chezmoi apply`, the files it would replace are backed up to `~/.cli-workbench-backup/` with a restore note. |
 | **The promises are tested** | The quick start below is run end to end in a throwaway home directory on macOS and Ubuntu. The agent pane (with stand-in agents), the backup and the privacy scanner each have their own tests. |
 
-**What is agent-specific today, honestly:** the workspace switcher starts any of the four agents; the status line (`~/.claude/statusline.sh`) is for Claude Code only; Gemini CLI and Grok CLI have no settings of their own here yet. The agents themselves are not installed by this repository.
+**What is agent-specific today, honestly:** the workspace switcher starts any of the four agents; the shared instruction text reaches Claude Code, Codex and Gemini CLI (Grok CLI is not wired up: its instruction file is not known here); the status line (`~/.claude/statusline.sh`) is for Claude Code only. The agents' own settings files (`settings.json`, `config.toml`) are deliberately not tracked, see below. The agents themselves are not installed by this repository.
 
 > **What this is:** a personal-dotfiles repository laid out as a chezmoi source tree. You fork it, edit `home/`, and keep it as your own.
 > **What this is not:** a package manager, a one-click installer, a theme pack, or an agent framework. It does not install software and it does not manage secrets.
@@ -67,6 +67,7 @@ What gets deployed (the layout follows [chezmoi's naming](https://www.chezmoi.io
 | `dot_zshrc`, `dot_config/private_zsh/` | `~/.zshrc`, `~/.config/zsh/{path,tmux-autostart}.zsh` | **replaces your `.zshrc`**; move your own tweaks to `~/.config/zsh/local.zsh` first. Installers (nvm, bun, ...) append to `~/.zshrc`; `chezmoi diff` shows that, so move such lines into `local.zsh` |
 | `dot_config/ghostty/config` | `~/.config/ghostty/config` | Catppuccin Mocha, Nerd Font, macOS tabs title bar |
 | `dot_claude/executable_statusline.sh` | `~/.claude/statusline.sh` | the Claude Code status line (project, branch, model, context, cost, rate limits); only if you use Claude Code |
+| `.chezmoitemplates/agent-instructions.md`, `dot_claude/CLAUDE.md.tmpl`, `dot_codex/AGENTS.md.tmpl`, `dot_gemini/GEMINI.md.tmpl` | `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.gemini/GEMINI.md` | the same short text for every agent: how this workbench works (config lives in the repo, secrets stay out, one tmux session per project). Your own rules: see "Agent instructions" |
 | `dot_config/git/config` | `~/.config/git/config` | portable Git settings; Git reads this file by itself, and `~/.gitconfig` (identity, credentials) stays yours |
 | `dot_config/nvim/` | `~/.config/nvim` | optional Neovim setup (lazy.nvim, LSP, Telescope, Git, debugging; no AI plugin: agents run in their own pane); plugins install on first launch and need network access. Delete the directory from your fork if you have your own |
 
@@ -104,6 +105,16 @@ scripts/privacy-scan [--all]     # secrets, personal paths and e-mail addresses 
 - The hook is part of the config `chezmoi init` writes. If you only create `chezmoi.toml` by hand, or run `chezmoi apply --source ...` without having run `init`, there is **no** backup.
 - It only touches the targets in the table above, and it deletes nothing unless you ask for it (`chezmoi destroy`).
 - `privacy-scan` runs in the pre-commit hook and in CI, so keys, tokens, personal paths and e-mail addresses do not reach a public fork by accident.
+
+## Agent instructions
+
+Claude Code, Codex and Gemini CLI each read a plain-text instruction file from their home directory. Here they are generated from **one** source, `home/.chezmoitemplates/agent-instructions.md`, so the agents get the same facts about the machine.
+
+- **Your own rules** go in `~/.config/cli-workbench/agent-instructions.local.md`. It is not tracked, so personal preferences never reach a public fork. It is appended after the shared text in all three files. Remove the file and the next `chezmoi apply` removes its text.
+- **Existing files:** your current `~/.claude/CLAUDE.md` (and the others) are replaced on `apply` and backed up first. Move their content into the local file beforehand if you want to keep it as it is.
+- **Edit the source, not the deployed file.** A tool that appends to `~/.claude/CLAUDE.md` is overwritten at the next apply. The generated files cannot be pulled back with `chezmoi re-add`.
+- **Not tracked, on purpose:** `settings.json`, `config.toml`, `auth.json`, histories, sessions and databases. They hold machine paths, proxies and credentials, and the tools rewrite them. A test fails if such a file appears under `home/`.
+- Want to publish your own principles? Put them into the shared source instead of the local file in your fork.
 
 ## Workspace switcher (tmux)
 

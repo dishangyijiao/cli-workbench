@@ -25,4 +25,10 @@ echo "no absolute home directories in tracked files"
 hits=$(grep -rn -I -E '/Users/[A-Za-z]|/home/[a-z]' . --exclude-dir=.git --exclude=defaults.test.sh | grep -v -e 'linuxbrew' -e '/home/dot_' | head -3)
 assert_eq "no /Users/<name> or /home/<name>" "" "$hits"
 
+echo "agent state and credentials are never part of the source tree"
+bad=$(find home -type f \( -name 'auth.json' -o -name '.credentials.json' -o -name 'history*' -o -name '*.sqlite*' -o -name 'settings.local.json' -o -name 'oauth_creds.json' -o -name 'installation_id' \) -o -path '*/sessions/*' -o -path '*/projects/*/*.jsonl' | head -3)
+assert_eq "no auth, history, session or database files under home/" "" "$bad"
+bad=$(find home -type f \( -name 'settings.json' -o -name 'config.toml' \) -path '*/dot_claude/*' -o -type f -name 'config.toml' -path '*/dot_codex/*' | head -3)
+assert_eq "the agents' own settings (machine paths, proxies, tools rewrite them) are not tracked" "" "$bad"
+
 t_done
