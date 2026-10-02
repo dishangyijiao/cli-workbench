@@ -4,7 +4,7 @@ Issues and pull requests are welcome. For security problems, follow [SECURITY.md
 
 ## Before you open a pull request
 
-1. Enable the git hooks once per clone, so `scripts/privacy-scan` runs before every commit and every push:
+1. Enable the git hooks once per clone, so `scripts/privacy-scan` and `scripts/lint-shell` run before every commit, and `scripts/privacy-scan` before every push:
 
    ```sh
    git config core.hooksPath .githooks
@@ -15,10 +15,15 @@ Issues and pull requests are welcome. For security problems, follow [SECURITY.md
 
    ```sh
    tests/run.sh
-   scripts/lint-shell   # shellcheck, warning level and above (brew install shellcheck); the pre-commit hook and CI run it too
    ```
 
-4. When user-visible behaviour changes, update both `README.md` and `README.zh-CN.md`, and add a line under `Unreleased` in [CHANGELOG.md](CHANGELOG.md). If you cannot write the Chinese part, say so in the pull request and it will be added.
+4. Lint the shell scripts (needs `shellcheck`: `brew install shellcheck`). It reports warnings and errors; the pre-commit hook and CI run it too:
+
+   ```sh
+   scripts/lint-shell
+   ```
+
+5. When user-visible behaviour changes, update both `README.md` and `README.zh-CN.md`, and add a line under `Unreleased` in [CHANGELOG.md](CHANGELOG.md). If you cannot write the Chinese part, say so in the pull request and a maintainer will add it.
 
 ## Language
 
@@ -32,4 +37,4 @@ To keep your e-mail address out of commit metadata, commit with your GitHub nore
 
 ## Commit messages
 
-Short imperative subject, optionally with a scope, for example `feat(tmux): ...`, `fix(zsh): ...`, `docs: ...`.
+Use [Conventional Commits](https://www.conventionalcommits.org): a short imperative subject with an optional scope, for example `feat(tmux): ...`, `fix(zsh): ...`, `docs: ...`.
