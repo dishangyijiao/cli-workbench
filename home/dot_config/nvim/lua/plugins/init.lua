@@ -1,17 +1,14 @@
 -- ~/.config/nvim/lua/plugins/init.lua
 -- Plugin specs for lazy.nvim
 
+-- Only our own lsp/ module is loaded again. Plugin specs cannot be reloaded (lazy.nvim refuses to be set up twice), and the
+-- plugins' own modules (lspconfig, ...) must stay loaded: a prefix match on "lsp" would throw those away too.
 vim.keymap.set('n', '<leader>rc', function()
-  for name, _ in pairs(package.loaded) do
-    if name:match('^lsp') or name:match('^plugins') or name:match('^ui') then
-      package.loaded[name] = nil
-    end
+  package.loaded['lsp'] = nil
+  if require('safe_require')('lsp') then
+    vim.notify('LSP config reloaded (other changes need a restart of Neovim)', vim.log.levels.INFO)
   end
-
-  dofile(vim.fn.stdpath('config') .. '/init.lua')
-
-  vim.notify('Neovim config reloaded', vim.log.levels.INFO)
-end, { desc = 'Reload Neovim config' })
+end, { desc = 'Reload the LSP config (other changes need a restart)' })
 
 vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
   pattern = { "*.rb", "*.rake", "Rakefile", "Gemfile", "*.gemspec", "*.ru" },

@@ -33,7 +33,9 @@ vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup("plugins")
 
-pcall(require, 'lsp')
-pcall(require, 'git')
+-- Errors are shown, not swallowed (a bare pcall would silently disable completion and every server on one bad line)
+local safe_require = require('safe_require')
+safe_require('lsp')
+safe_require('git')
 -- Not loaded here, to avoid a circular require
 -- pcall(require, 'dap')

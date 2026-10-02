@@ -151,6 +151,30 @@ touch -t "$(ago 5)" "$T"/cache6/*
 check "a cache entry exactly TTL seconds old is expired" "cache-edge-proj ⎇ main ?2" \
   "$(printf '%s' "$J6" | STATUSLINE_CACHE_DIR="$T/cache6" sh "$SCRIPT" | strip)"
 
+# ---- the cache directory must be ours, and nothing read from disk or from a path may carry terminal escapes ----
+# In a shared /tmp another user can create the cache directory first. A cache entry is printed as it is, so a forged one
+# could draw anything on this terminal.
+D7=$(make_repo safe-proj)
+J7=$(jq -n --arg d "$D7" '{cwd:$d}')
+printf '%s' "$J7" | STATUSLINE_CACHE_DIR="$T/real7" sh "$SCRIPT" >/dev/null
+for f in "$T"/real7/*; do printf 'forged 9 9' > "$f"; done
+check "a forged entry in a directory of ours is used (the setup works)" "safe-proj ⎇ forged !9 ?9" \
+  "$(printf '%s' "$J7" | STATUSLINE_CACHE_DIR="$T/real7" sh "$SCRIPT" | strip)"
+ln -s "$T/real7" "$T/link7"
+check "a cache directory that is a symlink is not trusted" "safe-proj ⎇ main" \
+  "$(printf '%s' "$J7" | STATUSLINE_CACHE_DIR="$T/link7" sh "$SCRIPT" | strip)"
+for f in "$T"/real7/*; do printf 'main%s[31mRED 0 0' "$ESC" > "$f"; done
+out=$(printf '%s' "$J7" | STATUSLINE_CACHE_DIR="$T/real7" sh "$SCRIPT")
+case "$out" in *"${ESC}[31mRED"*) leak=yes ;; *) leak=no ;; esac
+check "an escape sequence in a cache entry does not reach the terminal" no "$leak"
+for f in "$T"/real7/*; do printf 'main 7x 9y' > "$f"; done
+check "counters in a cache entry that are not plain numbers are dropped" "safe-proj ⎇ main" \
+  "$(printf '%s' "$J7" | STATUSLINE_CACHE_DIR="$T/real7" sh "$SCRIPT" | strip)"
+J8=$(jq -n --arg d "/tmp/nonexistent/proj${ESC}[31mEVIL" '{workspace:{project_dir:$d}}')
+out=$(printf '%s' "$J8" | STATUSLINE_CACHE_TTL=0 sh "$SCRIPT")
+case "$out" in *"${ESC}[31mEVIL"*) leak=yes ;; *) leak=no ;; esac
+check "an escape sequence in the directory name does not reach the terminal" no "$leak"
+
 # ---- duration ----
 dur() { # dur <ms> -> the duration text on line 2
   run "$(payload "$CLEAN" | jq --argjson ms "$1" '.cost.total_duration_ms=$ms')" | sed -n '2p' | awk -F' · ' '{print $4}'
