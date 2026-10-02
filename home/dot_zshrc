@@ -23,10 +23,14 @@ setopt AUTO_CD INTERACTIVE_COMMENTS NO_BEEP
 _wb_cache=${XDG_CACHE_HOME:-$HOME/.cache}/zsh
 [[ -d $_wb_cache ]] || mkdir -p "$_wb_cache"
 autoload -Uz compinit
-compinit -i -C -d "$_wb_cache/zcompdump"   # -i: silently skip insecure completion dirs instead of asking y/n (no terminal, CI)
+# -i: silently skip insecure completion dirs instead of asking y/n (no terminal, CI).
+# -C: reuse the dump without scanning fpath, which is fast but never sees completions installed later (brew install ...),
+# so the dump is only reused while it is less than a day old; after that it is rebuilt once.
+_wb_fresh=($_wb_cache/zcompdump(N.mh-24))
+if (( $#_wb_fresh )); then compinit -i -C -d "$_wb_cache/zcompdump"; else compinit -i -d "$_wb_cache/zcompdump"; fi
 zstyle ':completion:*' menu select
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
-unset _wb_cache
+unset _wb_cache _wb_fresh
 
 # Key bindings: emacs style; Up/Down search history by the text already typed
 if [[ -o zle ]]; then
