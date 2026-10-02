@@ -5,4 +5,9 @@ if ! "$root/scripts/privacy-scan" --staged; then
   echo "Commit blocked by scripts/privacy-scan. Fix the lines above, or add 'wb-scan: allow' to a deliberate exception." >&2
   exit 1
 fi
+# Lint the shell scripts at warning level, whole tree (about a second); skipped, with a notice, if the linter is not installed.
+if ! "$root/scripts/lint-shell"; then
+  echo "Commit blocked by scripts/lint-shell. Fix the warnings above." >&2
+  exit 1
+fi
 git diff --cached --shortstat >&2

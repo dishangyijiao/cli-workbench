@@ -96,6 +96,7 @@ chezmoi diff | status | verify   # home/ 与 $HOME 有什么差异（有差异�
 chezmoi doctor                   # chezmoi 自带的健康检查
 tests/run.sh                     # 仓库自己的测试，包含在临时 HOME 里端到端运行本快速开始
 scripts/privacy-scan [--all]     # 扫描已暂存（或全部已跟踪）文件、或提交元数据（--commits）中的密钥、个人路径和邮箱地址
+scripts/lint-shell               # 对仓库里所有 bash/sh 脚本运行 shellcheck（warning 及以上级别）
 ```
 
 ## 安全模型

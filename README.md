@@ -96,6 +96,7 @@ chezmoi diff | status | verify   # what differs between home/ and $HOME (verify 
 chezmoi doctor                   # chezmoi's own health check
 tests/run.sh                     # the repository's tests, including an end-to-end run of this quick start in a throwaway HOME
 scripts/privacy-scan [--all]     # secrets, personal paths and e-mail addresses in staged (or all tracked) files, or in commit metadata (--commits)
+scripts/lint-shell               # shellcheck (warning level and above) over every bash/sh script in the repository
 ```
 
 ## Safety model

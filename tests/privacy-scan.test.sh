@@ -7,7 +7,7 @@ WB_SRC=$(cd "$(dirname "$0")/.." && pwd)
 mkrepo() {
   T_DIR=$(cd -P "$(mktemp -d)" && pwd); R=$T_DIR/repo; DENY=$T_DIR/deny.txt
   mkdir -p "$R/scripts" "$R/.githooks"
-  cp "$WB_SRC/scripts/privacy-scan" "$R/scripts/" 2>/dev/null
+  cp "$WB_SRC/scripts/privacy-scan" "$WB_SRC/scripts/lint-shell" "$R/scripts/" 2>/dev/null
   cp "$WB_SRC/.githooks/pre-commit" "$R/.githooks/" 2>/dev/null
   cp "$WB_SRC/.githooks/pre-push" "$R/.githooks/" 2>/dev/null
   git -C "$R" init -q 2>/dev/null
