@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-02
+
 ### Changed
 
 - **Breaking:** deployment moved from the home-grown symlink tooling to [chezmoi](https://www.chezmoi.io). The repository is now a chezmoi source tree under `home/` (`.chezmoiroot`); `config/` is gone. Files are copied, not symlinked, so an edit takes effect after `chezmoi apply`, and chezmoi itself keeps no backup of files it replaces, so `scripts/backup-before-apply` (a `hooks.apply.pre` hook written by `chezmoi init`) does it. To migrate from the symlink setup, remove the old links, run `chezmoi init --source <clone>`, and `chezmoi apply` (see the README).
@@ -52,5 +54,6 @@ First public release.
 - Test suite (`tests/run.sh`) including an end-to-end run of the README quick start; GitHub Actions on macOS and Ubuntu, plus the macOS system bash 3.2.
 - English and Simplified Chinese READMEs, `SECURITY.md`, `CONTRIBUTING.md`, issue and pull request templates.
 
-[Unreleased]: https://github.com/dishangyijiao/cli-workbench/compare/v0.0.1...HEAD
+[Unreleased]: https://github.com/dishangyijiao/cli-workbench/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/dishangyijiao/cli-workbench/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/dishangyijiao/cli-workbench/releases/tag/v0.0.1
