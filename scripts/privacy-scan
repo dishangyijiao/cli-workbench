@@ -24,7 +24,7 @@ fi
 work=$(mktemp -d) || exit 2
 trap 'rm -rf "$work"' EXIT
 
-# 1. Lines to scan, as location:text. The scanner and its own tests contain the patterns on purpose.
+# 1. Lines to scan, as location:text.
 if [ "$mode" = --staged ]; then
   git diff --cached -U0 --no-color --diff-filter=ACMR | awk '
     /^\+\+\+ /   { f = ($0 ~ /^\+\+\+ \/dev\/null/) ? "" : substr($0, 7); next }
@@ -36,8 +36,11 @@ elif [ "$mode" = --commits ]; then
              for (i = 2; i <= n; i++) if (L[i] != "") { ln++; print sha ":" ln ":" L[i] } }'
 else
   git grep -I -n -e '' 2>/dev/null
-fi | grep -v -E '^(scripts/privacy-scan|tests/privacy-scan\.test\.sh|tests/defaults\.test\.sh):' \
-   | grep -v 'wb-scan: allow' > "$work/lines"
+fi | grep -v 'wb-scan: allow' > "$work/lines_all"
+# The scanner and its own tests contain the patterns on purpose, so the pattern rules (assignments, paths, e-mail, deny list)
+# skip them. Private keys and token formats are checked in every file: those fixtures are assembled from parts and never hold
+# a real-looking value, so a real secret pasted into one of these files is still caught.
+grep -v -E '^(scripts/privacy-scan|tests/privacy-scan\.test\.sh|tests/defaults\.test\.sh):' "$work/lines_all" > "$work/lines"
 
 if [ "$mode" = --staged ]; then git diff --cached --name-only --diff-filter=ACMR > "$work/names"
 elif [ "$mode" = --commits ]; then : > "$work/names"   # commit metadata only; the sensitive-file rule finds nothing there
@@ -50,12 +53,18 @@ rule() { # name, extended regex, [grep flags]
   found=1
 }
 
-rule private-key  '-----BEGIN [A-Z ]*PRIVATE KEY-----'
-rule secret-token '(sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}|xai-[A-Za-z0-9_-]{20,})'
+rule private-key  '-----BEGIN [A-Z ]*PRIVATE KEY-----' '' lines_all
+rule secret-token '(sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}|xai-[A-Za-z0-9_-]{20,})' '' lines_all
 
-# Secret-looking assignment with a literal value (a $VARIABLE or $(command) is fine), minus obvious placeholders.
-grep -i -E -e '(API_?KEY|SECRET|TOKEN|PASSWORD|PASSWD|PRIVATE_?KEY)[A-Za-z_]*[[:space:]]*[=:][[:space:]]*['"'"'"]?[A-Za-z0-9/+_.-]{12,}' "$work/lines" \
-  | grep -v -i -E 'example|changeme|your[-_]|xxxx|dummy|placeholder|<[^>]*>' > "$work/assign"
+# Secret-looking assignment with a literal value. A value that starts with $ (a variable or $(command)), < (a <placeholder>),
+# ( { [ or * (a masked value) is not literal; any other run of 12+ characters without spaces or quotes is, so symbols in a
+# password cannot hide it. Placeholder words are judged on the assignment itself, not on the rest of the line, so a trailing
+# comment such as "# copied from the example" cannot hide a real value.
+assign_re='(API_?KEY|SECRET|TOKEN|PASSWORD|PASSWD|PRIVATE_?KEY)[A-Za-z_]*[[:space:]]*[=:][[:space:]]*['"'"'"]?[^[:space:]'"'"'"$<({[*][^[:space:]'"'"'"]{11,}'
+grep -i -E -o -n -e "$assign_re" "$work/lines" | while IFS=: read -r n match; do
+  printf '%s\n' "$match" | grep -q -i -E -e 'example|changeme|your[-_]|xxxx|dummy|placeholder|<[^>]*>' && continue
+  sed -n "${n}p" "$work/lines" | cut -d: -f1,2
+done > "$work/assign"
 rule secret-assign '.' '' assign
 
 grep -E -e '/Users/[A-Za-z]|/home/[a-z]' "$work/lines" | grep -v -e 'linuxbrew' -e '/home/dot_' > "$work/home"   # home/dot_* is the chezmoi source tree, not a personal path || true

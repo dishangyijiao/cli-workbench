@@ -92,6 +92,23 @@ mkdir -p "$ROOT/conc/.git"
 assert_eq "one window" "main " "$(windows conc)"
 assert_eq "two panes" 2 "$(panes '=conc:main')"
 
+echo "two simultaneous opens of different directories with the same name each get their own session"
+# tmux-slownew delays new-session, so both instances see the name as free before either one creates it.
+cat > "$T_DIR/bin/tmux-slownew" <<'SH'
+#!/usr/bin/env bash
+for a in "$@"; do if [ "$a" = new-session ]; then sleep 0.4; break; fi; done
+exec tmux "$@"
+SH
+chmod +x "$T_DIR/bin/tmux-slownew"
+mkdir -p "$T_DIR/p1/dup/.git" "$T_DIR/p2/dup/.git"
+WORKSPACE_SWITCH_TMUX="$T_DIR/bin/tmux-slownew" "$PS" --open "$T_DIR/p1/dup" > "$T_DIR/res1" 2>/dev/null &
+WORKSPACE_SWITCH_TMUX="$T_DIR/bin/tmux-slownew" "$PS" --open "$T_DIR/p2/dup" > "$T_DIR/res2" 2>/dev/null &
+wait
+res1=$(cat "$T_DIR/res1"); res2=$(cat "$T_DIR/res2")
+assert "the two get different session names" test -n "$res1" -a -n "$res2" -a "$res1" != "$res2"
+assert_eq "the first directory owns its session" "$T_DIR/p1/dup" "$(X show-options -qv -t "=$res1:" @project_dir)"
+assert_eq "the second directory owns its session" "$T_DIR/p2/dup" "$(X show-options -qv -t "=$res2:" @project_dir)"
+
 echo "a session made by hand (e.g. with prefix+N, no @project_dir tag) for the same directory is reused"
 mkdir -p "$ROOT/byhand/.git"
 X new-session -d -s byhand -c "$ROOT/byhand"

@@ -56,10 +56,22 @@ check_rule "private key"    "$PEM"                                   "private-ke
 check_rule "assigned secret" 'DB_PASSWORD="hunter2hunter2hunter2"'   "secret-assign" "hunter2"
 check_rule "home path"      "export PATH=$HOMEPATH:\$PATH"           "home-path"     "alice"
 check_rule "email address"  "contact bob@corp-internal.io"           "email"         "bob@corp"
+check_rule "secret with symbols in the value" "DB_PASSWORD='Tr0ub4dor&3xKcd!9'" "secret-assign" "Tr0ub4dor"
+check_rule "secret next to a placeholder word in a comment" 'API_KEY=abcd1234efgh5678ijkl  # copied from the example in docs' "secret-assign" "abcd1234"
+
+echo "the scanner's own fixture files skip the pattern rules, but not private keys and token formats"
+mkrepo; mkdir -p "$R/tests"; printf 'export GH=%s\n' "$GH" > "$R/tests/defaults.test.sh"; git -C "$R" add -A
+out=$(scan --staged); rc=$?
+assert_eq "a token format in an exempt file is refused" 1 "$rc"
+assert_contains "and named" "secret-token" "$out"
+t_cleanup
+mkrepo; mkdir -p "$R/tests"; printf 'contact bob@corp-internal.io\n' > "$R/tests/defaults.test.sh"; git -C "$R" add -A
+scan --staged >/dev/null; assert_eq "an e-mail address in an exempt file is still skipped" 0 $?
+t_cleanup
 
 echo "things that look similar but are fine"
 mkrepo
-printf '%s\n' 'export API_KEY="$(op read op://vault/item/key)"' 'export TOKEN=$MY_TOKEN' 'API_KEY=your-key-here-xxxxxxxxxxxx' \
+printf '%s\n' 'export API_KEY="$(op read op://vault/item/key)"' 'export TOKEN=$MY_TOKEN' 'API_KEY=your-key-here-xxxxxxxxxxxx' 'password: ************' \
   'git clone git@github.com:someone/repo.git' 'Author: dev <dev@users.noreply.github.com>' 'mail me@example.com' \
   "token=$KEY # wb-scan: allow" 'PATH=/home/linuxbrew/.linuxbrew/bin' > "$R/ok.sh"
 git -C "$R" add -A; scan --staged >/dev/null; assert_eq "variable refs, placeholders, noreply, example.com, allow marker pass" 0 $?
