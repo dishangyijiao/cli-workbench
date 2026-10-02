@@ -28,6 +28,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Fixed
 
 - `zshrc`: starship is no longer started under `TERM=dumb` or with `TERM` unset (test harnesses, some editor shells). It cannot render there and printed an error at every prompt; the built-in prompt is used instead, so a fresh interactive zsh starts silently again. The smoke test pins the choice for both TERMs.
+- `privacy-scan`: a secret-looking assignment is now caught when its value contains symbols such as `&` or `!` (the scan stopped at the first one and reported nothing), and a placeholder word such as "example" in a trailing comment no longer hides it: placeholders are judged on the assignment, not on the whole line. Private keys and token formats are also checked in the scanner's own fixture files, which were skipped entirely before.
 
 ## [0.0.1] - 2026-10-01
 
