@@ -15,3 +15,9 @@ secrets.zsh
 *.pfx
 id_rsa
 id_ed25519
+
+# NLPM score history (per-machine trend data)
+.claude/nlpm-history.json
+
+# Local state written by the ui-tokenize Claude Code plugin
+.tokenize/

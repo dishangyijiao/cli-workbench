@@ -22,7 +22,12 @@ done
 refute "the tracked templates are not ignored by those patterns" grep -qxF 'templates' .gitignore
 
 echo "no absolute home directories in tracked files"
-hits=$(grep -rn -I -E '/Users/[A-Za-z]|/home/[a-z]' . --exclude-dir=.git --exclude=defaults.test.sh | grep -v -e 'linuxbrew' -e '/home/dot_' | head -3)
+# Scan what git would publish (tracked plus new, not ignored); local tool state such as .tokenize/ is ignored and stays out.
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  hits=$(git ls-files -z -co --exclude-standard | xargs -0 grep -n -I -E '/Users/[A-Za-z]|/home/[a-z]' 2>/dev/null | grep -v -e 'tests/defaults.test.sh' -e 'linuxbrew' -e '/home/dot_' | head -3)
+else
+  hits=$(grep -rn -I -E '/Users/[A-Za-z]|/home/[a-z]' . --exclude-dir=.git --exclude=defaults.test.sh | grep -v -e 'linuxbrew' -e '/home/dot_' | head -3)
+fi
 assert_eq "no /Users/<name> or /home/<name>" "" "$hits"
 
 echo "agent state and credentials are never part of the source tree"
