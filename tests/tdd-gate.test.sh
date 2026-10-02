@@ -183,5 +183,5 @@ git -C "$H" checkout -q main; echo 5 > "$H/$P/c"; git -C "$H" add -A; git -C "$H
 assert "a real merge titled fix: passes" git -C "$H" merge --no-ff -q side -m "fix: merge side"
 
 echo "CI runs the gate over the pull request's commits"
-assert "the workflow calls scripts/tdd-gate --range" rg -q 'scripts/tdd-gate --range' "$WB_SRC/.github/workflows/tests.yml"
+assert "the workflow calls scripts/tdd-gate --range" grep -q 'scripts/tdd-gate --range' "$WB_SRC/.github/workflows/tests.yml"
 t_done
