@@ -4,7 +4,7 @@ Issues and pull requests are welcome. For security problems, follow [SECURITY.md
 
 ## Before you open a pull request
 
-1. Enable the git hooks once per clone, so `scripts/privacy-scan` runs before every commit and every push:
+1. Enable the git hooks once per clone, so `scripts/privacy-scan` and `scripts/lint-shell` run before every commit, and `scripts/privacy-scan` before every push:
 
    ```sh
    git config core.hooksPath .githooks
@@ -15,10 +15,15 @@ Issues and pull requests are welcome. For security problems, follow [SECURITY.md
 
    ```sh
    tests/run.sh
-   scripts/lint-shell   # shellcheck, warning level and above (brew install shellcheck); the pre-commit hook and CI run it too
    ```
 
-4. When user-visible behaviour changes, update both `README.md` and `README.zh-CN.md`, and add a line under `Unreleased` in [CHANGELOG.md](CHANGELOG.md). If you cannot write the Chinese part, say so in the pull request and it will be added.
+4. Lint the shell scripts (needs `shellcheck`: `brew install shellcheck`). It reports warnings and errors; the pre-commit hook and CI run it too:
+
+   ```sh
+   scripts/lint-shell
+   ```
+
+5. When user-visible behaviour changes, update both `README.md` and `README.zh-CN.md`, and add a line under `Unreleased` in [CHANGELOG.md](CHANGELOG.md). If you cannot write the Chinese part, say so in the pull request and a maintainer will add it.
 
 ## Language
 
@@ -28,8 +33,8 @@ Code, comments, commit messages and every file except `README.zh-CN.md` are in E
 
 Do not commit personal paths, names, e-mail addresses or credentials. `scripts/privacy-scan` checks for private keys, token formats, secret-looking assignments, `/Users/<name>` and `/home/<name>` paths, e-mail addresses, `.env`/`*.pem`/`*.key` files, and your own words from `~/.config/cli-workbench/deny.txt` (one word per line, kept outside the repo). The pre-commit and pre-push hooks and CI all run it. A deliberate exception: put `wb-scan: allow` on that line.
 
-To keep your e-mail address out of commit metadata, commit with your GitHub noreply address (GitHub, Settings, Emails). File scans never see commit metadata, so the pre-push hook scans the author, the committer and the message of every commit a push would add; put your private address (and other private words) in `~/.config/cli-workbench/deny.txt` and the hook refuses the push.
+To keep your e-mail address out of commit metadata, commit with your GitHub noreply address (Settings > Emails on GitHub). File scans never see commit metadata, so the pre-push hook scans the author, the committer and the message of every commit a push would add; put your private address (and other private words) in `~/.config/cli-workbench/deny.txt` and the hook refuses the push.
 
 ## Commit messages
 
-Short imperative subject, optionally with a scope, for example `feat(tmux): ...`, `fix(zsh): ...`, `docs: ...`.
+Use [Conventional Commits](https://www.conventionalcommits.org): a short imperative subject with an optional scope, for example `feat(tmux): ...`, `fix(zsh): ...`, `docs: ...`.

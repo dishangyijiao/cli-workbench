@@ -27,9 +27,10 @@ English | [简体中文](README.zh-CN.md)
 | **Reversible** | Before every `chezmoi apply`, the files it would replace are backed up to `~/.cli-workbench-backup/` with a restore note. |
 | **The promises are tested** | The quick start below is run end to end in a throwaway home directory on macOS and Ubuntu. The agent pane (with stand-in agents), the backup and the privacy scanner each have their own tests. |
 
-**What is agent-specific today, honestly:** the workspace switcher starts any of the four agents; the shared instruction text reaches Claude Code, Codex and Gemini CLI (Grok CLI is not wired up: its instruction file is not known here); the status line (`~/.claude/statusline.sh`) is for Claude Code only. The agents' own settings files (`settings.json`, `config.toml`) are deliberately not tracked, see below. The agents themselves are not installed by this repository.
+**Agent-specific today:** the workspace switcher starts any of the four agents; the shared instruction text reaches Claude Code, Codex and Gemini CLI (Grok CLI is not wired up: the location of its instruction file is not known); the status line (`~/.claude/statusline.sh`) is for Claude Code only. The agents' own settings files (`settings.json`, `config.toml`) are deliberately not tracked, see below. The agents themselves are not installed by this repository.
 
 > **What this is:** a personal-dotfiles repository laid out as a chezmoi source tree. You fork it, edit `home/`, and keep it as your own.
+>
 > **What this is not:** a package manager, a one-click installer, a theme pack, or an agent framework. It does not install software and it does not manage secrets.
 
 ## Requirements and scope
@@ -59,7 +60,7 @@ chezmoi apply                      # then everything
 
 Or let chezmoi do the clone: `chezmoi init <your-github-user>/cli-workbench`, then the same `diff` and `apply`.
 
-What gets deployed (the layout follows [chezmoi's naming](https://www.chezmoi.io/reference/source-state-attributes/): `dot_` becomes `.`, `executable_` sets the mode, `private_` makes the directory 700):
+What gets deployed (the layout follows [chezmoi's naming](https://www.chezmoi.io/reference/source-state-attributes/): `dot_` becomes `.`, `executable_` sets the mode, `private_` makes the directory mode 700):
 
 | Source in `home/` | Target | Notes |
 |---|---|---|
@@ -105,7 +106,7 @@ scripts/lint-shell               # shellcheck (warning level and above) over eve
 - **Backup before every apply.** chezmoi overwrites a differing file without keeping a copy. `chezmoi init` installs a hook ([`scripts/backup-before-apply`](scripts/backup-before-apply)) that copies every file the apply is about to replace, including files you edited after chezmoi wrote them, to `~/.cli-workbench-backup/<timestamp>/` first. Directory mode 700, symlinks kept as symlinks, a `RESTORE` note with one copy-paste command per file. If nothing would change, nothing is created. If the backup fails, the apply is refused. `--dry-run` has no side effects.
 - The hook is part of the config `chezmoi init` writes. If you only create `chezmoi.toml` by hand, or run `chezmoi apply --source ...` without having run `init`, there is **no** backup.
 - It only touches the targets in the table above, and it deletes nothing unless you ask for it (`chezmoi destroy`).
-- `privacy-scan` runs in the pre-commit and pre-push hooks and in CI, so keys, tokens, personal paths and e-mail addresses do not reach a public fork by accident — including through the metadata of a commit.
+- `scripts/privacy-scan` guards what you commit; see "Safe to make public" above.
 
 ## Agent instructions
 
@@ -113,15 +114,15 @@ Claude Code, Codex and Gemini CLI each read a plain-text instruction file from t
 
 - **Your own rules** go in `~/.config/cli-workbench/agent-instructions.local.md`. It is not tracked, so personal preferences never reach a public fork. It is appended after the shared text in all three files. Remove the file and the next `chezmoi apply` removes its text.
 - **Existing files:** your current `~/.claude/CLAUDE.md` (and the others) are replaced on `apply` and backed up first. Move their content into the local file beforehand if you want to keep it as it is.
-- **Edit the source, not the deployed file.** A tool that appends to `~/.claude/CLAUDE.md` is overwritten at the next apply. The generated files cannot be pulled back with `chezmoi re-add`.
+- **Edit the source, not the deployed file.** Text that a tool appends to `~/.claude/CLAUDE.md` is overwritten at the next apply. The generated files cannot be pulled back with `chezmoi re-add`.
 - **Not tracked, on purpose:** `settings.json`, `config.toml`, `auth.json`, histories, sessions and databases. They hold machine paths, proxies and credentials, and the tools rewrite them. A test fails if such a file appears under `home/`.
-- Want to publish your own principles? Put them into the shared source instead of the local file in your fork.
+- To publish your own principles, put them in the shared source in your fork, not in the untracked local file.
 
 ## Workspace switcher (tmux)
 
 Press `prefix` then `P` (`Ctrl-a P`) for a picker over `~/dev/projects`. Every directory directly under a root is a workspace, opened as one tmux session: the editor on the left, on the right an AI agent over a shell. A directory that is not a repository but contains several (a multi-repo product) is **one** workspace with one window per repository. Choosing an existing workspace only switches to it. It needs tmux 3.2+ and `fzf`.
 
-- **Agent pane:** the first installed of `claude codex gemini grok` is started in the project directory. If none is installed, the window has just the editor and a shell, as before. `WORKSPACE_SWITCH_AGENT="claude --continue"` picks one (with arguments), `none` turns it off, `WORKSPACE_SWITCH_AGENTS="aider claude"` changes the candidates and their order. Set these with `set-environment -g` in `home/dot_tmux.conf`, next to `WORKSPACE_ROOTS`.
+- **Agent pane:** the first installed of `claude codex gemini grok` is started in the project directory. If none is installed, the window has just the editor and a shell. `WORKSPACE_SWITCH_AGENT="claude --continue"` picks one (with arguments), `none` turns it off, `WORKSPACE_SWITCH_AGENTS="aider claude"` changes the candidates and their order. Set these with `set-environment -g` in `home/dot_tmux.conf`, next to `WORKSPACE_ROOTS`.
 - **Roots:** uncomment `WORKSPACE_ROOTS` in `home/dot_tmux.conf` to scan other directories.
 - Details are in the header of `home/dot_tmux/scripts/executable_workspace-switch.sh`.
 

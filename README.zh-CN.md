@@ -27,9 +27,10 @@
 | **可回退** | 每次 `chezmoi apply` 之前，会把将被替换的文件备份到 `~/.cli-workbench-backup/`，并附恢复说明。 |
 | **承诺都有测试** | 下面的快速开始会在临时 home 目录里端到端运行（macOS 和 Ubuntu）。代理窗格（用替身代理）、备份和隐私扫描各有自己的测试。 |
 
-**如实说明，目前针对代理的部分有这些：** 工作台切换器可以启动这四个代理中的任何一个；状态栏（`~/.claude/statusline.sh`）只适用于 Claude Code；共享的指令文本能到达 Claude Code、Codex 和 Gemini CLI（Grok CLI 没有接入：这里不确定它读哪个指令文件）；各代理自己的设置文件（`settings.json`、`config.toml`）有意不纳入，见下文。本仓库不负责安装这些代理。
+**目前针对代理的部分有这些：** 工作台切换器可以启动这四个代理中的任何一个；状态栏（`~/.claude/statusline.sh`）只适用于 Claude Code；共享的指令文本能到达 Claude Code、Codex 和 Gemini CLI（Grok CLI 没有接入：尚不清楚它读哪个指令文件）；各代理自己的设置文件（`settings.json`、`config.toml`）有意不纳入，见下文。本仓库不负责安装这些代理。
 
 > **它是什么：** 一个个人 dotfiles 仓库，结构是 chezmoi 源目录。你 fork 它，修改 `home/`，把它变成你自己的。
+>
 > **它不是什么：** 不是包管理器、不是一键安装器、不是主题包，也不是代理框架。它不会安装软件，也不管理密钥。
 
 ## 使用条件与适用范围
@@ -105,7 +106,7 @@ scripts/lint-shell               # 对仓库里所有 bash/sh 脚本运行 shell
 - **每次 apply 之前先备份。** chezmoi 会直接覆盖内容不同的文件，不留副本。`chezmoi init` 会安装一个钩子（[`scripts/backup-before-apply`](scripts/backup-before-apply)），在 apply 之前把将被替换的文件（包括 chezmoi 写入后被你改过的文件）拷到 `~/.cli-workbench-backup/<时间戳>/`。目录权限 700，软链接按软链接保存，`RESTORE` 里每个文件一条可直接复制的恢复命令。没有要改的文件时什么都不创建；备份失败则拒绝 apply；`--dry-run` 没有任何副作用。
 - 钩子写在 `chezmoi init` 生成的配置里。如果你只是手写了 `chezmoi.toml`，或者没运行过 `init` 就用 `chezmoi apply --source ...`，则**没有**备份。
 - 它只会碰上表里的目标，除非你主动要求（`chezmoi destroy`），否则不会删除任何东西。
-- `privacy-scan` 在 pre-commit、pre-push 钩子和 CI 里都会运行，避免密钥、令牌、个人路径和邮箱地址意外进入公开的 fork——包括通过提交的元数据。
+- `scripts/privacy-scan` 负责检查你提交的内容；详见上文“可以放心公开”。
 
 ## 代理指令
 
@@ -113,15 +114,15 @@ Claude Code、Codex 和 Gemini CLI 都会从各自的主目录读取一个纯文
 
 - **你自己的规则**写在 `~/.config/cli-workbench/agent-instructions.local.md`。它不入库，所以个人偏好不会进入公开的 fork；它会被追加在三个文件的共享文本之后。删掉这个文件，下一次 `chezmoi apply` 就会移除其中的文本。
 - **已有的文件：** 你现有的 `~/.claude/CLAUDE.md`（以及另外两个）在 `apply` 时会被替换，替换前会先备份。想保持原样，请事先把内容挪进本地文件。
-- **改源，不要改部署后的文件。** 往 `~/.claude/CLAUDE.md` 追加内容的工具，会在下一次 apply 时被覆盖。生成的文件不能用 `chezmoi re-add` 拉回。
+- **改源，不要改部署后的文件。** 工具追加到 `~/.claude/CLAUDE.md` 的内容，会在下一次 apply 时被覆盖。生成的文件不能用 `chezmoi re-add` 拉回。
 - **有意不纳入：** `settings.json`、`config.toml`、`auth.json`、历史、会话和数据库。它们包含机器路径、代理和凭据，而且工具会自己改写。如果 `home/` 下出现这类文件，有测试会失败。
-- 想公开你自己的准则？在你的 fork 里把它们放进共享源，而不是本地文件。
+- 要公开你自己的准则，请在你的 fork 里把它们放进共享源，而不是未被跟踪的本地文件。
 
 ## 工作台切换器（tmux）
 
 按 `前缀键` 再按 `P`（`Ctrl-a P`），弹出 `~/dev/projects` 下的选择器。根目录下的每个直接子目录都是一个工作台，会打开成一个 tmux 会话：左边编辑器，右边上面是 AI 代理、下面是 shell。不是仓库、但里面包含多个仓库的目录（多仓库产品）算**一个**工作台，每个仓库一个窗口。选择已存在的工作台只会切换过去。需要 tmux 3.2+ 和 `fzf`。
 
-- **代理窗格：** 在项目目录里启动 `claude codex gemini grok` 中第一个已安装的。一个都没装时，窗口只有编辑器和 shell，和以前一样。`WORKSPACE_SWITCH_AGENT="claude --continue"` 指定某一个（可带参数），`none` 关闭，`WORKSPACE_SWITCH_AGENTS="aider claude"` 修改候选及顺序。在 `home/dot_tmux.conf` 里用 `set-environment -g` 设置，与 `WORKSPACE_ROOTS` 放在一起。
+- **代理窗格：** 在项目目录里启动 `claude codex gemini grok` 中第一个已安装的。一个都没装时，窗口只有编辑器和 shell。`WORKSPACE_SWITCH_AGENT="claude --continue"` 指定某一个（可带参数），`none` 关闭，`WORKSPACE_SWITCH_AGENTS="aider claude"` 修改候选及顺序。在 `home/dot_tmux.conf` 里用 `set-environment -g` 设置，与 `WORKSPACE_ROOTS` 放在一起。
 - **根目录：** 取消 `home/dot_tmux.conf` 里 `WORKSPACE_ROOTS` 的注释，可以扫描其他目录。
 - 详细说明在 `home/dot_tmux/scripts/executable_workspace-switch.sh` 开头的注释里。
 
