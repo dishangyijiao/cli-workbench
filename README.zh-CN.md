@@ -106,7 +106,7 @@ scripts/lint-shell               # 对仓库里所有 bash/sh 脚本运行 shell
 - **每次 apply 之前先备份。** chezmoi 会直接覆盖内容不同的文件，不留副本。`chezmoi init` 会安装一个钩子（[`scripts/backup-before-apply`](scripts/backup-before-apply)），在 apply 之前把将被替换的文件（包括 chezmoi 写入后被你改过的文件）拷到 `~/.cli-workbench-backup/<时间戳>/`。目录权限 700，软链接按软链接保存，`RESTORE` 里每个文件一条可直接复制的恢复命令。没有要改的文件时什么都不创建；备份失败则拒绝 apply；`--dry-run` 没有任何副作用。
 - 钩子写在 `chezmoi init` 生成的配置里。如果你只是手写了 `chezmoi.toml`，或者没运行过 `init` 就用 `chezmoi apply --source ...`，则**没有**备份。
 - 它只会碰上表里的目标，除非你主动要求（`chezmoi destroy`），否则不会删除任何东西。
-- `privacy-scan` 在 pre-commit、pre-push 钩子和 CI 里都会运行，避免密钥、令牌、个人路径和邮箱地址意外进入公开的 fork——包括通过提交的元数据。
+- `scripts/privacy-scan` 负责检查你提交的内容；详见上文“可以放心公开”。
 
 ## 代理指令
 
@@ -116,7 +116,7 @@ Claude Code、Codex 和 Gemini CLI 都会从各自的主目录读取一个纯文
 - **已有的文件：** 你现有的 `~/.claude/CLAUDE.md`（以及另外两个）在 `apply` 时会被替换，替换前会先备份。想保持原样，请事先把内容挪进本地文件。
 - **改源，不要改部署后的文件。** 工具追加到 `~/.claude/CLAUDE.md` 的内容，会在下一次 apply 时被覆盖。生成的文件不能用 `chezmoi re-add` 拉回。
 - **有意不纳入：** `settings.json`、`config.toml`、`auth.json`、历史、会话和数据库。它们包含机器路径、代理和凭据，而且工具会自己改写。如果 `home/` 下出现这类文件，有测试会失败。
-- 想公开你自己的准则？在你的 fork 里把它们放进共享源，而不是本地文件。
+- 要公开你自己的准则，请在你的 fork 里把它们放进共享源，而不是未被跟踪的本地文件。
 
 ## 工作台切换器（tmux）
 

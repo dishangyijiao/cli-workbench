@@ -60,7 +60,7 @@ chezmoi apply                      # then everything
 
 Or let chezmoi do the clone: `chezmoi init <your-github-user>/cli-workbench`, then the same `diff` and `apply`.
 
-What gets deployed (the layout follows [chezmoi's naming](https://www.chezmoi.io/reference/source-state-attributes/): `dot_` becomes `.`, `executable_` sets the mode, `private_` makes the directory 700):
+What gets deployed (the layout follows [chezmoi's naming](https://www.chezmoi.io/reference/source-state-attributes/): `dot_` becomes `.`, `executable_` sets the mode, `private_` makes the directory mode 700):
 
 | Source in `home/` | Target | Notes |
 |---|---|---|
@@ -106,7 +106,7 @@ scripts/lint-shell               # shellcheck (warning level and above) over eve
 - **Backup before every apply.** chezmoi overwrites a differing file without keeping a copy. `chezmoi init` installs a hook ([`scripts/backup-before-apply`](scripts/backup-before-apply)) that copies every file the apply is about to replace, including files you edited after chezmoi wrote them, to `~/.cli-workbench-backup/<timestamp>/` first. Directory mode 700, symlinks kept as symlinks, a `RESTORE` note with one copy-paste command per file. If nothing would change, nothing is created. If the backup fails, the apply is refused. `--dry-run` has no side effects.
 - The hook is part of the config `chezmoi init` writes. If you only create `chezmoi.toml` by hand, or run `chezmoi apply --source ...` without having run `init`, there is **no** backup.
 - It only touches the targets in the table above, and it deletes nothing unless you ask for it (`chezmoi destroy`).
-- `privacy-scan` runs in the pre-commit and pre-push hooks and in CI, so keys, tokens, personal paths and e-mail addresses do not reach a public fork by accident — including through the metadata of a commit.
+- `scripts/privacy-scan` guards what you commit; see "Safe to make public" above.
 
 ## Agent instructions
 
@@ -116,7 +116,7 @@ Claude Code, Codex and Gemini CLI each read a plain-text instruction file from t
 - **Existing files:** your current `~/.claude/CLAUDE.md` (and the others) are replaced on `apply` and backed up first. Move their content into the local file beforehand if you want to keep it as it is.
 - **Edit the source, not the deployed file.** Text that a tool appends to `~/.claude/CLAUDE.md` is overwritten at the next apply. The generated files cannot be pulled back with `chezmoi re-add`.
 - **Not tracked, on purpose:** `settings.json`, `config.toml`, `auth.json`, histories, sessions and databases. They hold machine paths, proxies and credentials, and the tools rewrite them. A test fails if such a file appears under `home/`.
-- Want to publish your own principles? Put them into the shared source instead of the local file in your fork.
+- To publish your own principles, put them in the shared source in your fork, not in the untracked local file.
 
 ## Workspace switcher (tmux)
 

@@ -33,7 +33,7 @@ Code, comments, commit messages and every file except `README.zh-CN.md` are in E
 
 Do not commit personal paths, names, e-mail addresses or credentials. `scripts/privacy-scan` checks for private keys, token formats, secret-looking assignments, `/Users/<name>` and `/home/<name>` paths, e-mail addresses, `.env`/`*.pem`/`*.key` files, and your own words from `~/.config/cli-workbench/deny.txt` (one word per line, kept outside the repo). The pre-commit and pre-push hooks and CI all run it. A deliberate exception: put `wb-scan: allow` on that line.
 
-To keep your e-mail address out of commit metadata, commit with your GitHub noreply address (GitHub, Settings, Emails). File scans never see commit metadata, so the pre-push hook scans the author, the committer and the message of every commit a push would add; put your private address (and other private words) in `~/.config/cli-workbench/deny.txt` and the hook refuses the push.
+To keep your e-mail address out of commit metadata, commit with your GitHub noreply address (Settings > Emails on GitHub). File scans never see commit metadata, so the pre-push hook scans the author, the committer and the message of every commit a push would add; put your private address (and other private words) in `~/.config/cli-workbench/deny.txt` and the hook refuses the push.
 
 ## Commit messages
 
