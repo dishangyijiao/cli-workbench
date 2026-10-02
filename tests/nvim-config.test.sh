@@ -35,4 +35,24 @@ assert_contains "a runtime error is an ERROR (4) that names the module" "boom fa
 assert_contains "and the cause reaches the user" "kaboom" "$out"
 assert_contains "a module that is not installed yet (first start) is only a WARN (3)" "missing false 3:wb_not_installed_xyz: could not load" "$out"
 
+echo "<leader>rc reloads the LSP config, and only that"
+cat > "$T_DIR/rc.lua" <<'LUA'
+package.path = arg[1] .. "/?.lua;" .. arg[1] .. "/?/init.lua;" .. package.path
+vim.g.mapleader = " "
+local msgs, loads = {}, 0
+vim.notify = function(msg) msgs[#msgs + 1] = msg end
+package.preload["lsp"] = function() loads = loads + 1; return true end
+require("plugins")
+require("lsp")                                           -- loaded once, as at start-up
+package.loaded["lspconfig"] = "plugin-internal-state"      -- a plugin's own module must survive the reload
+vim.fn.maparg("<leader>rc", "n", false, true).callback()
+print("lspconfig_kept", tostring(package.loaded["lspconfig"] == "plugin-internal-state"))
+print("lsp_loaded_again", tostring(loads == 2))
+print("says_restart", tostring((msgs[#msgs] or ""):lower():find("restart", 1, true) ~= nil))
+LUA
+out=$(runlua "$T_DIR/rc.lua")
+assert_contains "lspconfig's own modules are not thrown away" "lspconfig_kept true" "$out"
+assert_contains "lsp/ is loaded again" "lsp_loaded_again true" "$out"
+assert_contains "the message says that plugin changes need a restart" "says_restart true" "$out"
+
 t_done
