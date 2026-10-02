@@ -21,8 +21,11 @@ require('gitsigns').setup {
     vim.keymap.set('n', '<leader>gs', gs.stage_hunk, { buffer = bufnr, desc = 'Stage hunk' })
     -- Open the GitLab merge request (or, failing that, the commit) that last changed the current line
     vim.keymap.set('n', '<leader>gm', function()
+      local gitlab = require('git.gitlab')
       local current_line = vim.fn.line('.')
-      local git_root = vim.fn.systemlist("git rev-parse --show-toplevel")[1]
+      -- The repository that holds this file, not the one Neovim happened to be started in
+      local git_root = vim.fn.systemlist(string.format("git -C %s rev-parse --show-toplevel",
+                                                       vim.fn.shellescape(vim.fn.expand('%:p:h'))))[1]
       if vim.v.shell_error ~= 0 then
         vim.notify("Not in a Git repository", vim.log.levels.ERROR)
         return
@@ -49,49 +52,48 @@ require('gitsigns').setup {
                                       vim.fn.shellescape(git_root),
                                       vim.fn.shellescape(commit_hash))
       local mr_id = vim.fn.systemlist(mr_command)[1]
-      local remote_url_cmd = "git config --get remote.origin.url"
-      local remote_url = vim.fn.systemlist(remote_url_cmd)[1]
+      -- The remote of the repository that holds this file, not of whatever directory Neovim was started in
+      local remote_url = vim.fn.systemlist(string.format("git -C %s config --get remote.origin.url",
+                                                         vim.fn.shellescape(git_root)))[1]
       if not remote_url then
         vim.notify("No remote.origin.url configured", vim.log.levels.ERROR)
         return
       end
-      local gitlab_url, project_path
-      if remote_url:match("^git@") then
-        -- SSH: git@example.com:namespace/project.git
-        local domain, path = remote_url:match("git@([^:]+):([^%.]+)")
-        if domain and path then
-          gitlab_url = "https://" .. domain
-          project_path = path
-        end
-      elseif remote_url:match("^https://") then
-        -- HTTPS: https://example.com/namespace/project.git
-        gitlab_url, project_path = remote_url:match("(https://[^/]+)/([^%.]+)")
-      end
+      local gitlab_url, project_path = gitlab.parse_remote(remote_url)
       if not gitlab_url or not project_path then
         vim.notify("Cannot parse the GitLab URL from the remote", vim.log.levels.ERROR)
         return
       end
-      project_path = project_path:gsub("%.git$", "")
-      local url
+      local url = gitlab.page_url(gitlab_url, project_path, mr_id, commit_hash)
+      if not url then
+        vim.notify("Unexpected value in the merge request number or commit; not opening a browser", vim.log.levels.ERROR)
+        return
+      end
       if mr_id then
-        url = string.format("%s/%s/-/merge_requests/%s", gitlab_url, project_path, mr_id:sub(2))
         vim.notify("Opening MR " .. mr_id, vim.log.levels.INFO)
       else
-        url = string.format("%s/%s/-/commit/%s", gitlab_url, project_path, commit_hash)
         vim.notify("No merge request found, opening the commit", vim.log.levels.INFO)
       end
-      local open_cmd
-      if vim.fn.has("mac") == 1 then
-        open_cmd = "open"
-      elseif vim.fn.has("unix") == 1 then
-        open_cmd = "xdg-open"
-      elseif vim.fn.has("win32") == 1 then
-        open_cmd = "start"
-      end
-      if open_cmd then
-        vim.fn.system(string.format("%s '%s'", open_cmd, url))
+      -- No shell is involved: the URL is one argument. vim.ui.open exists from Neovim 0.10; before that, run the opener directly.
+      if vim.ui.open then
+        local _, err = vim.ui.open(url)
+        if err then
+          vim.notify("Cannot open a browser: " .. err .. "\n" .. url, vim.log.levels.ERROR)
+        end
       else
-        vim.notify("Cannot open a browser: " .. url, vim.log.levels.INFO)
+        local opener
+        if vim.fn.has("mac") == 1 then
+          opener = { "open", url }
+        elseif vim.fn.has("unix") == 1 then
+          opener = { "xdg-open", url }
+        elseif vim.fn.has("win32") == 1 then
+          opener = { "cmd", "/c", "start", "", url }
+        end
+        if opener then
+          vim.fn.jobstart(opener, { detach = true })
+        else
+          vim.notify("Cannot open a browser: " .. url, vim.log.levels.INFO)
+        end
       end
     end, { buffer = bufnr, desc = 'Open merge request for current line' })
   end
@@ -100,4 +102,3 @@ require('gitsigns').setup {
 vim.keymap.set('n', '<leader>gc', '<cmd>Telescope git_commits<CR>', { noremap = true, silent = true, desc = 'Git commits' })
 vim.keymap.set('n', '<leader>gt', '<cmd>Telescope git_status<CR>', { noremap = true, silent = true, desc = 'Git status' })
 vim.keymap.set('n', '<leader>gB', '<cmd>Telescope git_branches<CR>', { noremap = true, silent = true, desc = 'Git branches' })
- 
