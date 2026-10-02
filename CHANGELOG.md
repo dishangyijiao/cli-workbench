@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- Test-first development is now the documented rule (CONTRIBUTING.md), enforced by `scripts/tdd-gate`: a `feat`, `fix`, `refactor` or `perf` commit that changes `home/`, `scripts/` or `.githooks/` must add or change a `tests/*.test.sh`. It runs as a `commit-msg` hook and, because `--no-verify` skips hooks, in CI over every commit of a pull request. Escape hatch: `tdd: skip - <reason>` in the message.
+
 ## [0.1.0] - 2026-10-02
 
 ### Changed
