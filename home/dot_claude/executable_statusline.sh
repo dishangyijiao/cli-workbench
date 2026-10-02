@@ -65,6 +65,11 @@ EOF
 [ -n "$project_dir" ] || project_dir=$current_dir
 project=$(basename "$project_dir")
 
+# Text that comes from disk or from a path (a directory name, a branch, a cache entry) is printed to the terminal, so it must not
+# be able to carry escape sequences: drop every ASCII control character (octal, so it does not depend on the locale).
+plain() { printf '%s' "$1" | tr -d '\000-\037\177'; }
+project=$(plain "$project")
+
 # ---- git: "<branch> <changed> <untracked>", or nothing outside a repository ----
 # --no-optional-locks: do not take the index lock, so this never conflicts with git
 # commands that Claude Code is running. A detached HEAD shows the short hash.
@@ -80,10 +85,14 @@ git_info() {
 ttl=${STATUSLINE_CACHE_TTL:-5}
 case $ttl in '' | *[!0-9]*) ttl=5 ;; esac
 
+# $XDG_RUNTIME_DIR is private to the user (Linux); macOS's $TMPDIR is too. In a shared /tmp another user could have created the
+# directory first, so the cache is used only when the directory is ours and not a symlink; otherwise it is left out.
+cache_dir=${STATUSLINE_CACHE_DIR:-${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/claude-statusline-$(id -u)}
+if [ -L "$cache_dir" ] || { [ -e "$cache_dir" ] && { [ ! -d "$cache_dir" ] || [ ! -O "$cache_dir" ]; }; }; then ttl=0; fi
+
 info=""
 hit=""
 if [ "$ttl" -gt 0 ]; then
-  cache_dir=${STATUSLINE_CACHE_DIR:-${TMPDIR:-/tmp}/claude-statusline-$(id -u)}
   key=$(printf '%s' "$current_dir" | cksum | cut -d' ' -f1)
   cache_file="$cache_dir/$key"
   if [ -f "$cache_file" ]; then
@@ -98,15 +107,20 @@ fi
 if [ -z "$hit" ]; then
   info=$(git_info "$current_dir")
   if [ "$ttl" -gt 0 ]; then
-    (umask 077 && mkdir -p "$cache_dir" && printf '%s' "$info" > "$cache_file") 2>/dev/null
+    # Check again after mkdir: another user may have created the directory between the check above and here, and a
+    # directory that is not ours could hold a symlink named like the cache file.
+    (umask 077 && mkdir -p "$cache_dir" && [ ! -L "$cache_dir" ] && [ -O "$cache_dir" ] && printf '%s' "$info" > "$cache_file") 2>/dev/null
   fi
 fi
 
-branch=${info%% *}
+branch=$(plain "${info%% *}")
 rest=${info#* }
 changed=${rest%% *}
 untracked=${rest#* }
 [ -n "$info" ] || { branch=""; changed=0; untracked=0; }
+# The two counters come from the same cache entry: anything that is not a plain number counts as 0.
+case $changed in '' | *[!0-9]*) changed=0 ;; esac
+case $untracked in '' | *[!0-9]*) untracked=0 ;; esac
 
 # ---- colors ----
 c() { printf '\033[%sm' "$1"; }
