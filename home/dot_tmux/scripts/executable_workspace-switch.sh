@@ -82,6 +82,15 @@ session_dir() {   # the directory a session belongs to: our @project_dir, else t
   [ -n "$d" ] && (cd "$d" 2>/dev/null && pwd -P)
 }
 
+claimed_by() {    # the directory a session belongs to, once its creator has tagged it (~1 s at most); nothing if it never does
+  local d
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    d=$(T show-options -qv -t "=$1:" @project_dir 2>/dev/null)
+    [ -n "$d" ] && { echo "$d"; return; }
+    sleep 0.1
+  done
+}
+
 pick_name() {     # a session name that is free, or already belongs to this directory
   local dir=$1 base parent h cand
   base=$(basename "$dir" | tr '.:' '__'); parent=$(basename "$(dirname "$dir")" | tr '.:' '__')
@@ -117,7 +126,10 @@ create_workspace() {   # $1 = dir, $2 = session name
     else wn=$(basename "$r"); [ "$wn" != "$gname" ] && wn=${wn#"$gname"-}; wn=$(echo "$wn" | tr '.:' '__'); fi
     if [ -z "$first" ]; then
       if ! out=$(T new-session -d -P -F '#{window_id}' -s "$name" -c "$r" -n "$wn" 2>&1); then
-        T has-session -t "=$name" 2>/dev/null && return 0        # another instance claimed it first
+        if T has-session -t "=$name" 2>/dev/null; then            # another instance claimed the name first
+          [ "$(claimed_by "$name")" = "$dir" ] && return 0        # ... for this same directory: nothing left to do
+          return 3                                                # ... for another directory: the caller picks a new name
+        fi
         die "cannot create session '$name': $out"; return 1
       fi
       wid=$out; first=$wid
@@ -132,11 +144,17 @@ create_workspace() {   # $1 = dir, $2 = session name
 }
 
 open_dir() {
-  local dir=${1/#\~/$HOME} name
+  local dir=${1/#\~/$HOME} name tries=0 rc=0
   [ -d "$dir" ] || { die "no such directory: $dir"; return 1; }
   dir=$(cd "$dir" && pwd -P)
-  name=$(pick_name "$dir")
-  T has-session -t "=$name" 2>/dev/null || create_workspace "$dir" "$name" || return 1
+  while :; do
+    name=$(pick_name "$dir")
+    if T has-session -t "=$name" 2>/dev/null; then rc=0; break; fi   # pick_name returns an existing session only when it is this directory's
+    create_workspace "$dir" "$name"; rc=$?
+    [ "$rc" = 3 ] || break                                           # 3 = another directory took the name meanwhile: pick again
+    tries=$((tries + 1)); [ "$tries" -lt 3 ] || { die "no free session name for $dir"; return 1; }
+  done
+  [ "$rc" = 0 ] || return 1
   [ "${WORKSPACE_SWITCH_NO_ATTACH:-0}" = 1 ] && { echo "$name"; return 0; }
   if [ -n "${TMUX:-}" ]; then T switch-client -t "=$name"; else T attach-session -t "=$name"; fi
 }
