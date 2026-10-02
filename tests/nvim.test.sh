@@ -12,7 +12,7 @@ assert "plugin versions are pinned by lazy-lock.json" test -f $NVIM_SRC/lazy-loc
 echo "chezmoi deploys it to ~/.config/nvim in a clean HOME"
 H=$(cd -P "$(mktemp -d)" && pwd)
 t_render "$H"
-assert "~/.config/nvim/init.lua is deployed" test -f "$H/.config/nvim/init.lua"
+assert '$HOME/.config/nvim/init.lua is deployed' test -f "$H/.config/nvim/init.lua"
 assert "the deployed copy matches the source" diff -r "$NVIM_SRC" "$H/.config/nvim" -x '.chezmoi*'
 case $H in /tmp/*|/var/folders/*|/private/var/folders/*) rm -rf "$H";; esac
 

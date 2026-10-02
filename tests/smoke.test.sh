@@ -23,7 +23,7 @@ echo "the README quick start: init points chezmoi at this clone"
 chezmoi init --source "$WB_SRC" --no-tty >/dev/null 2>&1; assert_eq "chezmoi init exits 0" 0 $?
 
 echo "look first (diff), then apply"
-out=$("${CZ[@]}" diff 2>&1); assert_eq "chezmoi diff exits 0" 0 $?
+"${CZ[@]}" diff >/dev/null 2>&1; assert_eq "chezmoi diff exits 0" 0 $?
 assert_eq "diff changed nothing" "# my old zshrc" "$(cat "$HOME/.zshrc")"
 "${CZ[@]}" apply --dry-run >/dev/null 2>&1; assert_eq "apply --dry-run exits 0" 0 $?
 assert_eq "dry-run changed nothing" "# my old zshrc" "$(cat "$HOME/.zshrc")"
