@@ -55,4 +55,30 @@ assert_contains "lspconfig's own modules are not thrown away" "lspconfig_kept tr
 assert_contains "lsp/ is loaded again" "lsp_loaded_again true" "$out"
 assert_contains "the message says that plugin changes need a restart" "says_restart true" "$out"
 
+echo "a language server is only set up when its executable is installed"
+mkdir -p "$T_DIR/bin"
+cat > "$T_DIR/lsp.lua" <<'LUA'
+package.path = arg[1] .. "/?.lua;" .. arg[1] .. "/?/init.lua;" .. package.path
+local calls = {}
+local function any() local t; t = setmetatable({}, { __index = function() return t end, __call = function() return t end }); return t end
+package.preload["lspconfig"] = function()
+  return setmetatable({ util = { root_pattern = function() end, find_git_ancestor = function() end } },
+    { __index = function(_, name) return { setup = function() calls[#calls + 1] = name end } end })
+end
+package.preload["cmp_nvim_lsp"] = function() return { default_capabilities = function() return {} end } end
+package.preload["cmp"] = any
+package.preload["luasnip"] = any
+require("lsp")
+print("set up: " .. table.concat(calls, " "))
+LUA
+out=$(RUNLUA_PATH="$T_DIR/bin" runlua "$T_DIR/lsp.lua")
+assert_eq "with no server installed, none is set up" "set up: " "$out"
+for exe in yaml-language-server docker-langserver; do printf '#!/bin/sh\n' > "$T_DIR/bin/$exe"; chmod +x "$T_DIR/bin/$exe"; done
+out=$(RUNLUA_PATH="$T_DIR/bin" runlua "$T_DIR/lsp.lua")
+assert_eq "only the installed ones are set up" "set up: yamlls dockerls" "$out"
+for exe in typescript-language-server vscode-html-language-server vscode-css-language-server; do
+  printf '#!/bin/sh\n' > "$T_DIR/bin/$exe"; chmod +x "$T_DIR/bin/$exe"
+done
+out=$(RUNLUA_PATH="$T_DIR/bin" runlua "$T_DIR/lsp.lua")
+assert_eq "with all five installed, all five are set up" "set up: ts_ls html cssls yamlls dockerls" "$out"
 t_done

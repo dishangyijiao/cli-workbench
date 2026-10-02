@@ -1,8 +1,15 @@
 -- ~/.config/nvim/lua/lsp/init.lua
--- Language servers and completion. A server is only set up when its executable is installed, unless noted.
+-- Language servers and completion. A server is only set up when its executable is installed: one that is set up but
+-- missing makes Neovim print an error every time a file of that type is opened.
 
 local lspconfig = require('lspconfig')
 local capabilities = require('cmp_nvim_lsp').default_capabilities()
+
+local function setup_if_installed(server, executable, config)
+    if vim.fn.executable(executable) == 1 then
+        lspconfig[server].setup(config)
+    end
+end
 
 local on_attach = function(client, bufnr)
     local opts = { noremap=true, silent=true, buffer=bufnr }
@@ -64,19 +71,19 @@ cmp.setup({
 })
 
 -- JavaScript/TypeScript
-lspconfig.ts_ls.setup({
+setup_if_installed('ts_ls', 'typescript-language-server', {
     on_attach = on_attach,
     capabilities = capabilities,
     filetypes = { "javascript", "javascriptreact", "javascript.jsx", "typescript", "typescriptreact", "typescript.tsx" },
 })
 
 -- HTML/CSS
-lspconfig.html.setup({
+setup_if_installed('html', 'vscode-html-language-server', {
     on_attach = on_attach,
     capabilities = capabilities,
 })
 
-lspconfig.cssls.setup({
+setup_if_installed('cssls', 'vscode-css-language-server', {
     on_attach = on_attach,
     capabilities = capabilities,
 })
@@ -247,7 +254,7 @@ if terraformls_available then
 end
 
 -- Kubernetes/YAML
-lspconfig.yamlls.setup({
+setup_if_installed('yamlls', 'yaml-language-server', {
     on_attach = on_attach,
     capabilities = capabilities,
     settings = {
@@ -288,7 +295,7 @@ end
 --]]
 
 -- Dockerfile
-lspconfig.dockerls.setup({
+setup_if_installed('dockerls', 'docker-langserver', {
     on_attach = on_attach,
     capabilities = capabilities,
 })
