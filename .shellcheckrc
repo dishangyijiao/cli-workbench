@@ -1,0 +1,2 @@
+# Follow `source`d files such as tests/harness.sh. scripts/lint-shell passes -S warning, so notes and style hints do not fail.
+external-sources=true

@@ -21,7 +21,7 @@ X() { tmux -L "$WORKSPACE_SWITCH_SOCKET" "$@"; }
 panes()    { X list-panes -t "$1" 2>/dev/null | wc -l | tr -d ' '; }
 windows()  { X list-windows -t "=$1" -F '#{window_name}' 2>/dev/null | tr '\n' ' '; }
 sessions() { X list-sessions -F '#S' 2>/dev/null | sort | tr '\n' ' '; }
-panepath() { local i p; for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do p=$(X list-panes -t "$1" -F '#{pane_current_path}' | head -1); [ -n "$p" ] && [ "$p" != "$HOME" ] && break; sleep 0.1; done; echo "$p"; }
+panepath() { local p; for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do p=$(X list-panes -t "$1" -F '#{pane_current_path}' | head -1); [ -n "$p" ] && [ "$p" != "$HOME" ] && break; sleep 0.1; done; echo "$p"; }
 
 echo "every directory directly under a root is a workspace; nothing deeper is listed"
 out=$("$PS" --list | sed "s#^$T_DIR/##" | sort | tr '\n' ' ')
@@ -79,12 +79,13 @@ echo "names that collide on the same basename AND the same parent still get dist
 mkdir -p "$T_DIR/x/other/alpha/.git"
 name3=$("$PS" --open "$T_DIR/x/other/alpha")
 assert_contains "third alpha gets a hash suffix" "alpha_" "$name3"
-[ "$name3" != "alpha" ] && [ "$name3" != "other_alpha" ]; assert_eq "distinct from the first two" 0 $?
+assert "distinct from the first" test "$name3" != "alpha"
+assert "distinct from the second" test "$name3" != "other_alpha"
 
 echo "a.b and a_b are different workspaces"
 mkdir -p "$ROOT/ab.c/.git" "$ROOT/ab_c/.git"
 n1=$("$PS" --open "$ROOT/ab.c"); n2=$("$PS" --open "$ROOT/ab_c")
-[ "$n1" != "$n2" ]; assert_eq "different sessions" 0 $?
+assert "different sessions" test "$n1" != "$n2"
 
 echo "two simultaneous opens of the same new workspace create it once"
 mkdir -p "$ROOT/conc/.git"
@@ -124,7 +125,7 @@ FAKE=$T_DIR/fakebin; mkdir -p "$FAKE"
 for a in fakeclaude fakecodex; do printf '#!/bin/sh\necho "AGENT-STARTED %s in $(pwd -P | sed "s#.*/##")"\nexec sleep 300\n' "$a" > "$FAKE/$a"; chmod +x "$FAKE/$a"; done
 export PATH="$FAKE:$PATH"
 mkdir -p "$ROOT/ag1/.git" "$ROOT/ag2/.git" "$ROOT/ag3/.git" "$ROOT/ag4/.git" "$ROOT/ag5/.git"
-agent_text() { local i t; for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do t=$(X capture-pane -p -t "$1" 2>/dev/null); case $t in *AGENT-STARTED*) break;; esac; sleep 0.1; done; echo "$t"; }
+agent_text() { local t; for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do t=$(X capture-pane -p -t "$1" 2>/dev/null); case $t in *AGENT-STARTED*) break;; esac; sleep 0.1; done; echo "$t"; }
 WORKSPACE_SWITCH_AGENT=fakeclaude "$PS" --open "$ROOT/ag1" >/dev/null
 assert_eq "three panes" 3 "$(panes '=ag1:main')"
 assert_contains "the agent is started in the project directory" "AGENT-STARTED fakeclaude in ag1" "$(agent_text "$(X list-panes -t '=ag1:main' -F '#{pane_id}' | sed -n 2p)")"

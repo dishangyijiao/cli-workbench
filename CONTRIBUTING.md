@@ -15,6 +15,7 @@ Issues and pull requests are welcome. For security problems, follow [SECURITY.md
 
    ```sh
    tests/run.sh
+   scripts/lint-shell   # shellcheck, warning level and above (brew install shellcheck); the pre-commit hook and CI run it too
    ```
 
 4. When user-visible behaviour changes, update both `README.md` and `README.zh-CN.md`, and add a line under `Unreleased` in [CHANGELOG.md](CHANGELOG.md). If you cannot write the Chinese part, say so in the pull request and it will be added.

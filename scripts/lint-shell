@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# lint-shell [--require]
+# Runs shellcheck (warning level and above) on every bash/sh script git would publish: tracked plus new files that are not
+# ignored, picked by their #! line. zsh is not supported by shellcheck, so zsh files are not checked. Used by the pre-commit
+# hook and by CI. Without shellcheck it prints a notice and exits 0, so a fresh clone can still commit;
+# --require turns that into exit 2 (CI uses it, so the gate cannot silently disappear).
+# Bash 3.2 compatible, like the other scripts.
+set -u
+require=0
+case ${1-} in
+  --require) require=1 ;;
+  '') ;;
+  *) echo "usage: lint-shell [--require]" >&2; exit 2 ;;
+esac
+sc=${SHELLCHECK:-shellcheck}
+if ! command -v "$sc" >/dev/null 2>&1; then
+  if [ "$require" = 1 ]; then echo "lint-shell: $sc is not installed" >&2; exit 2; fi
+  echo "lint-shell: $sc is not installed; skipping (brew install shellcheck)" >&2
+  exit 0
+fi
+root=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "lint-shell: not a git repository" >&2; exit 2; }
+cd "$root" || exit 2
+files=()
+while IFS= read -r f; do
+  [ -f "$f" ] || continue
+  head -n 1 "$f" 2>/dev/null | grep -qE '^#!.*[ /](ba)?sh([[:space:]]|$)' && files+=("$f")
+done < <(git ls-files -co --exclude-standard)
+if [ "${#files[@]}" -eq 0 ]; then echo "lint-shell: no shell scripts found"; exit 0; fi
+"$sc" -x -S warning "${files[@]}" || exit 1
+echo "lint-shell: ${#files[@]} files ok"

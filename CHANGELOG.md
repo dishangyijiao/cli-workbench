@@ -11,6 +11,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - `zshrc` loads `path.zsh` from `~/.config/zsh/` instead of from next to itself; `~/.config/zsh` is created with mode 700.
 - CI installs chezmoi (macOS: Homebrew; Ubuntu: a pinned, checksum-verified release).
 - `privacy-scan` no longer mistakes `home/dot_*` for a personal `/home/<name>` path.
+- The pre-commit hook and CI (Ubuntu) run `scripts/lint-shell`, which runs shellcheck at warning level over every bash/sh script; five existing warnings in `tests/` are fixed.
 
 ### Added
 
