@@ -1,0 +1,9 @@
+#!/bin/sh
+# Tell .githooks/commit-msg that this commit is an amend: git passes the source ("commit") and the commit being reused,
+# which is HEAD for --amend (the word, or its sha). (commit-msg itself is not told.) "git commit -C HEAD" without --amend looks the same; CI still judges it.
+marker=$(git rev-parse --git-path tdd-gate-amend) || exit 0
+rm -f "$marker"
+[ "${2:-}" = commit ] && [ -n "${3:-}" ] || exit 0
+# git passes the literal word HEAD for --amend, a full sha for -C <sha>; accept both.
+[ "$3" = HEAD ] || [ "$3" = "$(git rev-parse -q --verify HEAD 2>/dev/null)" ] && : > "$marker"
+exit 0

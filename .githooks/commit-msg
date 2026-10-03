@@ -1,0 +1,6 @@
+#!/bin/sh
+# Refuse feat/fix/refactor/perf commits that change product code without a test. Enable once per clone:  git config core.hooksPath .githooks
+root=$(git rev-parse --show-toplevel) || exit 1
+marker=$(git rev-parse --git-path tdd-gate-amend) || exit 1       # left by .githooks/prepare-commit-msg for an amend
+if [ -e "$marker" ]; then TDD_GATE_AMEND=1; export TDD_GATE_AMEND; rm -f "$marker"; fi
+"$root/scripts/tdd-gate" "$1"

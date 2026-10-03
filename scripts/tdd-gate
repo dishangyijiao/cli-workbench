@@ -1,0 +1,57 @@
+#!/bin/sh
+# Test-first gate. A feat/fix/refactor/perf commit that changes product code (home/, scripts/, .githooks/) must add or
+# change a tests/*.test.sh file in the same commit. Deleting a test does not count.
+#   scripts/tdd-gate <commit-message-file>   the commit being made (.githooks/commit-msg); set TDD_GATE_AMEND=1 when amending
+#   scripts/tdd-gate --range <a>..<b>        every non-merge commit in a range (CI), so --no-verify cannot skip the gate
+# Escape hatch for a change with no behaviour (say, a comment): a line "tdd: skip - <reason>" in the message.
+# Git history cannot prove the test was written first; this guarantees one exists, and CONTRIBUTING.md asks for the rest.
+PRODUCT='^(home|scripts|\.githooks)/'
+TESTFILE='^tests/.*\.test\.sh$'
+EMPTY_TREE=4b825dc642cb6eb9a060e54bf8d69288fbee4904
+
+# Does this subject need a test at all? "fix(zsh)!: x", "feat!: x", "Fix: x"; not "fixture: x", "docs: x" or "Merge ...".
+needs_test() { printf '%s\n' "$1" | grep -Eiq '^(feat|fix|refactor|perf)(\([^)]*\))?!?:'; }
+has_skip() { printf '%s\n' "$1" | grep -Eq '^tdd: skip - [[:space:]]*[^[:space:]]'; }
+# Both lists are "product" and "test" paths; quotepath off so a non-ASCII name is not wrapped in quotes and missed.
+has_product() { printf '%s\n' "$1" | grep -Eq "$PRODUCT"; }
+has_test() { printf '%s\n' "$1" | grep -Eq "$TESTFILE"; }
+
+if [ "${1:-}" = "--range" ]; then
+  range=${2:-}
+  [ -n "$range" ] || { echo "usage: tdd-gate --range <a>..<b>" >&2; exit 2; }
+  rc=0
+  for c in $(git rev-list --no-merges --reverse "$range"); do
+    body=$(git log -1 --format=%B "$c")
+    needs_test "$(printf '%s\n' "$body" | sed -n '1p')" || continue
+    changed=$(git -c core.quotepath=off diff-tree -r --root --no-commit-id --name-only "$c")
+    has_product "$changed" || continue
+    added=$(git -c core.quotepath=off diff-tree -r --root --no-commit-id --name-only --diff-filter=ACMR "$c")
+    has_test "$added" && continue
+    short=$(git rev-parse --short "$c")
+    if has_skip "$body"; then echo "tdd-gate: $short skipped the test requirement: $(printf '%s\n' "$body" | grep -E '^tdd: skip - ')" >&2; continue; fi
+    echo "tdd-gate: $short $(printf '%s\n' "$body" | sed -n '1p')  (changes home/, scripts/ or .githooks/, but adds or changes no tests/*.test.sh)" >&2
+    rc=1
+  done
+  [ "$rc" -eq 0 ] || echo "Write the failing test first and commit it with the change (CONTRIBUTING.md), or say 'tdd: skip - <reason>' in the message if there is no behaviour to test." >&2
+  exit $rc
+fi
+
+msg=${1:?usage: tdd-gate <commit-message-file> | --range <a>..<b>}
+needs_test "$(sed -n '1p' "$msg")" || exit 0
+git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1 && exit 0     # a merge: its content was judged on the branch
+
+# Amending: the new commit's parent is HEAD^, so judge everything the amended commit will contain, not just the new delta.
+base=
+if [ "${TDD_GATE_AMEND:-}" = 1 ]; then base=$(git rev-parse -q --verify HEAD^ 2>/dev/null || echo "$EMPTY_TREE"); fi
+changed=$(git -c core.quotepath=off diff --cached --name-only ${base:+"$base"})
+has_product "$changed" || exit 0
+added=$(git -c core.quotepath=off diff --cached --name-only --diff-filter=ACMR ${base:+"$base"})
+has_test "$added" && exit 0
+has_skip "$(cat "$msg")" && exit 0
+
+cat >&2 <<'MSG'
+Commit blocked by scripts/tdd-gate: this feat/fix/refactor/perf commit changes home/, scripts/ or .githooks/ but adds or changes no tests/*.test.sh.
+Write the failing test first (see CONTRIBUTING.md), then commit it together with the change.
+A change with no behaviour (a comment, say) may say so in the message:  tdd: skip - <reason>
+MSG
+exit 1

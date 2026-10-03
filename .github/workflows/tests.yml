@@ -13,6 +13,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Second gate behind the local commit-msg hook (which --no-verify skips): every commit of the pull request that changes
+  # product code must carry a test, or say why not.
+  tdd:
+    name: test-first
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          fetch-depth: 0
+      - name: Every changed commit has a test
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: scripts/tdd-gate --range "$BASE..$HEAD"
+
   test:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
