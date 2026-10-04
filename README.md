@@ -27,7 +27,7 @@ English | [简体中文](README.zh-CN.md)
 | **Reversible** | Before every `chezmoi apply`, the files it would replace are backed up to `~/.cli-workbench-backup/` with a restore note. |
 | **The promises are tested** | The quick start below is run end to end in a throwaway home directory on macOS and Ubuntu. The agent pane (with stand-in agents), the backup and the privacy scanner each have their own tests. |
 
-**Agent-specific today:** the workspace switcher starts any of the four agents; the shared instruction text reaches Claude Code, Codex and Gemini CLI (Grok CLI is not wired up: the location of its instruction file is not known); the status line (`~/.claude/statusline.sh`) is for Claude Code only. The agents' own settings files (`settings.json`, `config.toml`) are deliberately not tracked, see below. The agents themselves are not installed by this repository.
+**Agent-specific today:** the workspace switcher starts any of the four agents; the shared instruction text reaches Claude Code, Codex and Gemini CLI (Grok CLI is not wired up: the location of its instruction file is not known); the status line (`~/.claude/statusline.sh`) is for Claude Code only. Full agent settings files are deliberately not tracked. Codex's portable UI preferences are merged into its local configuration, see below. The agents themselves are not installed by this repository.
 
 > **What this is:** a personal-dotfiles repository laid out as a chezmoi source tree. You fork it, edit `home/`, and keep it as your own.
 >
@@ -68,6 +68,7 @@ What gets deployed (the layout follows [chezmoi's naming](https://www.chezmoi.io
 | `dot_zshrc`, `dot_config/private_zsh/` | `~/.zshrc`, `~/.config/zsh/{path,tmux-autostart}.zsh` | **replaces your `.zshrc`**; move your own tweaks to `~/.config/zsh/local.zsh` first. Installers (nvm, bun, ...) append to `~/.zshrc`; `chezmoi diff` shows that, so move such lines into `local.zsh` |
 | `dot_config/ghostty/config` | `~/.config/ghostty/config` | Catppuccin Mocha, Nerd Font, macOS tabs title bar |
 | `dot_claude/executable_statusline.sh` | `~/.claude/statusline.sh` | the Claude Code status line (project, branch, model, context, cost, rate limits); only if you use Claude Code |
+| `dot_codex/modify_private_config.toml` | `~/.codex/config.toml` | merge portable status-line and completion-bell preferences; preserve other local values |
 | `.chezmoitemplates/agent-instructions.md`, `dot_claude/CLAUDE.md.tmpl`, `dot_codex/AGENTS.md.tmpl`, `dot_gemini/GEMINI.md.tmpl` | `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.gemini/GEMINI.md` | the same short text for every agent: how this workbench works (config lives in the repo, secrets stay out, one tmux session per project). Your own rules: see "Agent instructions" |
 | `dot_config/git/config` | `~/.config/git/config` | portable Git settings; Git reads this file by itself, and `~/.gitconfig` (identity, credentials) stays yours |
 | `dot_config/nvim/` | `~/.config/nvim` | optional Neovim setup (lazy.nvim, LSP, Telescope, Git, debugging; no AI plugin: agents run in their own pane); plugins install on first launch and need network access. Delete the directory from your fork if you have your own |
@@ -115,8 +116,16 @@ Claude Code, Codex and Gemini CLI each read a plain-text instruction file from t
 - **Your own rules** go in `~/.config/cli-workbench/agent-instructions.local.md`. It is not tracked, so personal preferences never reach a public fork. It is appended after the shared text in all three files. Remove the file and the next `chezmoi apply` removes its text.
 - **Existing files:** your current `~/.claude/CLAUDE.md` (and the others) are replaced on `apply` and backed up first. Move their content into the local file beforehand if you want to keep it as it is.
 - **Edit the source, not the deployed file.** Text that a tool appends to `~/.claude/CLAUDE.md` is overwritten at the next apply. The generated files cannot be pulled back with `chezmoi re-add`.
-- **Not tracked, on purpose:** `settings.json`, `config.toml`, `auth.json`, histories, sessions and databases. They hold machine paths, proxies and credentials, and the tools rewrite them. A test fails if such a file appears under `home/`.
+- **Not tracked as complete files, on purpose:** `settings.json`, `config.toml`, `auth.json`, histories, sessions and databases. They hold machine paths, proxies and credentials, and the tools rewrite them. A test fails if such a file appears under `home/`.
 - To publish your own principles, put them in the shared source in your fork, not in the untracked local file.
+
+## Portable Codex preferences
+
+`home/dot_codex/modify_private_config.toml` merges five UI settings into `~/.codex/config.toml`: the status line (model, directory, session name, five-hour and weekly remaining limits), status-line colors, and completion notifications using a terminal bell regardless of focus. With the existing tmux bell settings, Ghostty can mark the background tab with a bell.
+
+On a new machine, install Codex separately and run the usual `chezmoi init` / `chezmoi apply` setup, then sign in to Codex. The configuration is created if absent. Existing model choices, local paths, notification commands, project trust, and other settings are preserved; credentials and sessions are not migrated. Restart an existing Codex CLI after applying (use `codex resume --last` to continue).
+
+Edit the merge template to change these shared preferences. Changes to these five settings made inside Codex are replaced by the next apply. Do not use `chezmoi add` or `re-add` to copy the full local file into the repository. When values need changing, the TOML is reserialized, so comments and formatting are lost; matching files remain unchanged. The existing pre-apply backup hook keeps the original before replacement. Invalid TOML stops the merge without overwriting the file.
 
 ## Workspace switcher (tmux)
 
