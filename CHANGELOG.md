@@ -7,6 +7,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Added
 
 - Test-first development is now the documented rule (CONTRIBUTING.md), enforced by `scripts/tdd-gate`: a `feat`, `fix`, `refactor` or `perf` commit that changes `home/`, `scripts/` or `.githooks/` must add or change a `tests/*.test.sh`. It runs as a `commit-msg` hook and, because `--no-verify` skips hooks, in CI over every commit of a pull request. Escape hatch: `tdd: skip - <reason>` in the message.
+- Portable Codex UI preferences: `home/dot_codex/modify_private_config.toml` merges the status line (model, directory, session name, five-hour and weekly limits), its colors and a terminal-bell completion notification into `~/.codex/config.toml`. Other local settings are preserved, a file that already matches stays byte-identical, and invalid TOML aborts without overwriting.
 
 ## [0.1.0] - 2026-10-02
 
