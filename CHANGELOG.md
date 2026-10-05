@@ -7,6 +7,15 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Added
 
 - Test-first development is now the documented rule (CONTRIBUTING.md), enforced by `scripts/tdd-gate`: a `feat`, `fix`, `refactor` or `perf` commit that changes `home/`, `scripts/` or `.githooks/` must add or change a `tests/*.test.sh`. It runs as a `commit-msg` hook and, because `--no-verify` skips hooks, in CI over every commit of a pull request. Escape hatch: `tdd: skip - <reason>` in the message.
+- Two Claude Code mods, deployed as a local marketplace to `~/.claude/workbench-mods/` (`home/dot_claude/workbench-mods/`) and installed once with `claude plugin marketplace add` and `claude plugin install ... --scope user` (see the README):
+  - `chezmoi-guard` refuses `Edit`, `Write` and `NotebookEdit` on a file chezmoi deploys and names the source file to edit instead; a line above the prompt shows when deployed files differ from the source.
+  - `reply-polish` lays out assistant replies: a left-aligned text column centered on the screen, bold and cyan headings, `•`/`◦` lists, tables drawn with box lines or turned into lists when too wide, line breaks that keep a number with its unit and closing punctuation off the line start, and long code blocks shortened. The stored reply and `ctrl+o` keep the original.
+  - `tests/mods.test.sh` checks the marketplace layout, and with Claude Code installed runs `claude plugin validate` and each mod's own tests.
+- Portable Codex UI preferences: `home/dot_codex/modify_private_config.toml` merges the status line (model, directory, session name, five-hour and weekly limits), its colors and a terminal-bell completion notification into `~/.codex/config.toml`. Other local settings are preserved, a file that already matches stays byte-identical, and invalid TOML aborts without overwriting.
+
+### Fixed
+
+- `tests/harness.sh`: `t_cleanup` now also removes a throwaway directory under `/private/tmp`, which is where `cd -P` resolves `/tmp` on macOS; before, such a directory was left behind.
 
 ## [0.1.0] - 2026-10-02
 

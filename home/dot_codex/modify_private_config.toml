@@ -1,0 +1,14 @@
+{{- /* chezmoi:modify-template */ -}}
+{{- /* Manage portable UI preferences only; never copy local configuration into the source tree. */ -}}
+{{- $original := .chezmoi.stdin | fromToml -}}
+{{- $updated := .chezmoi.stdin | fromToml
+    | setValueAtPath "tui.status_line" (list "model-with-reasoning" "current-dir" "thread-name" "five-hour-limit" "weekly-limit")
+    | setValueAtPath "tui.status_line_use_colors" true
+    | setValueAtPath "tui.notifications" (list "agent-turn-complete")
+    | setValueAtPath "tui.notification_method" "bel"
+    | setValueAtPath "tui.notification_condition" "always" -}}
+{{- if eq ($original | toJson) ($updated | toJson) -}}
+{{ .chezmoi.stdin }}
+{{- else -}}
+{{ $updated | toToml }}
+{{- end -}}

@@ -27,7 +27,7 @@ English | [简体中文](README.zh-CN.md)
 | **Reversible** | Before every `chezmoi apply`, the files it would replace are backed up to `~/.cli-workbench-backup/` with a restore note. |
 | **The promises are tested** | The quick start below is run end to end in a throwaway home directory on macOS and Ubuntu. The agent pane (with stand-in agents), the backup and the privacy scanner each have their own tests. |
 
-**Agent-specific today:** the workspace switcher starts any of the four agents; the shared instruction text reaches Claude Code, Codex and Gemini CLI (Grok CLI is not wired up: the location of its instruction file is not known); the status line (`~/.claude/statusline.sh`) is for Claude Code only. The agents' own settings files (`settings.json`, `config.toml`) are deliberately not tracked, see below. The agents themselves are not installed by this repository.
+**Agent-specific today:** the workspace switcher starts any of the four agents; the shared instruction text reaches Claude Code, Codex and Gemini CLI (Grok CLI is not wired up: the location of its instruction file is not known); the status line (`~/.claude/statusline.sh`) and the mods (below) are for Claude Code only. Full agent settings files are deliberately not tracked. Codex's portable UI preferences are merged into its local configuration, see below. The agents themselves are not installed by this repository.
 
 > **What this is:** a personal-dotfiles repository laid out as a chezmoi source tree. You fork it, edit `home/`, and keep it as your own.
 >
@@ -68,6 +68,8 @@ What gets deployed (the layout follows [chezmoi's naming](https://www.chezmoi.io
 | `dot_zshrc`, `dot_config/private_zsh/` | `~/.zshrc`, `~/.config/zsh/{path,tmux-autostart}.zsh` | **replaces your `.zshrc`**; move your own tweaks to `~/.config/zsh/local.zsh` first. Installers (nvm, bun, ...) append to `~/.zshrc`; `chezmoi diff` shows that, so move such lines into `local.zsh` |
 | `dot_config/ghostty/config` | `~/.config/ghostty/config` | Catppuccin Mocha, Nerd Font, macOS tabs title bar |
 | `dot_claude/executable_statusline.sh` | `~/.claude/statusline.sh` | the Claude Code status line (project, branch, model, context, cost, rate limits); only if you use Claude Code |
+| `dot_claude/workbench-mods/` | `~/.claude/workbench-mods/` | two Claude Code mods (`chezmoi-guard`, `reply-polish`) as a local marketplace; deployed, not installed: see "Claude Code mods" |
+| `dot_codex/modify_private_config.toml` | `~/.codex/config.toml` | merge portable status-line and completion-bell preferences; preserve other local values |
 | `.chezmoitemplates/agent-instructions.md`, `dot_claude/CLAUDE.md.tmpl`, `dot_codex/AGENTS.md.tmpl`, `dot_gemini/GEMINI.md.tmpl` | `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.gemini/GEMINI.md` | the same short text for every agent: how this workbench works (config lives in the repo, secrets stay out, one tmux session per project). Your own rules: see "Agent instructions" |
 | `dot_config/git/config` | `~/.config/git/config` | portable Git settings; Git reads this file by itself, and `~/.gitconfig` (identity, credentials) stays yours |
 | `dot_config/nvim/` | `~/.config/nvim` | optional Neovim setup (lazy.nvim, LSP, Telescope, Git, debugging; no AI plugin: agents run in their own pane); plugins install on first launch and need network access. Delete the directory from your fork if you have your own |
@@ -115,8 +117,42 @@ Claude Code, Codex and Gemini CLI each read a plain-text instruction file from t
 - **Your own rules** go in `~/.config/cli-workbench/agent-instructions.local.md`. It is not tracked, so personal preferences never reach a public fork. It is appended after the shared text in all three files. Remove the file and the next `chezmoi apply` removes its text.
 - **Existing files:** your current `~/.claude/CLAUDE.md` (and the others) are replaced on `apply` and backed up first. Move their content into the local file beforehand if you want to keep it as it is.
 - **Edit the source, not the deployed file.** Text that a tool appends to `~/.claude/CLAUDE.md` is overwritten at the next apply. The generated files cannot be pulled back with `chezmoi re-add`.
-- **Not tracked, on purpose:** `settings.json`, `config.toml`, `auth.json`, histories, sessions and databases. They hold machine paths, proxies and credentials, and the tools rewrite them. A test fails if such a file appears under `home/`.
+- **Not tracked as complete files, on purpose:** `settings.json`, `config.toml`, `auth.json`, histories, sessions and databases. They hold machine paths, proxies and credentials, and the tools rewrite them. A test fails if such a file appears under `home/`.
 - To publish your own principles, put them in the shared source in your fork, not in the untracked local file.
+
+## Portable Codex preferences
+
+`home/dot_codex/modify_private_config.toml` merges five UI settings into `~/.codex/config.toml`: the status line (model, directory, session name, five-hour and weekly remaining limits), status-line colors, and completion notifications using a terminal bell regardless of focus. With the existing tmux bell settings, Ghostty can mark the background tab with a bell.
+
+On a new machine, install Codex separately and run the usual `chezmoi init` / `chezmoi apply` setup, then sign in to Codex. The configuration is created if absent. Existing model choices, local paths, notification commands, project trust, and other settings are preserved; credentials and sessions are not migrated. Restart an existing Codex CLI after applying (use `codex resume --last` to continue).
+
+Edit the merge template to change these shared preferences. Changes to these five settings made inside Codex are replaced by the next apply. Do not use `chezmoi add` or `re-add` to copy the full local file into the repository. When values need changing, the TOML is reserialized, so comments and formatting are lost; matching files remain unchanged. The existing pre-apply backup hook keeps the original before replacement. Invalid TOML stops the merge without overwriting the file.
+
+## Claude Code mods
+
+A *mod* is a Claude Code plugin whose behavior is a small TypeScript file that Claude Code calls when something happens: a tool is about to run, a reply is about to be drawn. This repository ships two, as a local *marketplace* (a folder Claude Code installs plugins from) in `home/dot_claude/workbench-mods/`:
+
+| Mod | What it does |
+|---|---|
+| `chezmoi-guard` | Refuses `Edit`, `Write` and `NotebookEdit` on a file chezmoi deploys (`~/.zshrc`, `~/.tmux.conf`, ...) and names the source file to edit instead, so the next `chezmoi apply` cannot overwrite the change. Shows a line above the prompt while the deployed files differ from the source (`chezmoi status`). It cannot see edits made through Bash (`sed -i`, `> file`). If chezmoi is missing or fails, it blocks nothing. |
+| `reply-polish` | Lays out the assistant's replies for a wide terminal. The text is one column, at most 80 cells (about 40 Chinese characters) and at most 72% of the window, left-aligned and centered on the screen. Headings are bold, the first two levels in cyan; lists use `•` and `◦`; a table is drawn with box lines when it fits the column and becomes a list when it does not; lines are cut so that a number stays with its unit and closing punctuation never starts a line; a code block longer than 30 lines is shortened to 12. Only the drawing changes: the stored reply, and `ctrl+o`, keep the original. |
+
+**Install once per machine** (needs Claude Code 2.1.287 or later; `chezmoi apply` only deploys the files, it does not install anything):
+
+```sh
+chezmoi apply                                                   # deploys ~/.claude/workbench-mods
+claude plugin marketplace add ~/.claude/workbench-mods
+claude plugin install chezmoi-guard@cli-workbench --scope user
+claude plugin install reply-polish@cli-workbench --scope user
+```
+
+Then restart Claude Code, or run `/reload-plugins` in a running session.
+
+- **Change a mod:** edit it under `home/dot_claude/workbench-mods/`, run `chezmoi apply`, then `/reload-plugins`. A marketplace that is a folder is read from the folder itself, so no version bump is needed. `claude plugin disable <name>` turns one off, `claude plugin uninstall <name>` removes it.
+- **Tests:** `tests/mods.test.sh` always checks the layout of the marketplace. With Claude Code installed it also runs `claude plugin validate` and each mod's own tests (`claude plugin test`); without it that part is skipped.
+- **Trust:** a mod sees every tool call and reply and runs with your permissions. Read the source before you install it; each mod is a few hundred lines.
+- **Stability:** the mods API is early access and changes between releases. These mods were built and tested with Claude Code 2.1.289. Mods do not load under `--safe-mode` or `--bare`.
+- **Not tracked on purpose:** the type declarations Claude Code writes into a mod's `.claude-plugin/types/` when it loads the mod.
 
 ## Workspace switcher (tmux)
 

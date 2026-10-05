@@ -1,0 +1,17 @@
+{
+  "name": "cli-workbench",
+  "owner": { "name": "cli-workbench" },
+  "description": "Claude Code mods for the cli-workbench terminal setup.",
+  "plugins": [
+    {
+      "name": "chezmoi-guard",
+      "source": "./chezmoi-guard",
+      "description": "Blocks edits to chezmoi-deployed files and shows when the source and the deployed files differ."
+    },
+    {
+      "name": "reply-polish",
+      "source": "./reply-polish",
+      "description": "Lays out assistant replies for the terminal: a centered text column, headings, lists, tables and line breaks."
+    }
+  ]
+}

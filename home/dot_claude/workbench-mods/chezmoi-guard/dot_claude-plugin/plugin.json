@@ -1,0 +1,7 @@
+{
+  "name": "chezmoi-guard",
+  "version": "0.1.0",
+  "author": { "name": "cli-workbench" },
+  "description": "Blocks edits to chezmoi-deployed files and shows when the source and the deployed files differ.",
+  "types": "./types/index.d.ts"
+}
