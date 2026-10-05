@@ -27,6 +27,12 @@ chezmoi overwrites differing files and keeps no copy. `scripts/backup-before-app
 
 Claude Code, Codex and Gemini CLI read `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` and `~/.gemini/GEMINI.md`. The three targets are one-line templates (`{{ template "agent-instructions.md" . }}`) over `home/.chezmoitemplates/agent-instructions.md`, so the text has exactly one source. That template appends `~/.config/cli-workbench/agent-instructions.local.md` when it exists (chezmoi's `stat`/`include`): the personal layer, never tracked. Rendered files are not re-addable; edit the source. The agents' own settings and state (`settings.json`, `config.toml`, `auth.json`, histories, sessions) are out of scope on purpose, and `tests/defaults.test.sh` fails if such files enter `home/`.
 
+## Claude Code mods
+
+`home/dot_claude/workbench-mods/` is a plugin marketplace in a folder: `.claude-plugin/marketplace.json` (named `dot_claude-plugin` in the source) and one folder per mod, each with its manifest, hooks module, tests and, for `chezmoi-guard`, a type contract. chezmoi deploys it to `~/.claude/workbench-mods/`, a stable path that does not depend on where the clone lives. Installing is a separate step by Claude Code itself (`claude plugin marketplace add`, `claude plugin install`), because that writes `~/.claude/settings.json`, which this repository does not track (see "Agent instructions").
+
+A marketplace that is a folder is read from the folder, so the loop is: edit the source, `chezmoi apply`, `/reload-plugins`; no version bump. The tests ship with the mods, so `claude plugin test` runs against exactly what is deployed. The type declarations Claude Code writes beside a mod when it loads it (`.claude-plugin/types/`) are generated and are not in `home/`; they appear only in the target, where chezmoi ignores files it does not manage.
+
 ## Machine differences
 
 Common settings live in `home/`. Differences between machines live in files chezmoi does not manage, so no config is duplicated:

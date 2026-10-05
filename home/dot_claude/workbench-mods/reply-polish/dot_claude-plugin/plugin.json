@@ -1,0 +1,6 @@
+{
+  "name": "reply-polish",
+  "version": "0.1.0",
+  "author": { "name": "cli-workbench" },
+  "description": "Makes assistant replies easier to read in the terminal: wide tables become lists, headings become bold lines, blank runs collapse and very long code blocks are shortened."
+}
