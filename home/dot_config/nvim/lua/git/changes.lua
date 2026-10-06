@@ -1,7 +1,8 @@
 -- ~/.config/nvim/lua/git/changes.lua
 -- Review what the branch changed: a Telescope list of the files changed since the branch left the default branch
--- (committed, uncommitted and untracked), with a diff preview. <CR> opens a file in a new tab beside its version at
--- the fork point, in Neovim's own diff mode. :Changes [base], <leader>gv, and prefix+g in tmux.
+-- (committed, uncommitted, deleted and untracked), with a diff preview. <CR> opens a file in a new tab beside its
+-- version at the fork point, in Neovim's own diff mode; a deleted file is its old version beside an empty side.
+-- :Changes [base], <leader>gv, and prefix+g in tmux.
 local M = {}
 
 local function git(args)
@@ -25,35 +26,47 @@ function M.base()
   return "HEAD"
 end
 
--- Paths relative to the repository root. Deleted files are left out: there is nothing to open.
+-- Paths relative to the repository root. A rename is listed as the old path deleted and the new one added.
 function M.files(base, top)
   top = top or git({ "rev-parse", "--show-toplevel" })[1]
   local files, seen = {}, {}
-  local function add(paths, untracked)
-    for _, path in ipairs(paths or {}) do
-      if path ~= "" and not seen[path] then
-        seen[path] = true
-        files[#files + 1] = { path = path, untracked = untracked }
-      end
+  local function add(path, kind)
+    if path and path ~= "" and not seen[path] then
+      seen[path] = true
+      files[#files + 1] = { path = path, deleted = kind == "D" or nil, untracked = kind == "?" or nil }
     end
   end
-  add(git({ "-C", top, "diff", "--name-only", "--diff-filter=d", base }))
-  add(git({ "-C", top, "ls-files", "--others", "--exclude-standard" }), true)
+  for _, line in ipairs(git({ "-C", top, "diff", "--name-status", "--no-renames", base }) or {}) do
+    local status, path = line:match("^(%a)%d*\t(.+)$")
+    add(path, status)
+  end
+  for _, path in ipairs(git({ "-C", top, "ls-files", "--others", "--exclude-standard" }) or {}) do add(path, "?") end
   return files
 end
 
--- A new tab: the file on the right, a read-only copy of its version at the fork point on the left.
-local function show(top, file, base)
-  vim.cmd("tabedit " .. vim.fn.fnameescape(top .. "/" .. file.path))
-  local ft = vim.bo.filetype
-  vim.cmd("diffthis")
-  vim.cmd("leftabove vnew")
-  local old = file.untracked and {} or (git({ "-C", top, "show", base .. ":" .. file.path }) or {})
-  vim.api.nvim_buf_set_lines(0, 0, -1, false, old)
+-- Fill the current window with a read-only buffer that is not a file.
+local function scratch(lines, name, ft)
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
   vim.bo.buftype, vim.bo.bufhidden, vim.bo.swapfile, vim.bo.modifiable = "nofile", "wipe", false, false
   vim.bo.filetype = ft
-  vim.api.nvim_buf_set_name(0, file.path .. " @ " .. base:sub(1, 7))
+  vim.api.nvim_buf_set_name(0, name)
   vim.cmd("diffthis")
+end
+
+-- A new tab: on the right the file, or an empty side for a deleted one; on the left its version at the fork point.
+local function show(top, file, base)
+  local path = top .. "/" .. file.path
+  local old = file.untracked and {} or (git({ "-C", top, "show", base .. ":" .. file.path }) or {})
+  local ft = vim.filetype.match({ filename = path }) or ""
+  if file.deleted then
+    vim.cmd("tabnew")
+    scratch({}, file.path .. " (deleted)", ft)
+  else
+    vim.cmd("tabedit " .. vim.fn.fnameescape(path))
+    vim.cmd("diffthis")
+  end
+  vim.cmd("leftabove vnew")
+  scratch(old, file.path .. " @ " .. base:sub(1, 7), ft)
 end
 
 function M.open(base)
@@ -75,7 +88,8 @@ function M.open(base)
     finder = require("telescope.finders").new_table({
       results = files,
       entry_maker = function(f)
-        return { value = f, ordinal = f.path, display = f.path .. (f.untracked and " (untracked)" or "") }
+        local mark = (f.deleted and " (deleted)") or (f.untracked and " (untracked)") or ""
+        return { value = f, ordinal = f.path, display = f.path .. mark }
       end,
     }),
     sorter = require("telescope.config").values.generic_sorter({}),

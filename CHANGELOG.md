@@ -6,7 +6,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
-- Code popups in tmux: `prefix e` opens Neovim over the current pane to browse the project; `prefix g` opens `:Changes` (also `<leader>gv` in Neovim), a Telescope list of the files the branch changed since it left the default branch, committed, uncommitted and untracked, with a diff preview. `Enter` opens a file beside its version at the fork point in Neovim's diff mode. No new plugin: `home/dot_config/nvim/lua/git/changes.lua` uses Telescope and `:diffthis`. `home/dot_tmux/scripts/executable_code-popup.sh` looks the directory up from the pane id, so no directory name reaches a shell command. Tested by `tests/code-popup.test.sh`.
+- Code popups in tmux: `prefix e` opens Neovim over the current pane to browse the project; `prefix g` opens `:Changes` (also `<leader>gv` in Neovim), a Telescope list of the files the branch changed since it left the default branch, committed, uncommitted, deleted and untracked, with a diff preview. `Enter` opens a file beside its version at the fork point in Neovim's diff mode; a deleted file shows its old version beside an empty side. No new plugin: `home/dot_config/nvim/lua/git/changes.lua` uses Telescope and `:diffthis`. `home/dot_tmux/scripts/executable_code-popup.sh` looks the directory up from the pane id, so no directory name reaches a shell command. Tested by `tests/code-popup.test.sh`.
 
 ## [0.2.0] - 2026-10-06
 

@@ -22,7 +22,7 @@ cat > "$T_DIR/bin/tmux" <<'SH'
 [ "$1" = display-message ] && printf '%s\n' "$STUB_DIR"
 SH
 chmod +x "$T_DIR/bin/nvim" "$T_DIR/bin/tmux"
-popup() { STUB_DIR=$1 PATH="$T_DIR/bin:$PATH" sh "$POPUP" "$2" %7 2>&1; }
+popup() { STUB_DIR=$1 PATH="$T_DIR/bin:$PATH" sh "$POPUP" "$2" %7 2>&1 </dev/null; }
 g() { git -C "$R" -c user.name=t -c user.email=t@example.invalid "$@" >/dev/null 2>&1; }
 
 R=$T_DIR/repo; mkdir -p "$R"
@@ -95,7 +95,9 @@ end
 local changes = require("git.changes")
 print("base " .. changes.base())
 local entries = {}
-for _, f in ipairs(picked == nil and changes.files(changes.base()) or {}) do entries[#entries + 1] = f.path .. (f.untracked and "?" or "") end
+for _, f in ipairs(picked == nil and changes.files(changes.base()) or {}) do
+  entries[#entries + 1] = f.path .. (f.untracked and "?" or "") .. (f.deleted and "-" or "")
+end
 print("files " .. table.concat(entries, " "))
 changes.open()
 local list = {}
@@ -104,6 +106,7 @@ print("list " .. table.concat(list, " | "))
 local function preview(i) return table.concat(picked.previewer.get_command(picked.finder.entry_maker(picked.finder.results[i])), " ") end
 print("preview1 " .. preview(1))
 print("preview3 " .. preview(3))
+print("preview4 " .. preview(4))
 -- <CR> on a.txt: the file on the right, its version at the fork point on the left, both in diff mode.
 local actions = require("telescope.actions")
 picked.attach_mappings(0, function() end)
@@ -115,18 +118,28 @@ print("windows " .. #wins)
 print("diff " .. tostring(vim.wo[wins[1]].diff) .. " " .. tostring(vim.wo[wins[2]].diff))
 print("left " .. table.concat(vim.api.nvim_buf_get_lines(left, 0, -1, false), ","))
 print("right " .. vim.fn.fnamemodify(vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(wins[2])), ":t"))
+-- <CR> on the deleted gone.txt: its old content on the left, an empty side on the right.
+selected = picked.finder.entry_maker(picked.finder.results[3])
+actions.select_default.fn(0)
+wins = vim.api.nvim_tabpage_list_wins(0)
+local function lines(w) return table.concat(vim.api.nvim_buf_get_lines(vim.api.nvim_win_get_buf(w), 0, -1, false), ",") end
+print("deleted windows " .. #wins .. " diff " .. tostring(vim.wo[wins[1]].diff) .. " " .. tostring(vim.wo[wins[2]].diff))
+print("deleted left " .. lines(wins[1]) .. " right [" .. lines(wins[2]) .. "] " .. vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(wins[2])):match("[^/]*$"))
 LUA
   out=$(cd "$R" && XDG_CONFIG_HOME="$T_DIR/xdg/c" XDG_DATA_HOME="$T_DIR/xdg/d" XDG_STATE_HOME="$T_DIR/xdg/s" \
     XDG_CACHE_HOME="$T_DIR/xdg/k" nvim --headless -u NONE -l "$T_DIR/review.lua" "$LUA" 2>&1 | tr -d '\r')
   assert_contains "the base is the fork point with origin/main, not the newer local main" "base $fork" "$out"
-  assert_contains "committed, uncommitted and untracked files are listed; deleted ones are not" "files a.txt b.txt new.txt?" "$out"
-  assert_contains "an untracked file is marked in the list" "list a.txt | b.txt | new.txt (untracked)" "$out"
+  assert_contains "committed, uncommitted, deleted and untracked files are listed" "files a.txt b.txt gone.txt- new.txt?" "$out"
+  assert_contains "deleted and untracked files are marked in the list" "list a.txt | b.txt | gone.txt (deleted) | new.txt (untracked)" "$out"
   assert_contains "the preview diffs a file against the fork point" "preview1 git --no-pager diff --color=always $fork -- a.txt" "$out"
-  assert_contains "and shows an untracked file as all new" "preview3 git --no-pager diff --color=always --no-index -- /dev/null new.txt" "$out"
+  assert_contains "a deleted file's preview is its removal" "preview3 git --no-pager diff --color=always $fork -- gone.txt" "$out"
+  assert_contains "and an untracked file shows as all new" "preview4 git --no-pager diff --color=always --no-index -- /dev/null new.txt" "$out"
   assert_contains "<CR> opens the file beside its version at the fork point" "windows 2" "$out"
   assert_contains "both sides are in diff mode" "diff true true" "$out"
   assert_contains "the left side is the fork point's content" "left one" "$out"
   assert_contains "the right side is the file itself" "right a.txt" "$out"
+  assert_contains "<CR> on a deleted file opens two sides in diff mode" "deleted windows 2 diff true true" "$out"
+  assert_contains "its old content on the left, nothing on the right" "deleted left keep right [] gone.txt (deleted)" "$out"
 else
   echo "  skip  nvim not installed"
 fi
