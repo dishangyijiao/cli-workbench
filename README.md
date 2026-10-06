@@ -41,7 +41,7 @@ English | [简体中文](README.zh-CN.md)
 | **Shell** | zsh 5.8 or newer (tested with 5.9). The helper scripts are bash 3.2 compatible, i.e. the macOS system bash is enough. |
 | **tmux** | 3.2 or newer recommended (tested with 3.5a). Older versions still load the config, minus the workspace switcher key. |
 | **Required** | `git` and [`chezmoi`](https://www.chezmoi.io/install/) (`brew install chezmoi`) |
-| **Optional** | `fzf` (0.48+ for the shell integration), `zoxide`, `starship`, `zsh-syntax-highlighting`, `jq` (status line), [Ghostty](https://ghostty.org) and a Nerd Font, Homebrew |
+| **Optional** | `fzf` (0.48+ for the shell integration), `zoxide`, `starship`, `zsh-syntax-highlighting`, `jq` (status line), `translate-shell` (the translation popup), [Ghostty](https://ghostty.org) and a Nerd Font, Homebrew |
 
 **What it changes on your machine:** exactly the files under [`home/`](home) that chezmoi deploys (the table below), a zsh completion cache in `~/.cache/zsh/`, and backups of the files it replaces in `~/.cli-workbench-backup/<timestamp>/` (chezmoi itself keeps none; see Safety model).
 
@@ -161,6 +161,14 @@ Press `prefix` then `P` (`Ctrl-a P`) for a picker over `~/dev/projects`. Every d
 - **Agent pane:** the first installed of `claude codex gemini grok` is started in the project directory. If none is installed, the window has just the editor and a shell. `WORKSPACE_SWITCH_AGENT="claude --continue"` picks one (with arguments), `none` turns it off, `WORKSPACE_SWITCH_AGENTS="aider claude"` changes the candidates and their order. Set these with `set-environment -g` in `home/dot_tmux.conf`, next to `WORKSPACE_ROOTS`.
 - **Roots:** uncomment `WORKSPACE_ROOTS` in `home/dot_tmux.conf` to scan other directories.
 - Details are in the header of `home/dot_tmux/scripts/executable_workspace-switch.sh`.
+
+## Translate what you select (tmux)
+
+Select some English text with the mouse (or `v` ... `y` in copy mode), then press `prefix` then `t` (`Ctrl-a t`). A popup shows a translation, so you do not leave the pane you are reading. One word gives a dictionary entry; anything longer gives its translation. Close the popup with `q`.
+
+- **Needs:** tmux 3.2+ and `translate-shell` (`brew install translate-shell`; without it the popup says so).
+- **Privacy:** the selected text is sent to the translation service (Google by default). Do not use it on text you may not send out.
+- **Language:** `LOOKUP_LANG` sets the target language (default `zh-CN`). Details are in the header of `home/dot_tmux/scripts/executable_lookup.sh`.
 
 ## Uninstall / restore
 
