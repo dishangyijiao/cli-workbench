@@ -5,16 +5,15 @@
 #   workspace-switch.sh --open DIR      open/switch to DIR's session without fzf
 #   workspace-switch.sh --info DIR      one-screen summary used as the fzf preview
 # A workspace is every directory directly under a root ($WORKSPACE_ROOTS, space separated; default ~/dev/projects).
-#   * a git repo or a plain directory -> one session, one window: editor left (~60%), shell right (~40%);
-#     with an AI CLI agent: editor left (50%), the agent top right, a shell under it
+#   * a git repo or a plain directory -> one session, one window: with an AI CLI agent, the agent on top (75%) and a
+#     shell under it; without one, just a shell. No editor pane: prefix+e / prefix+g open Neovim in a popup instead.
 #   * a group directory (not a git repo itself, but with git repos inside, e.g. my-product/)
-#     -> one session rooted at the group; one window per direct git repo, each with the same two panes.
+#     -> one session rooted at the group; one window per direct git repo, each with the same panes.
 #     The repo named like the group comes first. Git worktrees (a .git *file*) get no window of their own.
 # Opening an existing workspace only switches to it. Creation is atomic (tmux's new-session claims the name);
 # if anything fails half-way the half-built session is removed and the error is printed.
 # Why not sesh/tmuxp: their group/window layouts are static config per project; the point here is that a group
 # is discovered from the directory tree, with no per-project registry to maintain.
-#   WORKSPACE_SWITCH_EDITOR   command started in each left pane (default: nvim; empty = plain shell)
 #   WORKSPACE_SWITCH_AGENT    command started in the agent pane. Unset = the first installed of WORKSPACE_SWITCH_AGENTS,
 #                             none installed = no agent pane; "none" or empty = never; anything else = that command
 #                             (e.g. "claude --continue"; if its program is missing, a note is printed and there is no agent pane)
@@ -23,7 +22,6 @@
 #   WORKSPACE_SWITCH_TMUX     tmux binary to use (tests: fault injection)
 set -u
 ROOTS=${WORKSPACE_ROOTS:-$HOME/dev/projects}
-EDITOR_CMD=${WORKSPACE_SWITCH_EDITOR-nvim}
 AGENT_CANDIDATES=${WORKSPACE_SWITCH_AGENTS:-claude codex gemini grok}
 TMUX_BIN=${WORKSPACE_SWITCH_TMUX:-tmux}
 NAME=$(basename "$0")
@@ -102,18 +100,13 @@ pick_name() {     # a session name that is free, or already belongs to this dire
   echo "${base}_${h}"
 }
 
-two_panes() {     # $1 = window id, $2 = directory: editor on the left; on the right a shell, or (AGENT set) an agent over a shell
-  local left right
-  left=$(T display-message -p -t "$1" '#{pane_id}') || return 1
-  if [ -z "$AGENT" ]; then
-    T split-window -h -l 40% -t "$left" -c "$2" || return 1
-  else
-    right=$(T split-window -h -l 50% -t "$left" -c "$2" -P -F '#{pane_id}') || return 1
-    T split-window -v -l 25% -t "$right" -c "$2" || return 1
-    T send-keys -t "$right" "$AGENT" Enter || return 1
-  fi
-  [ -n "$EDITOR_CMD" ] && { T send-keys -t "$left" "$EDITOR_CMD" Enter || return 1; }
-  T select-pane -t "$left"
+set_panes() {     # $1 = window id, $2 = directory: with AGENT set, the agent on top and a shell under it; else just the shell
+  local top
+  [ -n "$AGENT" ] || return 0
+  top=$(T display-message -p -t "$1" '#{pane_id}') || return 1
+  T split-window -v -l 25% -t "$top" -c "$2" || return 1
+  T send-keys -t "$top" "$AGENT" Enter || return 1
+  T select-pane -t "$top"
 }
 
 create_workspace() {   # $1 = dir, $2 = session name
@@ -138,7 +131,7 @@ create_workspace() {   # $1 = dir, $2 = session name
       wid=$(T new-window -d -P -F '#{window_id}' -t "=$name:" -n "$wn" -c "$r") \
         || { T kill-session -t "=$name:" 2>/dev/null; die "could not create window '$wn' in '$name'; session removed"; return 1; }
     fi
-    two_panes "$wid" "$r" || { T kill-session -t "=$name:" 2>/dev/null; die "could not set up panes for '$name' ($wn); session removed"; return 1; }
+    set_panes "$wid" "$r" || { T kill-session -t "=$name:" 2>/dev/null; die "could not set up panes for '$name' ($wn); session removed"; return 1; }
   done <<< "$repos"
   T select-window -t "$first"
 }

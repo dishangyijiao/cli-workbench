@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Changed
+
+- The workspace switcher no longer opens an editor pane: a window is the AI agent on top with a shell under it, or just a shell when no agent is installed. `prefix e` and `prefix g` open Neovim in a popup instead. `WORKSPACE_SWITCH_EDITOR` is gone.
+
 ## [0.3.0] - 2026-10-06
 
 ### Added
