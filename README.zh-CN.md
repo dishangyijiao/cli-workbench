@@ -162,6 +162,14 @@ claude plugin install reply-polish@cli-workbench --scope user
 - **根目录：** 取消 `home/dot_tmux.conf` 里 `WORKSPACE_ROOTS` 的注释，可以扫描其他目录。
 - 详细说明在 `home/dot_tmux/scripts/executable_workspace-switch.sh` 开头的注释里。
 
+## 代码弹窗（tmux）
+
+不离开代理所在的窗格就能看代码。两个键都会在当前窗格上方弹出 Neovim，目录就是该窗格的目录；关掉 Neovim，弹窗随之关闭，回到原处。需要 tmux 3.2+。
+
+- 先按 `prefix` 再按 `e`：**浏览**项目，用平常的 Neovim 按键（`<leader>ff` 找文件、`<leader>fg` 全文搜索、`<leader>e` 文件树）。`:qa` 关闭。
+- 先按 `prefix` 再按 `g`：**查看改动**。用 Telescope 列出当前分支自离开默认分支（`origin/HEAD`，否则 `origin/main`、`main` 等）以来改过的每个文件：已提交、未提交、已删除和未跟踪的都算，并分别标注，预览区是带颜色的 diff。按 `Enter` 会在新标签页里打开该文件，左边是它在分叉点时的版本，用 Neovim 自带的 diff 模式对照（已删除的文件：左边是旧版本，右边为空）（`]c`/`[c` 在改动之间跳转）。在 Neovim 里也可以用 `:Changes` 或 `<leader>gv` 打开同一个列表。`:qa` 关闭弹窗。不在 Git 仓库里时会给出提示。不需要额外插件。
+- 脚本是 `home/dot_tmux/scripts/executable_code-popup.sh`；tmux 只传给它窗格 ID，从不传目录名。
+
 ## 翻译选中的文字（tmux）
 
 用鼠标（或在复制模式里按 `v` ... `y`）选中一段英文，再按 `前缀键` 加 `t`（`Ctrl-a t`）。弹窗里会显示翻译，不用离开正在阅读的窗格。单个单词给出词典条目，更长的文字给出译文。按 `q` 关闭弹窗。
