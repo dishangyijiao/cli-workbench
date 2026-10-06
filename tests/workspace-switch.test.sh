@@ -12,7 +12,7 @@ mkdir -p "$ROOT/alpha/.git" "$ROOT/dotted.name/.git" "$ROOT/plain" "$ROOT2/alpha
 mkdir -p "$ROOT/group/beta/.git" "$ROOT/group/group-api/.git" "$ROOT/group/notes"
 mkdir -p "$ROOT/group/wt"; echo "gitdir: /elsewhere" > "$ROOT/group/wt/.git"      # a worktree: .git is a file
 mkdir -p "$ROOT/mono/mono-a/.git" "$ROOT/mono/mono/.git"                                  # main repo is named like the group
-export WORKSPACE_ROOTS="$ROOT $ROOT2" WORKSPACE_SWITCH_EDITOR="" WORKSPACE_SWITCH_AGENT="" WORKSPACE_SWITCH_NO_ATTACH=1
+export WORKSPACE_ROOTS="$ROOT $ROOT2" WORKSPACE_SWITCH_AGENT="" WORKSPACE_SWITCH_NO_ATTACH=1
 export WORKSPACE_SWITCH_SOCKET=wbtest$$
 unset TMUX
 cleanup() { tmux -L "$WORKSPACE_SWITCH_SOCKET" kill-server 2>/dev/null; case $T_DIR in /tmp/*|/var/folders/*|/private/var/folders/*) rm -rf "$T_DIR";; esac; }
@@ -27,16 +27,16 @@ echo "every directory directly under a root is a workspace; nothing deeper is li
 out=$("$PS" --list | sed "s#^$T_DIR/##" | sort | tr '\n' ' ')
 assert_eq "list" "other/alpha projects/alpha projects/dotted.name projects/group projects/mono projects/plain " "$out"
 
-echo "a repo: one session, one window, two panes"
+echo "a repo: one session, one window; with no agent, one pane: a shell"
 name=$("$PS" --open "$ROOT/alpha")
 assert_eq "session name" "alpha" "$name"
 assert_eq "one window" "main " "$(windows alpha)"
-assert_eq "two panes" 2 "$(panes '=alpha:main')"
+assert_eq "one pane" 1 "$(panes '=alpha:main')"
 
 echo "opening it again changes nothing"
 "$PS" --open "$ROOT/alpha" >/dev/null
 assert_eq "still one session" "alpha " "$(sessions)"
-assert_eq "still two panes" 2 "$(panes '=alpha:main')"
+assert_eq "still one pane" 1 "$(panes '=alpha:main')"
 
 echo "a dot in the name is mapped to an underscore"
 assert_eq "session name" "dotted_name" "$("$PS" --open "$ROOT/dotted.name")"
@@ -47,13 +47,13 @@ assert_eq "one window" "main " "$(windows plain)"
 
 echo "two workspaces with the same basename get different sessions"
 assert_eq "second alpha is prefixed by its parent dir" "other_alpha" "$("$PS" --open "$ROOT2/alpha")"
-assert_eq "first alpha untouched" 2 "$(panes '=alpha:main')"
+assert_eq "first alpha untouched" 1 "$(panes '=alpha:main')"
 
 echo "a group directory is ONE workspace: a window per repo, worktrees and non-repos skipped"
 assert_eq "session name" "group" "$("$PS" --open "$ROOT/group")"
 assert_eq "windows" "beta api " "$(windows group)"
-assert_eq "beta has two panes" 2 "$(panes '=group:beta')"
-assert_eq "api has two panes" 2 "$(panes '=group:api')"
+assert_eq "beta has one pane" 1 "$(panes '=group:beta')"
+assert_eq "api has one pane" 1 "$(panes '=group:api')"
 assert_eq "api window starts in its own repo" "$ROOT/group/group-api" "$(panepath '=group:api')"
 assert_eq "opening the group again adds nothing" "beta api " "$( "$PS" --open "$ROOT/group" >/dev/null; windows group)"
 
@@ -69,11 +69,11 @@ for a in "$@"; do [ "$a" = split-window ] && exit 1; done
 exec tmux "$@"
 SH
 chmod +x "$T_DIR/bin/tmux-failsplit"
-err=$(WORKSPACE_SWITCH_TMUX="$T_DIR/bin/tmux-failsplit" "$PS" --open "$ROOT/rb" 2>&1 >/dev/null); rc=$?
+err=$(WORKSPACE_SWITCH_AGENT=true WORKSPACE_SWITCH_TMUX="$T_DIR/bin/tmux-failsplit" "$PS" --open "$ROOT/rb" 2>&1 >/dev/null); rc=$?
 assert_eq "exit 1" 1 "$rc"
 assert_contains "says what failed" "rb" "$err"
 assert_eq "no session left" "" "$(X has-session -t '=rb:' 2>/dev/null && echo yes)"
-assert_eq "a later open works" 2 "$("$PS" --open "$ROOT/rb" >/dev/null; panes '=rb:main')"
+assert_eq "a later open works" 1 "$("$PS" --open "$ROOT/rb" >/dev/null; panes '=rb:main')"
 
 echo "names that collide on the same basename AND the same parent still get distinct sessions"
 mkdir -p "$T_DIR/x/other/alpha/.git"
@@ -91,7 +91,7 @@ echo "two simultaneous opens of the same new workspace create it once"
 mkdir -p "$ROOT/conc/.git"
 "$PS" --open "$ROOT/conc" >/dev/null 2>&1 & "$PS" --open "$ROOT/conc" >/dev/null 2>&1 & wait
 assert_eq "one window" "main " "$(windows conc)"
-assert_eq "two panes" 2 "$(panes '=conc:main')"
+assert_eq "one pane" 1 "$(panes '=conc:main')"
 
 echo "two simultaneous opens of different directories with the same name each get their own session"
 # tmux-slownew delays new-session, so both instances see the name as free before either one creates it.
@@ -120,43 +120,44 @@ echo "bad input is refused"
 "$PS" --open "$ROOT/nope" >/dev/null 2>&1; assert_eq "missing dir -> exit 1" 1 $?
 "$PS" --bogus >/dev/null 2>&1; assert_eq "unknown option -> exit 2" 2 $?
 
-echo "an AI CLI agent gets its own pane: editor | agent over shell"
+echo "an AI CLI agent gets the top pane, full width, with a shell under it; no editor pane"
 FAKE=$T_DIR/fakebin; mkdir -p "$FAKE"
 for a in fakeclaude fakecodex; do printf '#!/bin/sh\necho "AGENT-STARTED %s in $(pwd -P | sed "s#.*/##")"\nexec sleep 300\n' "$a" > "$FAKE/$a"; chmod +x "$FAKE/$a"; done
 export PATH="$FAKE:$PATH"
 mkdir -p "$ROOT/ag1/.git" "$ROOT/ag2/.git" "$ROOT/ag3/.git" "$ROOT/ag4/.git" "$ROOT/ag5/.git"
 agent_text() { local t; for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do t=$(X capture-pane -p -t "$1" 2>/dev/null); case $t in *AGENT-STARTED*) break;; esac; sleep 0.1; done; echo "$t"; }
 WORKSPACE_SWITCH_AGENT=fakeclaude "$PS" --open "$ROOT/ag1" >/dev/null
-assert_eq "three panes" 3 "$(panes '=ag1:main')"
-assert_contains "the agent is started in the project directory" "AGENT-STARTED fakeclaude in ag1" "$(agent_text "$(X list-panes -t '=ag1:main' -F '#{pane_id}' | sed -n 2p)")"
-assert_eq "the shell pane under it started nothing" "" "$(X capture-pane -p -t "$(X list-panes -t '=ag1:main' -F '#{pane_id}' | sed -n 3p)" | grep AGENT-STARTED)"
-geo=$(X list-panes -t '=ag1:main' -F '#{pane_left} #{pane_top}' | tr '\n' ';')
-assert_eq "editor left; agent and shell stacked on the right" 1 "$(echo "$geo" | awk -F';' '{split($1,e," "); split($2,a," "); split($3,s," "); print (e[1]==0 && a[1]>0 && a[1]==s[1] && s[2]>a[2]) ? 1 : 0}')"
+assert_eq "two panes" 2 "$(panes '=ag1:main')"
+assert_contains "the agent is started in the project directory" "AGENT-STARTED fakeclaude in ag1" "$(agent_text "$(X list-panes -t '=ag1:main' -F '#{pane_id}' | sed -n 1p)")"
+assert_eq "the shell pane under it started nothing" "" "$(X capture-pane -p -t "$(X list-panes -t '=ag1:main' -F '#{pane_id}' | sed -n 2p)" | grep AGENT-STARTED)"
+geo=$(X list-panes -t '=ag1:main' -F '#{pane_left} #{pane_top} #{pane_width}' | tr '\n' ';')
+assert_eq "agent on top, shell under it, both full width" 1 "$(echo "$geo" | awk -F';' '{split($1,a," "); split($2,s," "); print (a[1]==0 && s[1]==0 && a[2]==0 && s[2]>a[2] && a[3]==s[3]) ? 1 : 0}')"
+assert_eq "the agent pane has the focus" 1 "$(X list-panes -t '=ag1:main' -F '#{pane_active}' | head -1)"
 
 echo "auto-detect takes the first installed candidate, in the given order"
 WORKSPACE_SWITCH_AGENT=auto WORKSPACE_SWITCH_AGENTS="not-installed-x fakecodex fakeclaude" "$PS" --open "$ROOT/ag2" >/dev/null
-assert_contains "second candidate chosen" "AGENT-STARTED fakecodex" "$(agent_text "$(X list-panes -t '=ag2:main' -F '#{pane_id}' | sed -n 2p)")"
+assert_contains "second candidate chosen" "AGENT-STARTED fakecodex" "$(agent_text "$(X list-panes -t '=ag2:main' -F '#{pane_id}' | sed -n 1p)")"
 
-echo "no candidate installed: the usual two panes"
+echo "no candidate installed: just the shell"
 WORKSPACE_SWITCH_AGENT=auto WORKSPACE_SWITCH_AGENTS="not-installed-x not-installed-y" "$PS" --open "$ROOT/ag3" >/dev/null
-assert_eq "two panes" 2 "$(panes '=ag3:main')"
+assert_eq "one pane" 1 "$(panes '=ag3:main')"
 
 echo "an explicitly named agent that is missing is reported, not fatal"
 err=$(WORKSPACE_SWITCH_AGENT="not-installed-x --flag" "$PS" --open "$ROOT/ag4" 2>&1 >/dev/null)
 assert_contains "says so" "agent 'not-installed-x' is not installed" "$err"
-assert_eq "two panes" 2 "$(panes '=ag4:main')"
+assert_eq "one pane" 1 "$(panes '=ag4:main')"
 
 echo "the agent can be switched off, and takes arguments"
 WORKSPACE_SWITCH_AGENT=none WORKSPACE_SWITCH_AGENTS="fakeclaude" "$PS" --open "$ROOT/ag5" >/dev/null
-assert_eq "none: two panes although an agent is installed" 2 "$(panes '=ag5:main')"
+assert_eq "none: one pane although an agent is installed" 1 "$(panes '=ag5:main')"
 mkdir -p "$ROOT/ag6/.git"
 WORKSPACE_SWITCH_AGENT="fakeclaude --continue" "$PS" --open "$ROOT/ag6" >/dev/null
-assert_eq "a command with arguments is accepted" 3 "$(panes '=ag6:main')"
+assert_eq "a command with arguments is accepted" 2 "$(panes '=ag6:main')"
 
 echo "a group gets an agent in every repo window"
 mkdir -p "$ROOT/team/t-one/.git" "$ROOT/team/t-two/.git"
 WORKSPACE_SWITCH_AGENT=fakeclaude "$PS" --open "$ROOT/team" >/dev/null
-assert_eq "t-one has three panes" 3 "$(panes '=team:t-one')"
-assert_eq "t-two has three panes" 3 "$(panes '=team:t-two')"
+assert_eq "t-one has two panes" 2 "$(panes '=team:t-one')"
+assert_eq "t-two has two panes" 2 "$(panes '=team:t-two')"
 
 t_done

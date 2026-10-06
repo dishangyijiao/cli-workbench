@@ -5,16 +5,17 @@
 
 English | [简体中文](README.zh-CN.md)
 
-**A terminal workbench for AI coding agents.** Claude Code, Codex, Gemini CLI, Grok CLI and the like are command-line programs that read and write plain text, so the best place to run them is a terminal you control: tmux sessions per project, an editor beside the agent, ripgrep, fzf and jq for text, and every setting in a Git repository you can read, diff and fork. This repository is that environment, deployed with [chezmoi](https://www.chezmoi.io).
+**A terminal workbench for AI coding agents.** Claude Code, Codex, Gemini CLI, Grok CLI and the like are command-line programs that read and write plain text, so the best place to run them is a terminal you control: tmux sessions per project, an editor one key away from the agent, ripgrep, fzf and jq for text, and every setting in a Git repository you can read, diff and fork. This repository is that environment, deployed with [chezmoi](https://www.chezmoi.io).
 
 ```
   prefix + P  ->  pick a project  ->  one tmux session, one window per repository
- ┌─────────────────┬─────────────────┐
- │                 │  claude / codex │   the first installed agent starts here,
- │  nvim           │  gemini / grok  │   in the project's directory
- │                 ├─────────────────┤
- │                 │  shell          │
- └─────────────────┴─────────────────┘
+ ┌───────────────────────────────────┐
+ │  claude / codex / gemini / grok   │   the first installed agent starts here,
+ │                                   │   in the project's directory
+ ├───────────────────────────────────┤
+ │  shell                            │
+ └───────────────────────────────────┘
+  prefix + e / prefix + g: Neovim in a popup, to browse code or review changes
 ```
 
 ## What makes it a workbench, not just dotfiles
@@ -156,9 +157,9 @@ Then restart Claude Code, or run `/reload-plugins` in a running session.
 
 ## Workspace switcher (tmux)
 
-Press `prefix` then `P` (`Ctrl-a P`) for a picker over `~/dev/projects`. Every directory directly under a root is a workspace, opened as one tmux session: the editor on the left, on the right an AI agent over a shell. A directory that is not a repository but contains several (a multi-repo product) is **one** workspace with one window per repository. Choosing an existing workspace only switches to it. It needs tmux 3.2+ and `fzf`.
+Press `prefix` then `P` (`Ctrl-a P`) for a picker over `~/dev/projects`. Every directory directly under a root is a workspace, opened as one tmux session: an AI agent on top, a shell under it. There is no editor pane; `prefix e` and `prefix g` open Neovim in a popup when you want to read code (see below). A directory that is not a repository but contains several (a multi-repo product) is **one** workspace with one window per repository. Choosing an existing workspace only switches to it. It needs tmux 3.2+ and `fzf`.
 
-- **Agent pane:** the first installed of `claude codex gemini grok` is started in the project directory. If none is installed, the window has just the editor and a shell. `WORKSPACE_SWITCH_AGENT="claude --continue"` picks one (with arguments), `none` turns it off, `WORKSPACE_SWITCH_AGENTS="aider claude"` changes the candidates and their order. Set these with `set-environment -g` in `home/dot_tmux.conf`, next to `WORKSPACE_ROOTS`.
+- **Agent pane:** the first installed of `claude codex gemini grok` is started in the project directory. If none is installed, the window has just a shell. `WORKSPACE_SWITCH_AGENT="claude --continue"` picks one (with arguments), `none` turns it off, `WORKSPACE_SWITCH_AGENTS="aider claude"` changes the candidates and their order. Set these with `set-environment -g` in `home/dot_tmux.conf`, next to `WORKSPACE_ROOTS`.
 - **Roots:** uncomment `WORKSPACE_ROOTS` in `home/dot_tmux.conf` to scan other directories.
 - Details are in the header of `home/dot_tmux/scripts/executable_workspace-switch.sh`.
 
