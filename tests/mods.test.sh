@@ -34,6 +34,12 @@ for name in chezmoi-guard reply-polish; do
   refute "$name: no generated types are tracked" test -e "$dir/.claude-plugin/types"
 done
 
+echo "chezmoi-guard: the line above the prompt is worded in one tested place"
+G=$M/chezmoi-guard/hooks
+assert "the wording lives in message.ts, with a test" test -f "$G/message.ts" -a -f "$G/message.test.ts"
+assert "it has the singular form ('differs')" grep -q "deployed file differs" "$G/message.ts"
+refute "register.tsx does not word it again" grep -q "differ from the source" "$G/register.tsx"
+
 echo "with Claude Code installed: validate and run each mod's own tests"
 if command -v claude >/dev/null && claude plugin test --help >/dev/null 2>&1; then
   assert "the marketplace validates" claude plugin validate "$M"
