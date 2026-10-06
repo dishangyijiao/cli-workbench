@@ -155,6 +155,10 @@ claude plugin install reply-polish@cli-workbench --scope user
 - **稳定性：** mod 的 API 处于早期阶段，不同版本之间会变化。这两个 mod 是用 Claude Code 2.1.289 开发和测试的。使用 `--safe-mode` 或 `--bare` 时 mod 不会加载。
 - **有意不纳入版本控制：** Claude Code 加载 mod 时写进 `.claude-plugin/types/` 的类型声明文件。
 
+## 按键表
+
+最常用的按键，一页纸，方便打印：[docs/keybindings.zh-CN.md](docs/keybindings.zh-CN.md)。有测试保证它和配置保持一致。
+
 ## 工作台切换器（tmux）
 
 按 `前缀键` 再按 `P`（`Ctrl-a P`），弹出 `~/dev/projects` 下的选择器。根目录下的每个直接子目录都是一个工作台，会打开成一个 tmux 会话：上面是 AI 代理，下面是 shell。没有常驻的编辑器窗格；想看代码时，用 `prefix e` 和 `prefix g` 在弹窗里打开 Neovim（见下文）。不是仓库、但里面包含多个仓库的目录（多仓库产品）算**一个**工作台，每个仓库一个窗口。选择已存在的工作台只会切换过去。需要 tmux 3.2+ 和 `fzf`。

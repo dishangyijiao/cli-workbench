@@ -155,6 +155,10 @@ Then restart Claude Code, or run `/reload-plugins` in a running session.
 - **Stability:** the mods API is early access and changes between releases. These mods were built and tested with Claude Code 2.1.289. Mods do not load under `--safe-mode` or `--bare`.
 - **Not tracked on purpose:** the type declarations Claude Code writes into a mod's `.claude-plugin/types/` when it loads the mod.
 
+## Keybindings
+
+The keys you use most, on one page to print: [docs/keybindings.md](docs/keybindings.md). A test keeps it in step with the config.
+
 ## Workspace switcher (tmux)
 
 Press `prefix` then `P` (`Ctrl-a P`) for a picker over `~/dev/projects`. Every directory directly under a root is a workspace, opened as one tmux session: an AI agent on top, a shell under it. There is no editor pane; `prefix e` and `prefix g` open Neovim in a popup when you want to read code (see below). A directory that is not a repository but contains several (a multi-repo product) is **one** workspace with one window per repository. Choosing an existing workspace only switches to it. It needs tmux 3.2+ and `fzf`.

@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
+- `docs/keybindings.md` and `docs/keybindings.zh-CN.md`: the keys used most, on one printable page. `tests/keybindings.test.sh` fails when a documented `prefix` key is not bound in the deployed tmux config, a documented `<leader>` key is not mapped in Neovim, or the two languages list different keys.
+
+### Added
+
 - Idea inbox: `prefix a` in tmux (or `idea TEXT` in zsh) appends one idea as one line to `~/.config/cli-workbench/inbox.md`, tagged with the date and the pane's repository, without leaving the pane. The text is stored verbatim and never evaluated; there is no heading, so concurrent appends need no lock. `home/dot_tmux/scripts/executable_idea.sh`, tested by `tests/idea.test.sh`. The README states the rules for processing the inbox.
 
 ### Changed
