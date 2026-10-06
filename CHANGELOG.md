@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- Idea inbox: `prefix a` in tmux (or `idea TEXT` in zsh) appends one idea as one line to `~/.config/cli-workbench/inbox.md`, tagged with the date and the pane's repository, without leaving the pane. The text is stored verbatim and never evaluated; there is no heading, so concurrent appends need no lock. `home/dot_tmux/scripts/executable_idea.sh`, tested by `tests/idea.test.sh`. The README states the rules for processing the inbox.
+
 ### Changed
 
 - The workspace switcher no longer opens an editor pane: a window is the AI agent on top with a shell under it, or just a shell when no agent is installed. `prefix e` and `prefix g` open Neovim in a popup instead. `WORKSPACE_SWITCH_EDITOR` is gone.

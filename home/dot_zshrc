@@ -52,6 +52,9 @@ if ls --color=auto / >/dev/null 2>&1; then alias ls='ls --color=auto'; else alia
 alias grep='grep --color=auto'
 alias ll='ls -lah'
 alias ..='cd ..'
+# idea TEXT: write an idea to the inbox (same as prefix + a). noglob keeps "why?" or "*" from failing as a pattern;
+# quote text with $ or backticks, or run `idea` alone and type the line at the prompt.
+alias idea='noglob ~/.tmux/scripts/idea.sh --'
 
 # Not tracked: secrets and per-machine settings, sourced last
 if [[ -r "$HOME/.config/zsh/secrets.zsh" ]]; then source "$HOME/.config/zsh/secrets.zsh"; fi

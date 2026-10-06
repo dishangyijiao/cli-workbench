@@ -179,6 +179,14 @@ Select some English text with the mouse (or `v` ... `y` in copy mode), then pres
 - **Privacy:** the selected text is sent to the translation service (Google by default; if that fails, Bing is asked once). Do not use it on text you may not send out.
 - **Language:** `LOOKUP_LANG` sets the target language (default `zh-CN`). Details are in the header of `home/dot_tmux/scripts/executable_lookup.sh`.
 
+## Idea inbox (tmux)
+
+Write an idea down the moment you have it, without leaving the pane or interrupting the agent. Press `prefix` then `a` (`Ctrl-a a`), type one line, press `Enter`; the popup closes and you are back where you were. An empty line cancels. In a shell, `idea some text` does the same (or `idea` alone to be asked). It needs tmux 3.2+.
+
+- **Where:** one line per idea in `~/.config/cli-workbench/inbox.md` (private, mode 600, not in this repository), for all projects: `- [ ] 2026-10-06 17:42 · ~/dev/projects/foo · the idea`. The project is the repository's top directory, for a worktree the repository it belongs to; `?` if the pane was gone.
+- **Safe to type anything:** the text is stored as it is and never run. A failed write keeps the popup open and repeats the idea.
+- **Processing it:** ask your agent to "process the inbox". The rules: copy the file to a timestamped backup (mode 600) first; change only the lines it handles, ticking `- [ ]` to `- [x]`, never deleting; afterwards check that every line from before is still there; ask before anything leaves the machine, such as opening a GitHub issue.
+
 ## Uninstall / restore
 
 Restore from `~/.cli-workbench-backup/<timestamp>/RESTORE` (one command per file), or delete what you no longer want. `chezmoi unmanage <target>` stops managing one file.
