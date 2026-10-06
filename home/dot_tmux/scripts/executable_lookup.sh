@@ -7,6 +7,7 @@
 # The text is sent to the translation service (translate-shell uses Google by default), so do not use this on text
 # you may not send out. Selected text is data: it goes in on standard input and is never part of a command line.
 #   LOOKUP_LANG   target language (default zh-CN)
+# If the default engine fails, Bing is asked once (so the text may reach two services).
 lang=${LOOKUP_LANG:-zh-CN}
 
 if [ $# -gt 0 ]; then text=$*; else text=$(tmux show-buffer 2>/dev/null); fi
@@ -33,8 +34,21 @@ case $word in
   *) brief=''; query=$word ;;
 esac
 
+# The default engine (Google) now and then answers "Null response". When it does, ask Bing once.
+ask() {
+  # shellcheck disable=SC2086  # $brief is empty or the single flag -b; $1 is empty or "-e bing"
+  printf '%s' "$query" | trans $1 $brief ":$lang" -i /dev/stdin 2>&1
+}
+answer=$(ask '') && failed=0 || failed=1
+case $answer in '' | *'[ERROR]'*) failed=1 ;; esac
+if [ $failed -eq 1 ]; then
+  second=$(ask '-e bing') && failed=0 || failed=1
+  case $second in '' | *'[ERROR]'*) failed=1 ;; esac
+  # Show the second answer if it worked; otherwise the first one's error, which says what went wrong.
+  [ $failed -eq 0 ] && answer=$second
+fi
+
 {
   printf '%s\n\n' "$text"
-  # shellcheck disable=SC2086  # $brief is empty or the single flag -b
-  printf '%s' "$query" | trans $brief ":$lang" -i /dev/stdin 2>&1
+  printf '%s\n' "$answer"
 } | show

@@ -167,7 +167,7 @@ claude plugin install reply-polish@cli-workbench --scope user
 用鼠标（或在复制模式里按 `v` ... `y`）选中一段英文，再按 `前缀键` 加 `t`（`Ctrl-a t`）。弹窗里会显示翻译，不用离开正在阅读的窗格。单个单词给出词典条目，更长的文字给出译文。按 `q` 关闭弹窗。
 
 - **需要：** tmux 3.2+ 和 `translate-shell`（`brew install translate-shell`；没装时弹窗会提示）。
-- **隐私：** 选中的文字会发给翻译服务（默认是 Google）。不要用在不能发出去的文字上。
+- **隐私：** 选中的文字会发给翻译服务（默认是 Google；失败时会再问一次 Bing）。不要用在不能发出去的文字上。
 - **语言：** `LOOKUP_LANG` 设置目标语言（默认 `zh-CN`）。细节见 `home/dot_tmux/scripts/executable_lookup.sh` 开头的注释。
 
 ## 卸载 / 恢复

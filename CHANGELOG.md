@@ -6,7 +6,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
-- `prefix` + `t` translates or looks up the text you just selected, in a popup (`home/dot_tmux/scripts/executable_lookup.sh`), so you do not leave the pane you are reading. One word gives a dictionary entry, anything longer gives its translation. It needs the optional `translate-shell`, and the selected text is sent to the translation service. `LOOKUP_LANG` sets the target language (default `zh-CN`).
+- `prefix` + `t` translates or looks up the text you just selected, in a popup (`home/dot_tmux/scripts/executable_lookup.sh`), so you do not leave the pane you are reading. One word gives a dictionary entry, anything longer gives its translation. It needs the optional `translate-shell`, and the selected text is sent to the translation service. `LOOKUP_LANG` sets the target language (default `zh-CN`). When the default engine answers with an error (it sometimes says "Null response"), Bing is asked once.
 
 ## [0.2.0] - 2026-10-06
 

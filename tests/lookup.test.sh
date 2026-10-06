@@ -22,7 +22,12 @@ STUB=$T_DIR/stub; mkdir -p "$STUB"
 cat > "$STUB/trans" <<EOF
 #!/bin/sh
 printf '%s\n' "\$*" > "$T_DIR/args"
+echo call >> "$T_DIR/calls"
 cat > "$T_DIR/stdin"
+# STUB_FAIL_DEFAULT=1: the default engine answers with trans's usual error, an explicit -e engine works.
+if [ -n "\${STUB_FAIL_DEFAULT:-}" ] && [ "\${1:-}" != "-e" ]; then
+  printf '[ERROR] Null response.\n'; exit "\${STUB_FAIL_RC:-0}"
+fi
 printf 'STUB ANSWER\n'
 EOF
 chmod +x "$STUB/trans"
@@ -42,6 +47,18 @@ assert_eq "no brief flag for a word" ":zh-CN -i /dev/stdin" "$(cat "$T_DIR/args"
 assert_eq "only the word is looked up" "scrutiny" "$(cat "$T_DIR/stdin")"
 run "don't" >/dev/null
 assert_eq "an apostrophe stays inside a word" "don't" "$(cat "$T_DIR/stdin")"
+
+echo "when the default engine fails it tries bing once"
+out=$(STUB_FAIL_DEFAULT=1 run "Always test your analogies.")
+assert_eq "the second call names the other engine" "-e bing -b :zh-CN -i /dev/stdin" "$(cat "$T_DIR/args")"
+assert_contains "the answer of the second engine is shown" "STUB ANSWER" "$out"
+case $out in *ERROR*) t_fail "the first engine's error is not shown when the retry works";; *) t_ok "the first engine's error is not shown when the retry works";; esac
+out=$(STUB_FAIL_DEFAULT=1 STUB_FAIL_RC=1 run "scrutiny")
+assert_contains "a non-zero exit also triggers the retry" "STUB ANSWER" "$out"
+assert_eq "a word keeps its dictionary form on the retry" "-e bing :zh-CN -i /dev/stdin" "$(cat "$T_DIR/args")"
+rm -f "$T_DIR/calls"
+run "Always test your analogies." >/dev/null
+assert_eq "no retry when the first call works" "1" "$(wc -l < "$T_DIR/calls" | tr -d ' ')"
 
 echo "the target language can be changed"
 LOOKUP_LANG=ja run "hello world" >/dev/null

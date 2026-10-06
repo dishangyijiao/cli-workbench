@@ -167,7 +167,7 @@ Press `prefix` then `P` (`Ctrl-a P`) for a picker over `~/dev/projects`. Every d
 Select some English text with the mouse (or `v` ... `y` in copy mode), then press `prefix` then `t` (`Ctrl-a t`). A popup shows a translation, so you do not leave the pane you are reading. One word gives a dictionary entry; anything longer gives its translation. Close the popup with `q`.
 
 - **Needs:** tmux 3.2+ and `translate-shell` (`brew install translate-shell`; without it the popup says so).
-- **Privacy:** the selected text is sent to the translation service (Google by default). Do not use it on text you may not send out.
+- **Privacy:** the selected text is sent to the translation service (Google by default; if that fails, Bing is asked once). Do not use it on text you may not send out.
 - **Language:** `LOOKUP_LANG` sets the target language (default `zh-CN`). Details are in the header of `home/dot_tmux/scripts/executable_lookup.sh`.
 
 ## Uninstall / restore
