@@ -73,7 +73,8 @@ First public release.
 - Test suite (`tests/run.sh`) including an end-to-end run of the README quick start; GitHub Actions on macOS and Ubuntu, plus the macOS system bash 3.2.
 - English and Simplified Chinese READMEs, `SECURITY.md`, `CONTRIBUTING.md`, issue and pull request templates.
 
-[Unreleased]: https://github.com/dishangyijiao/cli-workbench/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/dishangyijiao/cli-workbench/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/dishangyijiao/cli-workbench/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/dishangyijiao/cli-workbench/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/dishangyijiao/cli-workbench/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/dishangyijiao/cli-workbench/releases/tag/v0.0.1
