@@ -41,7 +41,7 @@
 | **Shell** | zsh 5.8 及以上（在 5.9 上测试）。辅助脚本兼容 bash 3.2，也就是 macOS 自带的 bash 就够用。 |
 | **tmux** | 建议 3.2 及以上（在 3.5a 上测试）。更旧的版本仍能加载配置，只是少了工作台切换键。 |
 | **必需** | `git` 和 [`chezmoi`](https://www.chezmoi.io/install/)（`brew install chezmoi`） |
-| **可选** | `fzf`（0.48+ 才有 shell 集成）、`zoxide`、`starship`、`zsh-syntax-highlighting`、`jq`（状态栏用）、[Ghostty](https://ghostty.org) 加一款 Nerd Font、Homebrew |
+| **可选** | `fzf`（0.48+ 才有 shell 集成）、`zoxide`、`starship`、`zsh-syntax-highlighting`、`jq`（状态栏用）、`translate-shell`（翻译弹窗）、[Ghostty](https://ghostty.org) 加一款 Nerd Font、Homebrew |
 
 **它会在你的机器上做的改动：** 仅限 [`home/`](home) 下由 chezmoi 部署的文件（见下表）、使用自带 `zshrc` 后 `~/.cache/zsh/` 里的 zsh 补全缓存，以及被替换文件的备份 `~/.cli-workbench-backup/<时间戳>/`（chezmoi 自己不备份，见“安全模型”）。
 
@@ -169,6 +169,14 @@ claude plugin install reply-polish@cli-workbench --scope user
 - 先按 `prefix` 再按 `e`：**浏览**项目，用平常的 Neovim 按键（`<leader>ff` 找文件、`<leader>fg` 全文搜索、`<leader>e` 文件树）。`:qa` 关闭。
 - 先按 `prefix` 再按 `g`：**查看改动**。用 Telescope 列出当前分支自离开默认分支（`origin/HEAD`，否则 `origin/main`、`main` 等）以来改过的每个文件：已提交、未提交、已删除和未跟踪的都算，并分别标注，预览区是带颜色的 diff。按 `Enter` 会在新标签页里打开该文件，左边是它在分叉点时的版本，用 Neovim 自带的 diff 模式对照（已删除的文件：左边是旧版本，右边为空）（`]c`/`[c` 在改动之间跳转）。在 Neovim 里也可以用 `:Changes` 或 `<leader>gv` 打开同一个列表。`:qa` 关闭弹窗。不在 Git 仓库里时会给出提示。不需要额外插件。
 - 脚本是 `home/dot_tmux/scripts/executable_code-popup.sh`；tmux 只传给它窗格 ID，从不传目录名。
+
+## 翻译选中的文字（tmux）
+
+用鼠标（或在复制模式里按 `v` ... `y`）选中一段英文，再按 `前缀键` 加 `t`（`Ctrl-a t`）。弹窗里会显示翻译，不用离开正在阅读的窗格。单个单词给出词典条目，更长的文字给出译文。按 `q` 关闭弹窗。
+
+- **需要：** tmux 3.2+ 和 `translate-shell`（`brew install translate-shell`；没装时弹窗会提示）。
+- **隐私：** 选中的文字会发给翻译服务（默认是 Google；失败时会再问一次 Bing）。不要用在不能发出去的文字上。
+- **语言：** `LOOKUP_LANG` 设置目标语言（默认 `zh-CN`）。细节见 `home/dot_tmux/scripts/executable_lookup.sh` 开头的注释。
 
 ## 卸载 / 恢复
 

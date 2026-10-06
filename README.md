@@ -41,7 +41,7 @@ English | [简体中文](README.zh-CN.md)
 | **Shell** | zsh 5.8 or newer (tested with 5.9). The helper scripts are bash 3.2 compatible, i.e. the macOS system bash is enough. |
 | **tmux** | 3.2 or newer recommended (tested with 3.5a). Older versions still load the config, minus the workspace switcher key. |
 | **Required** | `git` and [`chezmoi`](https://www.chezmoi.io/install/) (`brew install chezmoi`) |
-| **Optional** | `fzf` (0.48+ for the shell integration), `zoxide`, `starship`, `zsh-syntax-highlighting`, `jq` (status line), [Ghostty](https://ghostty.org) and a Nerd Font, Homebrew |
+| **Optional** | `fzf` (0.48+ for the shell integration), `zoxide`, `starship`, `zsh-syntax-highlighting`, `jq` (status line), `translate-shell` (the translation popup), [Ghostty](https://ghostty.org) and a Nerd Font, Homebrew |
 
 **What it changes on your machine:** exactly the files under [`home/`](home) that chezmoi deploys (the table below), a zsh completion cache in `~/.cache/zsh/`, and backups of the files it replaces in `~/.cli-workbench-backup/<timestamp>/` (chezmoi itself keeps none; see Safety model).
 
@@ -169,6 +169,14 @@ Read code without leaving the agent's pane. Both keys open Neovim in a popup ove
 - `prefix` then `e`: **browse** the project with the usual Neovim keys (`<leader>ff` find a file, `<leader>fg` search, `<leader>e` file tree). `:qa` closes it.
 - `prefix` then `g`: **review changes**. A Telescope list of every file the branch changed since it left the default branch (`origin/HEAD`, else `origin/main`, `main` and so on): committed, uncommitted, deleted and untracked files, each marked, with a colored diff as the preview. `Enter` opens the file in a new tab beside its version at the fork point, in Neovim's own diff mode (a deleted file: its old version beside an empty side) (`]c`/`[c` jump between changes). Inside Neovim the same list is `:Changes` or `<leader>gv`. `:qa` closes the popup. Outside a Git repository it says so. No extra plugin is needed.
 - The script is `home/dot_tmux/scripts/executable_code-popup.sh`; tmux passes it only the pane id, never a directory name.
+
+## Translate what you select (tmux)
+
+Select some English text with the mouse (or `v` ... `y` in copy mode), then press `prefix` then `t` (`Ctrl-a t`). A popup shows a translation, so you do not leave the pane you are reading. One word gives a dictionary entry; anything longer gives its translation. Close the popup with `q`.
+
+- **Needs:** tmux 3.2+ and `translate-shell` (`brew install translate-shell`; without it the popup says so).
+- **Privacy:** the selected text is sent to the translation service (Google by default; if that fails, Bing is asked once). Do not use it on text you may not send out.
+- **Language:** `LOOKUP_LANG` sets the target language (default `zh-CN`). Details are in the header of `home/dot_tmux/scripts/executable_lookup.sh`.
 
 ## Uninstall / restore
 

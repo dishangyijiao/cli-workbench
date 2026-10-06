@@ -2,10 +2,9 @@ import { atom, read, update } from 'claude-code'
 import type { Engine, Register } from 'claude-code'
 
 import type { Drift } from '../types'
+import { driftMessage } from './message'
 
 const drift = atom({ plugin: 'chezmoi-guard', key: 'drift' } as const, [] as Drift)
-
-const SHOWN = 3
 
 // chezmoi prints "<status> <path>" per drifted target; fail open when it cannot run.
 const refresh = async ($: Engine) => {
@@ -59,19 +58,14 @@ export const register: Register = on => {
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    const rows = await read($, drift)
-    if (e.props.hasSurvey || rows.length === 0) return next(e)
+    const message = driftMessage(await read($, drift))
+    if (e.props.hasSurvey || message === null) return next(e)
 
     const { Box, Text } = $.ui.resolve(e)
-    const names = rows.slice(0, SHOWN).map(row => row.path).join(', ')
-    const more = rows.length > SHOWN ? ` and ${rows.length - SHOWN} more` : ''
 
     return (
       <Box>
-        <Text color="yellow">
-          chezmoi: {rows.length} deployed file{rows.length === 1 ? '' : 's'} differ from the source ({names}
-          {more}). Run chezmoi diff.
-        </Text>
+        <Text color="yellow">{message}</Text>
       </Box>
     )
   })
