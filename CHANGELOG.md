@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-06
+
 ### Added
 
 - `prefix` + `t` translates or looks up the text you just selected, in a popup (`home/dot_tmux/scripts/executable_lookup.sh`), so you do not leave the pane you are reading. One word gives a dictionary entry, anything longer gives its translation. It needs the optional `translate-shell`, and the selected text is sent to the translation service. `LOOKUP_LANG` sets the target language (default `zh-CN`). When the default engine answers with an error (it sometimes says "Null response"), Bing is asked once.
@@ -77,7 +79,8 @@ First public release.
 - Test suite (`tests/run.sh`) including an end-to-end run of the README quick start; GitHub Actions on macOS and Ubuntu, plus the macOS system bash 3.2.
 - English and Simplified Chinese READMEs, `SECURITY.md`, `CONTRIBUTING.md`, issue and pull request templates.
 
-[Unreleased]: https://github.com/dishangyijiao/cli-workbench/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/dishangyijiao/cli-workbench/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/dishangyijiao/cli-workbench/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/dishangyijiao/cli-workbench/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/dishangyijiao/cli-workbench/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/dishangyijiao/cli-workbench/releases/tag/v0.0.1
