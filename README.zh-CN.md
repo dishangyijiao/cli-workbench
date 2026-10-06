@@ -41,7 +41,7 @@
 | **Shell** | zsh 5.8 及以上（在 5.9 上测试）。辅助脚本兼容 bash 3.2，也就是 macOS 自带的 bash 就够用。 |
 | **tmux** | 建议 3.2 及以上（在 3.5a 上测试）。更旧的版本仍能加载配置，只是少了工作台切换键。 |
 | **必需** | `git` 和 [`chezmoi`](https://www.chezmoi.io/install/)（`brew install chezmoi`） |
-| **可选** | `fzf`（0.48+ 才有 shell 集成）、`zoxide`、`starship`、`zsh-syntax-highlighting`、`jq`（状态栏用）、[Ghostty](https://ghostty.org) 加一款 Nerd Font、Homebrew |
+| **可选** | `fzf`（0.48+ 才有 shell 集成）、`zoxide`、`starship`、`zsh-syntax-highlighting`、`jq`（状态栏用）、`translate-shell`（翻译弹窗）、[Ghostty](https://ghostty.org) 加一款 Nerd Font、Homebrew |
 
 **它会在你的机器上做的改动：** 仅限 [`home/`](home) 下由 chezmoi 部署的文件（见下表）、使用自带 `zshrc` 后 `~/.cache/zsh/` 里的 zsh 补全缓存，以及被替换文件的备份 `~/.cli-workbench-backup/<时间戳>/`（chezmoi 自己不备份，见“安全模型”）。
 
@@ -161,6 +161,14 @@ claude plugin install reply-polish@cli-workbench --scope user
 - **代理窗格：** 在项目目录里启动 `claude codex gemini grok` 中第一个已安装的。一个都没装时，窗口只有编辑器和 shell。`WORKSPACE_SWITCH_AGENT="claude --continue"` 指定某一个（可带参数），`none` 关闭，`WORKSPACE_SWITCH_AGENTS="aider claude"` 修改候选及顺序。在 `home/dot_tmux.conf` 里用 `set-environment -g` 设置，与 `WORKSPACE_ROOTS` 放在一起。
 - **根目录：** 取消 `home/dot_tmux.conf` 里 `WORKSPACE_ROOTS` 的注释，可以扫描其他目录。
 - 详细说明在 `home/dot_tmux/scripts/executable_workspace-switch.sh` 开头的注释里。
+
+## 翻译选中的文字（tmux）
+
+用鼠标（或在复制模式里按 `v` ... `y`）选中一段英文，再按 `前缀键` 加 `t`（`Ctrl-a t`）。弹窗里会显示翻译，不用离开正在阅读的窗格。单个单词给出词典条目，更长的文字给出译文。按 `q` 关闭弹窗。
+
+- **需要：** tmux 3.2+ 和 `translate-shell`（`brew install translate-shell`；没装时弹窗会提示）。
+- **隐私：** 选中的文字会发给翻译服务（默认是 Google；失败时会再问一次 Bing）。不要用在不能发出去的文字上。
+- **语言：** `LOOKUP_LANG` 设置目标语言（默认 `zh-CN`）。细节见 `home/dot_tmux/scripts/executable_lookup.sh` 开头的注释。
 
 ## 卸载 / 恢复
 
