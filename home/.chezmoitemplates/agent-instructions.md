@@ -11,7 +11,7 @@ This machine is a plain-text terminal workbench (cli-workbench), managed with ch
 ## Engineering principles
 
 - **One source, layered.** Each fact lives in one place; copies are generated from it or point to it. Global, project and local layers state only what differs from the layer above.
-- **Least privilege.** Give each agent, hook and script only the access its task needs. Reviewers read; one owner writes.
+- **Least privilege.** Give each agent, hook and script only the access its task needs. One agent writes to a working copy at a time; reviewers only read.
 - **Files over conversation.** Decisions, conventions and hand-offs go into files (instructions, docs, tests, commit messages), not only into chat.
 - **The simplest thing that works.** Add a tool, layer, agent or file only for a present need; remove what is no longer used, after checking that it is unused.
 - **Evidence and a way back.** "Done" and "unused" need evidence: a test, a diff, a log or a command's output, not a guess. Keep a way back before you delete or overwrite.
