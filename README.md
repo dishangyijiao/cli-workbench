@@ -162,6 +162,14 @@ Press `prefix` then `P` (`Ctrl-a P`) for a picker over `~/dev/projects`. Every d
 - **Roots:** uncomment `WORKSPACE_ROOTS` in `home/dot_tmux.conf` to scan other directories.
 - Details are in the header of `home/dot_tmux/scripts/executable_workspace-switch.sh`.
 
+## Code popups (tmux)
+
+Read code without leaving the agent's pane. Both keys open Neovim in a popup over the current pane, in that pane's directory; closing Neovim closes the popup and you are back where you were. They need tmux 3.2+.
+
+- `prefix` then `e`: **browse** the project with the usual Neovim keys (`<leader>ff` find a file, `<leader>fg` search, `<leader>e` file tree). `:qa` closes it.
+- `prefix` then `g`: **review changes**. A Telescope list of every file the branch changed since it left the default branch (`origin/HEAD`, else `origin/main`, `main` and so on): committed, uncommitted and untracked files, with a colored diff as the preview. `Enter` opens the file in a new tab beside its version at the fork point, in Neovim's own diff mode (`]c`/`[c` jump between changes). Inside Neovim the same list is `:Changes` or `<leader>gv`. `:qa` closes the popup. Outside a Git repository it says so. No extra plugin is needed.
+- The script is `home/dot_tmux/scripts/executable_code-popup.sh`; tmux passes it only the pane id, never a directory name.
+
 ## Uninstall / restore
 
 Restore from `~/.cli-workbench-backup/<timestamp>/RESTORE` (one command per file), or delete what you no longer want. `chezmoi unmanage <target>` stops managing one file.

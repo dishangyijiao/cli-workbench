@@ -102,3 +102,8 @@ require('gitsigns').setup {
 vim.keymap.set('n', '<leader>gc', '<cmd>Telescope git_commits<CR>', { noremap = true, silent = true, desc = 'Git commits' })
 vim.keymap.set('n', '<leader>gt', '<cmd>Telescope git_status<CR>', { noremap = true, silent = true, desc = 'Git status' })
 vim.keymap.set('n', '<leader>gB', '<cmd>Telescope git_branches<CR>', { noremap = true, silent = true, desc = 'Git branches' })
+
+-- What the branch changed since it left the default branch, with a diff preview (lua/git/changes.lua; prefix+g in tmux)
+vim.api.nvim_create_user_command('Changes', function(o) require('git.changes').open(o.args) end,
+  { nargs = '?', desc = 'Files changed since the fork point, with a diff preview' })
+vim.keymap.set('n', '<leader>gv', '<cmd>Changes<CR>', { noremap = true, silent = true, desc = 'Review branch changes' })
