@@ -19,6 +19,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
+- Engineering principles in the shared agent instructions (`home/.chezmoitemplates/agent-instructions.md`): one source of truth with layers that only add differences, least privilege, files over conversation, the simplest thing that works, and evidence before "done" with a way back.
 - Test-first development is now the documented rule (CONTRIBUTING.md), enforced by `scripts/tdd-gate`: a `feat`, `fix`, `refactor` or `perf` commit that changes `home/`, `scripts/` or `.githooks/` must add or change a `tests/*.test.sh`. It runs as a `commit-msg` hook and, because `--no-verify` skips hooks, in CI over every commit of a pull request. Escape hatch: `tdd: skip - <reason>` in the message.
 - Two Claude Code mods, deployed as a local marketplace to `~/.claude/workbench-mods/` (`home/dot_claude/workbench-mods/`) and installed once with `claude plugin marketplace add` and `claude plugin install ... --scope user` (see the README):
   - `chezmoi-guard` refuses `Edit`, `Write` and `NotebookEdit` on a file chezmoi deploys and names the source file to edit instead; a line above the prompt shows when deployed files differ from the source.

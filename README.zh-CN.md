@@ -112,7 +112,7 @@ scripts/lint-shell               # 对仓库里所有 bash/sh 脚本运行 shell
 
 ## 代理指令
 
-Claude Code、Codex 和 Gemini CLI 都会从各自的主目录读取一个纯文本指令文件。这里它们由**同一个**源 `home/.chezmoitemplates/agent-instructions.md` 生成，所以各个代理得到的是关于这台机器的同一套事实。
+Claude Code、Codex 和 Gemini CLI 都会从各自的主目录读取一个纯文本指令文件。这里它们由**同一个**源 `home/.chezmoitemplates/agent-instructions.md` 生成，所以各个代理得到的是关于这台机器的同一套事实，以及同一套工程原则：单一事实来源且各层只写差异、最小权限、写进文件而不只靠对话、够用的最简方案、先有证据再说完成并留好退路。
 
 - **你自己的规则**写在 `~/.config/cli-workbench/agent-instructions.local.md`。它不入库，所以个人偏好不会进入公开的 fork；它会被追加在三个文件的共享文本之后。删掉这个文件，下一次 `chezmoi apply` 就会移除其中的文本。
 - **已有的文件：** 你现有的 `~/.claude/CLAUDE.md`（以及另外两个）在 `apply` 时会被替换，替换前会先备份。想保持原样，请事先把内容挪进本地文件。

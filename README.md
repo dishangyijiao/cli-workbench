@@ -112,7 +112,7 @@ scripts/lint-shell               # shellcheck (warning level and above) over eve
 
 ## Agent instructions
 
-Claude Code, Codex and Gemini CLI each read a plain-text instruction file from their home directory. Here they are generated from **one** source, `home/.chezmoitemplates/agent-instructions.md`, so the agents get the same facts about the machine.
+Claude Code, Codex and Gemini CLI each read a plain-text instruction file from their home directory. Here they are generated from **one** source, `home/.chezmoitemplates/agent-instructions.md`, so the agents get the same facts about the machine and the same engineering principles: one source of truth with layers that only add differences, least privilege, files over conversation, the simplest thing that works, and evidence before "done" with a way back.
 
 - **Your own rules** go in `~/.config/cli-workbench/agent-instructions.local.md`. It is not tracked, so personal preferences never reach a public fork. It is appended after the shared text in all three files. Remove the file and the next `chezmoi apply` removes its text.
 - **Existing files:** your current `~/.claude/CLAUDE.md` (and the others) are replaced on `apply` and backed up first. Move their content into the local file beforehand if you want to keep it as it is.
