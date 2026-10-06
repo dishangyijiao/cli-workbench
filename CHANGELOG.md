@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- Idea inbox: `prefix a` in tmux (or `idea TEXT` in zsh) appends one idea as one line to `~/.config/cli-workbench/inbox.md`, tagged with the date and the pane's repository, without leaving the pane. The text is stored verbatim and never evaluated; there is no heading, so concurrent appends need no lock. `home/dot_tmux/scripts/executable_idea.sh`, tested by `tests/idea.test.sh`. The README states the rules for processing the inbox.
+
 ## [0.3.0] - 2026-10-06
 
 ### Added
