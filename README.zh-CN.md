@@ -5,16 +5,17 @@
 
 [English](README.md) | 简体中文
 
-**给 AI 编码代理用的终端工作台。** Claude Code、Codex、Gemini CLI、Grok CLI 这些都是读写纯文本的命令行程序，所以运行它们最合适的地方是一个你完全掌控的终端：每个项目一个 tmux 会话，编辑器紧挨着代理，用 ripgrep、fzf、jq 处理文本，所有设置都在一个你能读、能 diff、能 fork 的 Git 仓库里。这个仓库就是这套环境，用 [chezmoi](https://www.chezmoi.io) 部署。
+**给 AI 编码代理用的终端工作台。** Claude Code、Codex、Gemini CLI、Grok CLI 这些都是读写纯文本的命令行程序，所以运行它们最合适的地方是一个你完全掌控的终端：每个项目一个 tmux 会话，编辑器一键就能叫出来，用 ripgrep、fzf、jq 处理文本，所有设置都在一个你能读、能 diff、能 fork 的 Git 仓库里。这个仓库就是这套环境，用 [chezmoi](https://www.chezmoi.io) 部署。
 
 ```
   prefix + P  ->  选一个项目  ->  一个 tmux 会话，每个仓库一个窗口
- ┌─────────────────┬─────────────────┐
- │                 │  claude / codex │   第一个已安装的代理在这里启动，
- │  nvim           │  gemini / grok  │   工作目录就是项目目录
- │                 ├─────────────────┤
- │                 │  shell          │
- └─────────────────┴─────────────────┘
+ ┌───────────────────────────────────┐
+ │  claude / codex / gemini / grok   │   第一个已安装的代理在这里启动，
+ │                                   │   工作目录就是项目目录
+ ├───────────────────────────────────┤
+ │  shell                            │
+ └───────────────────────────────────┘
+  prefix + e / prefix + g：在弹窗里用 Neovim 浏览代码或查看改动
 ```
 
 ## 为什么它是工作台，而不只是 dotfiles
@@ -156,9 +157,9 @@ claude plugin install reply-polish@cli-workbench --scope user
 
 ## 工作台切换器（tmux）
 
-按 `前缀键` 再按 `P`（`Ctrl-a P`），弹出 `~/dev/projects` 下的选择器。根目录下的每个直接子目录都是一个工作台，会打开成一个 tmux 会话：左边编辑器，右边上面是 AI 代理、下面是 shell。不是仓库、但里面包含多个仓库的目录（多仓库产品）算**一个**工作台，每个仓库一个窗口。选择已存在的工作台只会切换过去。需要 tmux 3.2+ 和 `fzf`。
+按 `前缀键` 再按 `P`（`Ctrl-a P`），弹出 `~/dev/projects` 下的选择器。根目录下的每个直接子目录都是一个工作台，会打开成一个 tmux 会话：上面是 AI 代理，下面是 shell。没有常驻的编辑器窗格；想看代码时，用 `prefix e` 和 `prefix g` 在弹窗里打开 Neovim（见下文）。不是仓库、但里面包含多个仓库的目录（多仓库产品）算**一个**工作台，每个仓库一个窗口。选择已存在的工作台只会切换过去。需要 tmux 3.2+ 和 `fzf`。
 
-- **代理窗格：** 在项目目录里启动 `claude codex gemini grok` 中第一个已安装的。一个都没装时，窗口只有编辑器和 shell。`WORKSPACE_SWITCH_AGENT="claude --continue"` 指定某一个（可带参数），`none` 关闭，`WORKSPACE_SWITCH_AGENTS="aider claude"` 修改候选及顺序。在 `home/dot_tmux.conf` 里用 `set-environment -g` 设置，与 `WORKSPACE_ROOTS` 放在一起。
+- **代理窗格：** 在项目目录里启动 `claude codex gemini grok` 中第一个已安装的。一个都没装时，窗口里只有 shell。`WORKSPACE_SWITCH_AGENT="claude --continue"` 指定某一个（可带参数），`none` 关闭，`WORKSPACE_SWITCH_AGENTS="aider claude"` 修改候选及顺序。在 `home/dot_tmux.conf` 里用 `set-environment -g` 设置，与 `WORKSPACE_ROOTS` 放在一起。
 - **根目录：** 取消 `home/dot_tmux.conf` 里 `WORKSPACE_ROOTS` 的注释，可以扫描其他目录。
 - 详细说明在 `home/dot_tmux/scripts/executable_workspace-switch.sh` 开头的注释里。
 
