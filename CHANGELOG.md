@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-06
+
 ### Added
 
 - Test-first development is now the documented rule (CONTRIBUTING.md), enforced by `scripts/tdd-gate`: a `feat`, `fix`, `refactor` or `perf` commit that changes `home/`, `scripts/` or `.githooks/` must add or change a `tests/*.test.sh`. It runs as a `commit-msg` hook and, because `--no-verify` skips hooks, in CI over every commit of a pull request. Escape hatch: `tdd: skip - <reason>` in the message.
@@ -67,6 +69,7 @@ First public release.
 - Test suite (`tests/run.sh`) including an end-to-end run of the README quick start; GitHub Actions on macOS and Ubuntu, plus the macOS system bash 3.2.
 - English and Simplified Chinese READMEs, `SECURITY.md`, `CONTRIBUTING.md`, issue and pull request templates.
 
-[Unreleased]: https://github.com/dishangyijiao/cli-workbench/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/dishangyijiao/cli-workbench/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/dishangyijiao/cli-workbench/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/dishangyijiao/cli-workbench/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/dishangyijiao/cli-workbench/releases/tag/v0.0.1
