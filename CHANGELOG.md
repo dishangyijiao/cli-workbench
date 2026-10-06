@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+
+- `chezmoi-guard`: the line above the prompt said "1 deployed file differ"; it now says "differs" for one file. The wording lives in `hooks/message.ts`, with tests.
+
 ## [0.2.0] - 2026-10-06
 
 ### Added
