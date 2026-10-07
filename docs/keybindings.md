@@ -119,6 +119,14 @@ In a list: `C-n` / `C-p` move, `Enter` opens, `Esc` closes.
 | `:tabclose` | Close this comparison |
 | `gt` / `gT` | Next / previous tab |
 
+### Markdown (render-markdown.nvim)
+
+Open a `.md` file and it is shown rendered in the same window: headings, lists, tables, code blocks and quotes are drawn as styled text. The text is shown as a centred column about 80 characters wide (no-neck-pain.nvim), so on a wide screen the eye does not travel across the whole window; other files keep the full width. The text itself is unchanged, and the line under the cursor shows its raw source so you can edit it.
+
+| Key | Action |
+|---|---|
+| ★ `<leader>mp` | Switch the rendering off / on (Markdown files only) |
+
 ### Other
 
 | Key | Action |

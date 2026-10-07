@@ -52,13 +52,73 @@ return {
           -- DevOps
           "dockerfile", "terraform", "hcl", "yaml", "bash", "json", "jsonnet",
           -- Build tools
-          "cmake", "make"
+          "cmake", "make",
+          -- Markdown (render-markdown.nvim draws from these)
+          "markdown", "markdown_inline"
         },
         auto_install = true,
         highlight = { enable = true },
         indent = { enable = true },
         incremental_selection = { enable = true },
       })
+    end,
+  },
+
+  -- Markdown shown rendered in place; <leader>mp switches it off and on
+  {
+    "MeanderingProgrammer/render-markdown.nvim",
+    ft = "markdown",
+    dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-tree/nvim-web-devicons" },
+    opts = {
+      -- Headings: a bar as wide as the text (not the whole window), no sign column mark, and a background
+      -- only for the top level, so the levels differ by weight and colour instead of all being the same blue bar.
+      heading = {
+        width = "block",
+        left_pad = 1,
+        right_pad = 1,
+        sign = false,
+        -- One mark per level, in place of the "#" signs. With no icons the raw "##" stays on screen.
+        icons = { "◆ ", "◇ ", "▸ ", "▹ ", "· ", "· " },
+        backgrounds = { "RenderMarkdownH1Bg", "", "", "", "", "" },
+      },
+      code = { width = "block", left_pad = 1, right_pad = 1, border = "thin" },
+    },
+    keys = {
+      { "<leader>mp", "<cmd>RenderMarkdown toggle<cr>", ft = "markdown", desc = "Markdown: toggle rendering" },
+    },
+  },
+
+  -- Markdown is read as a centred column of 80 characters, not across the whole window: on a wide screen the eye
+  -- would otherwise travel far from the end of a line to the start of the next. It is on only while a Markdown
+  -- buffer is shown; other files keep the full width.
+  {
+    "shortcuts/no-neck-pain.nvim",
+    ft = "markdown",
+    opts = {
+      width = 80,
+      autocmds = { enableOnVimEnter = false },
+    },
+    config = function(_, opts)
+      local nnp = require("no-neck-pain")
+      nnp.setup(opts)
+      local function sync()
+        local md = vim.bo.filetype == "markdown"
+        local on = _G.NoNeckPain ~= nil and _G.NoNeckPain.state ~= nil and _G.NoNeckPain.state.enabled
+        if md and not on then
+          nnp.enable()
+        elseif not md and on then
+          nnp.disable()
+        end
+      end
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = "markdown",
+        callback = function()
+          vim.opt_local.linebreak = true
+          vim.opt_local.breakindent = true
+        end,
+      })
+      vim.api.nvim_create_autocmd("BufEnter", { group = vim.api.nvim_create_augroup("MarkdownWidth", {}), callback = sync })
+      sync()
     end,
   },
 
