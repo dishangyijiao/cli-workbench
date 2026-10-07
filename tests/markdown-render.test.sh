@@ -51,6 +51,19 @@ if r then
   end
 end
 
+-- reading width: Markdown text is a centred column of 66 to 80 characters, not the whole window
+local nnp = find("shortcuts/no-neck-pain.nvim")
+print("width-plugin", tostring(nnp ~= nil))
+if nnp then
+  local ft = nnp.ft
+  if type(ft) == "string" then ft = { ft } end
+  print("width-markdown-only", tostring(ft ~= nil and #ft == 1 and ft[1] == "markdown"))
+  local w = nnp.opts and nnp.opts.width
+  print("width-range", tostring(type(w) == "number" and w >= 66 and w <= 80))
+  print("width-not-on-start", tostring(nnp.opts and nnp.opts.autocmds and nnp.opts.autocmds.enableOnVimEnter == false))
+  print("width-config", tostring(type(nnp.config) == "function"))
+end
+
 -- the parsers the plugin needs are requested by the treesitter spec
 local ts = find("nvim-treesitter/nvim-treesitter")
 local asked
@@ -75,6 +88,11 @@ assert_contains "<leader>mp is defined with the plugin" "toggle-key true" "$out"
 assert_contains "it runs the plugin's toggle" "toggle-runs true" "$out"
 assert_contains "it exists only in Markdown buffers, in normal mode" "toggle-scope true" "$out"
 assert_contains "it has a description for the key list" "toggle-desc true" "$out"
+assert_contains "a width plugin is in the spec" "width-plugin true" "$out"
+assert_contains "it loads for Markdown files only" "width-markdown-only true" "$out"
+assert_contains "the column is 66 to 80 characters wide" "width-range true" "$out"
+assert_contains "it is not switched on at start for every file" "width-not-on-start true" "$out"
+assert_contains "it has a config that switches it on and off with the buffer" "width-config true" "$out"
 assert_contains "the markdown parser is requested" "parser-markdown true" "$out"
 assert_contains "and the inline parser, which headings and emphasis need" "parser-markdown_inline true" "$out"
 
@@ -82,6 +100,8 @@ echo "the plugin version is pinned, like every other plugin"
 lock=$NVIM_SRC/lazy-lock.json
 assert_eq "render-markdown.nvim has a pinned commit" "yes" \
   "$(jq -r 'if (.["render-markdown.nvim"].commit // "" | test("^[0-9a-f]{40}$")) then "yes" else "no" end' "$lock" 2>/dev/null)"
+assert_eq "no-neck-pain.nvim has a pinned commit" "yes" \
+  "$(jq -r 'if (.["no-neck-pain.nvim"].commit // "" | test("^[0-9a-f]{40}$")) then "yes" else "no" end' "$lock" 2>/dev/null)"
 assert_eq "the lock file is still valid JSON" "0" "$(jq empty "$lock" >/dev/null 2>&1; echo $?)"
 
 echo "the key is written down in both languages"
