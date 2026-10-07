@@ -88,6 +88,40 @@ return {
     },
   },
 
+  -- Markdown is read as a centred column of 80 characters, not across the whole window: on a wide screen the eye
+  -- would otherwise travel far from the end of a line to the start of the next. It is on only while a Markdown
+  -- buffer is shown; other files keep the full width.
+  {
+    "shortcuts/no-neck-pain.nvim",
+    ft = "markdown",
+    opts = {
+      width = 80,
+      autocmds = { enableOnVimEnter = false },
+    },
+    config = function(_, opts)
+      local nnp = require("no-neck-pain")
+      nnp.setup(opts)
+      local function sync()
+        local md = vim.bo.filetype == "markdown"
+        local on = _G.NoNeckPain ~= nil and _G.NoNeckPain.state ~= nil and _G.NoNeckPain.state.enabled
+        if md and not on then
+          nnp.enable()
+        elseif not md and on then
+          nnp.disable()
+        end
+      end
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = "markdown",
+        callback = function()
+          vim.opt_local.linebreak = true
+          vim.opt_local.breakindent = true
+        end,
+      })
+      vim.api.nvim_create_autocmd("BufEnter", { group = vim.api.nvim_create_augroup("MarkdownWidth", {}), callback = sync })
+      sync()
+    end,
+  },
+
   -- LSP
   {
     "neovim/nvim-lspconfig",
