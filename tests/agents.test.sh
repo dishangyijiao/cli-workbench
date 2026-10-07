@@ -11,7 +11,8 @@ trap t_cleanup EXIT
 AGENTS=$WB_SRC/home/dot_tmux/scripts/executable_agents.sh
 export HOME=$T_DIR/home; mkdir -p "$HOME"
 export XDG_STATE_HOME=$T_DIR/state
-SESS=$XDG_STATE_HOME/cli-workbench/sessions; mkdir -p "$SESS"
+SRV=100-1700000000; export FAKE_SERVER=$SRV
+SESS=$XDG_STATE_HOME/cli-workbench/sessions/$SRV; mkdir -p "$SESS"
 LOG=$T_DIR/log; : > "$LOG"
 
 # tmux stub: list-panes answers with the lines of $FAKE_PANES ("%pane $session @window"); FAKE_TMUX_FAIL=1 makes it fail like
@@ -20,13 +21,14 @@ mkdir -p "$T_DIR/bin"
 cat > "$T_DIR/bin/tmux" <<'SH'
 #!/bin/sh
 [ "${FAKE_TMUX_FAIL:-}" = 1 ] && exit 1
+if [ "$1" = display-message ]; then echo "$FAKE_SERVER"; exit 0; fi
 if [ "$1" = list-panes ]; then cat "$FAKE_PANES"; exit 0; fi
 echo "$*" >> "$FAKE_LOG"
 SH
 chmod +x "$T_DIR/bin/tmux"
 export FAKE_PANES=$T_DIR/panes FAKE_LOG=$LOG
 now=$(date +%s)
-rec() { printf '{"state":"%s","project":"%s","branch":"%s","since":%s,"session_id":"s"}\n' "$2" "$3" "$4" "$5" > "$SESS/$1.json"; }
+rec() { printf '{"state":"%s","project":"%s","branch":"%s","since":%s,"ts":%s000,"session_id":"s"}\n' "$2" "$3" "$4" "$5" "$5" > "$SESS/$1.json"; }
 run() { PATH="$T_DIR/bin:$PATH" sh "$AGENTS" "$@" 2>&1 </dev/null; }
 
 rec %1 idle    alpha main    $((now - 7300))
@@ -41,7 +43,7 @@ out=$(run --list)
 assert_eq "four rows, the dead pane is not listed" 4 "$(printf '%s\n' "$out" | grep -c .)"
 assert_eq "order by state, then by how long" "delta gamma beta alpha" "$(printf '%s\n' "$out" | awk '{print $2}' | tr '\n' ' ' | sed 's/ $//')"
 assert_eq "columns: state project branch age" "waiting delta main 15m" "$(printf '%s\n' "$out" | sed -n 1p | tr -s ' ')"
-assert "seconds" printf '%s\n' "$(printf '%s\n' "$out" | sed -n 2p | tr -s ' ' | grep -E '^waiting gamma fix/y 3[0-9]s$')"
+assert_eq "seconds" "waiting gamma fix/y" "$(printf '%s\n' "$out" | sed -n 2p | tr -s ' ' | grep -E '^waiting gamma fix/y 3[0-9]s$' | sed 's/ [0-9]*s$//')"
 assert_eq "minutes" "working beta feat-x 2m" "$(printf '%s\n' "$out" | sed -n 3p | tr -s ' ')"
 assert_eq "hours" "idle alpha main 2h" "$(printf '%s\n' "$out" | sed -n 4p | tr -s ' ')"
 
@@ -66,15 +68,50 @@ assert "and --count removes nothing" test -e "$SESS/%9.json"
 rm -f "$SESS/%9.json"
 assert_eq "an unreachable tmux counts nothing" "" "$(FAKE_TMUX_FAIL=1 run --count)"
 
-echo "jump goes to the session, the window and the pane"
+echo "the count does not slow down with the number of records"
+for i in $(seq 100 199); do rec %$i waiting bulk main "$now"; printf '%%%s $1 @1\n' "$i" >> "$FAKE_PANES"; done
+t0=$(date +%s%N 2>/dev/null || echo 0)
+assert_eq "100 more waiting agents are counted" "⏳102" "$(run --count)"
+t1=$(date +%s%N 2>/dev/null || echo 0)
+if [ "$t0" != 0 ] && [ "${t0%N}" = "$t0" ]; then assert "and it takes well under half a second" test $(( (t1 - t0) / 1000000 )) -lt 500; fi
+rm -f "$SESS"/%1[0-9][0-9].json; head -n 4 "$FAKE_PANES" > "$FAKE_PANES.4"; mv "$FAKE_PANES.4" "$FAKE_PANES"
+
+echo "jump goes to the session, the window and the pane, on the client that asked"
 : > "$LOG"; out=$(run --jump %3); rc=$?
 assert_eq "exit 0" 0 "$rc"
-assert_eq "switch-client, select-window, select-pane, in that order" 'switch-client -t $2|select-window -t @3|select-pane -t %3' "$(paste -sd'|' "$LOG")"
+assert_eq "switch-client, select-window (session-qualified), select-pane, in that order" 'switch-client -t $2|select-window -t $2:@3|select-pane -t %3' "$(paste -sd'|' "$LOG")"
+: > "$LOG"; run --client /dev/ttys009 --jump %3 >/dev/null
+assert_eq "with a client the switch names it" 'switch-client -c /dev/ttys009 -t $2|select-window -t $2:@3|select-pane -t %3' "$(paste -sd'|' "$LOG")"
 : > "$LOG"; out=$(run --jump %77); rc=$?
 assert "a pane that is gone is refused" test "$rc" -ne 0
 assert_eq "and nothing is switched" "" "$(cat "$LOG")"
 out=$(run --jump '%1;touch x'); rc=$?
 assert "a pane id that is not %N is refused" test "$rc" -ne 0
+
+echo "ended sessions are hidden, then removed after a minute"
+rec %1 idle alpha main "$now"
+printf '{"state":"ended","ts":%s000,"since":1}\n' "$now" > "$SESS/%2.json"
+out=$(run --list)
+assert_eq "an ended record is not listed" "delta gamma alpha" "$(printf '%s\n' "$out" | awk '{print $2}' | tr '\n' ' ' | sed 's/ $//')"
+assert "a fresh tombstone stays, so that late events find it" test -e "$SESS/%2.json"
+printf '{"state":"ended","ts":%s000,"since":1}\n' "$((now - 120))" > "$SESS/%2.json"
+run --list >/dev/null
+refute "an old tombstone is removed" test -e "$SESS/%2.json"
+assert_eq "an ended record is not counted as waiting" "⏳2" "$(run --count)"
+rec %2 working beta feat-x $((now - 125))
+
+echo "only this tmux server's records are read; directories of dead servers are swept"
+OTHER=$XDG_STATE_HOME/cli-workbench/sessions/200-1700000001; mkdir -p "$OTHER"
+printf '{"state":"waiting","project":"old","branch":"x","since":%s,"ts":1}\n' "$now" > "$OTHER/%1.json"
+assert_eq "a record of another server is not listed" 0 "$(run --list | grep -c old)"
+assert_eq "nor counted" "⏳2" "$(run --count)"
+sleep 0.1 & dead=$!; wait "$dead"
+DEAD=$XDG_STATE_HOME/cli-workbench/sessions/$dead-1700000002; mkdir -p "$DEAD"
+LIVEDIR=$XDG_STATE_HOME/cli-workbench/sessions/$$-1700000003; mkdir -p "$LIVEDIR"
+FAKE_PICK=9 PATH="$T_DIR/bin:$PATH" sh "$AGENTS" >/dev/null 2>&1 </dev/null
+refute "the directory of a server that is gone is removed" test -e "$DEAD"
+assert "a server that still runs keeps its directory" test -d "$LIVEDIR"
+rm -rf "$OTHER" "$LIVEDIR"
 
 echo "the picker with fzf: the choice is jumped to"
 cat > "$T_DIR/bin/fzf" <<'SH'
@@ -83,7 +120,7 @@ sed -n "${FAKE_PICK:-1}p"
 SH
 chmod +x "$T_DIR/bin/fzf"
 : > "$LOG"; FAKE_PICK=2 run >/dev/null
-assert_eq "the second row (gamma, pane %3) was jumped to" 'switch-client -t $2|select-window -t @3|select-pane -t %3' "$(paste -sd'|' "$LOG")"
+assert_eq "the second row (gamma, pane %3) was jumped to" 'switch-client -t $2|select-window -t $2:@3|select-pane -t %3' "$(paste -sd'|' "$LOG")"
 : > "$LOG"; out=$(PATH="$T_DIR/bin:$PATH" FAKE_PICK=9 sh "$AGENTS" </dev/null 2>&1)
 assert_eq "no choice (fzf closed) jumps nowhere" "" "$(cat "$LOG")"
 rm "$T_DIR/bin/fzf"
@@ -96,7 +133,7 @@ done
 menu() { PATH="$T_DIR/bin:$T_DIR/tools" sh "$AGENTS" 2>&1 <<<"$1"; }
 : > "$LOG"; out=$(menu 3)
 assert_contains "the rows are numbered" "1) waiting" "$out"
-assert_eq "choosing 3 jumps to the third row (beta, pane %2)" 'switch-client -t $1|select-window -t @2|select-pane -t %2' "$(paste -sd'|' "$LOG")"
+assert_eq "choosing 3 jumps to the third row (beta, pane %2)" 'switch-client -t $1|select-window -t $1:@2|select-pane -t %2' "$(paste -sd'|' "$LOG")"
 : > "$LOG"; menu 0 >/dev/null; menu 99 >/dev/null; menu x >/dev/null; menu "" >/dev/null
 assert_eq "an invalid or empty choice jumps nowhere" "" "$(cat "$LOG")"
 
@@ -105,11 +142,36 @@ rm -f "$SESS"/*.json
 out=$(PATH="$T_DIR/bin:$T_DIR/tools" sh "$AGENTS" 2>&1 <<<"")
 assert_contains "it explains" "No agent sessions" "$out"
 
+echo "with a real tmux and two clients, the client that opened the popup is the one that moves"
+REAL=$(command -v tmux)
+if [ -n "$REAL" ] && "$REAL" -L "wbagents$$" -f /dev/null new-session -d -s one 2>/dev/null \
+   && "$REAL" -L "wbagents$$" has-session -t one 2>/dev/null; then
+  SOCK=wbagents$$
+  trap '"$REAL" -L "$SOCK" kill-server 2>/dev/null; t_cleanup' EXIT
+  mkdir -p "$T_DIR/real"
+  printf '#!/bin/sh\nexec "%s" -L "%s" "$@"\n' "$REAL" "$SOCK" > "$T_DIR/real/tmux"; chmod +x "$T_DIR/real/tmux"
+  "$REAL" -L "$SOCK" new-session -d -s two
+  (sleep 15 | "$REAL" -L "$SOCK" -C attach -t one >/dev/null 2>&1 &)
+  (sleep 15 | "$REAL" -L "$SOCK" -C attach -t one >/dev/null 2>&1 &)
+  for _ in 1 2 3 4 5 6 7 8 9 10; do [ "$("$REAL" -L "$SOCK" list-clients 2>/dev/null | wc -l | tr -d ' ')" = 2 ] && break; sleep 0.3; done
+  A=$("$REAL" -L "$SOCK" list-clients -F '#{client_name}' | sed -n 1p); B=$("$REAL" -L "$SOCK" list-clients -F '#{client_name}' | sed -n 2p)
+  target=$("$REAL" -L "$SOCK" list-panes -t two -F '#{pane_id}' | sed -n 1p)
+  PATH="$T_DIR/real:$PATH" sh "$AGENTS" --client "$A" --jump "$target" >/dev/null 2>&1 </dev/null
+  assert_eq "the asking client is in the target session" two "$("$REAL" -L "$SOCK" list-clients -F '#{client_name} #{session_name}' | grep "^$A " | cut -d' ' -f2)"
+  assert_eq "the other client stays where it was" one "$("$REAL" -L "$SOCK" list-clients -F '#{client_name} #{session_name}' | grep "^$B " | cut -d' ' -f2)"
+  PATH="$T_DIR/real:$PATH" sh "$AGENTS" --client "$B" --jump "$target" >/dev/null 2>&1 </dev/null
+  assert_eq "and the other one moves when it is the one that asks" two "$("$REAL" -L "$SOCK" list-clients -F '#{client_name} #{session_name}' | grep "^$B " | cut -d' ' -f2)"
+  "$REAL" -L "$SOCK" kill-server 2>/dev/null
+else
+  echo "  skip  tmux cannot run a throwaway server here"
+fi
+
 echo "tmux binds prefix+O to the popup, shows the waiting count in the status line, and deploys both scripts"
 if command -v tmux >/dev/null && command -v chezmoi >/dev/null; then
   R=$T_DIR/render; mkdir -p "$R"; t_render "$R"
   line=$(grep -E 'bind O display-popup' "$R/.tmux.conf")
   assert_contains "prefix+O opens the overview" "tmux/scripts/agents.sh" "$line"
+  assert_contains "and tells it which client opened the popup" "agents.sh --client #{client_name}" "$line"
   refute "no directory is passed into the shell" grep -q 'pane_current_path' <<<"$line"
   assert_contains "status-right shows the count" "#(~/.tmux/scripts/agents.sh --count)" "$(grep '^set -g status-right ' "$R/.tmux.conf")"
   assert "the overview is deployed executable" test -x "$R/.tmux/scripts/agents.sh"

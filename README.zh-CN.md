@@ -136,7 +136,7 @@ Claude Code、Codex 和 Gemini CLI 都会从各自的主目录读取一个纯文
 | mod | 作用 |
 |---|---|
 | `chezmoi-guard` | 拒绝用 `Edit`、`Write`、`NotebookEdit` 修改 chezmoi 已部署的文件（`~/.zshrc`、`~/.tmux.conf` 等），并指出该改哪个源文件，这样下一次 `chezmoi apply` 不会覆盖你的修改。已部署文件与源不一致时，在提示栏上方显示一行提示（来自 `chezmoi status`）。它看不到通过 Bash 做的修改（`sed -i`、`> 文件`）。chezmoi 不存在或执行失败时，它什么都不拦。 |
-| `agent-state` | 为每个 tmux 窗格写一个小文件，记录里面的代理是在工作、在等你，还是空闲，供总览弹窗（见“代理总览”）列出。它在七个 Claude Code 事件上运行 `~/.tmux/scripts/agent-state.sh`，别的什么都不改：不在 tmux 里，或脚本失败时，什么都不发生，也不会拖慢代理。 |
+| `agent-state` | 为每个 tmux 窗格写一个小文件，记录里面的代理是在工作、在等你，还是空闲，供总览弹窗（见“代理总览”）列出。它在 Claude Code 事件上运行 `~/.tmux/scripts/agent-state.sh`，别的什么都不改：不在 tmux 里，或脚本失败时，什么都不发生；hook 等待脚本最多一秒。 |
 | `reply-polish` | 为宽终端排版助手的回复。文字是一栏，最宽 80 格（约 40 个汉字）且不超过窗口的 72%，左对齐，并整体居中。标题加粗，前两级为青色；列表用 `•` 和 `◦`；表格在放得下时用制表符画出，放不下就变成列表；折行时数字不和单位分开，句号逗号不出现在行首；超过 30 行的代码块缩短为 12 行。只改绘制：已存储的回复和 `ctrl+o` 看到的仍是原文。 |
 
 **每台机器安装一次**（需要 Claude Code 2.1.287 或更新版本；`chezmoi apply` 只部署文件，不会安装任何东西）：
@@ -198,11 +198,13 @@ claude plugin install agent-state@cli-workbench --scope user
 
 好几个代理同时干活时，要回答的问题是：哪一个需要你？按 `prefix` 再按 `O`（`Ctrl-a O`），弹出一个窗口，每个代理会话一行：状态、项目、分支，以及处于该状态多久。**等待**排最前（权限提示或提问；等得最久的在最上面），然后是**工作中**，最后是**空闲**。`Enter` 跳到那个窗格（它的会话、窗口和窗格），`Esc` 关闭弹窗。装了 [fzf](https://github.com/junegunn/fzf) 时可以边输入边筛选，没有则是编号菜单。纯文本，没有颜色。需要 tmux 3.2+ 和 `jq`。
 
-- **行从哪来：** 来自 Claude Code 的 hook。`agent-state` mod（见“Claude Code mod”）在这些时刻运行 `~/.tmux/scripts/agent-state.sh`：你提交提示时（工作中）、出现权限提示或提问时（等待）、之后工具运行完毕时（回到工作中）、代理停下或会话开始时（空闲）、会话结束时（删除记录）。没装这个 mod，弹窗是空的。文件在 `${XDG_STATE_HOME:-~/.local/state}/cli-workbench/sessions/<窗格 id>.json`，内容是状态、项目、分支、起始时间、会话 id。窗格已经不存在的文件，会在你下次打开弹窗时删除。
+- **行从哪来：** 来自 Claude Code。`agent-state` mod（见“Claude Code mod”）在这些时刻运行 `~/.tmux/scripts/agent-state.sh`：一轮开始时（工作中）；一轮因任何原因结束时，无论是回答完、被打断还是出错（空闲）；会话开始或恢复时（空闲，压缩上下文不算）；会话结束时。**等待**按请求逐个记录：权限提示针对某一次工具调用打开一个等待，这次调用结束、失败或被拒绝时才关闭它，所以批准后长时间运行的工具显示为工作中，别的工具也不会误清掉另一个等待。MCP 的提问（`elicitation_dialog`、`elicitation_url_dialog`）是一个等待，由对话框的结果关闭。一轮开始或结束时会关闭所有等待。没装这个 mod，弹窗是空的。
+- **文件：** `${XDG_STATE_HOME:-~/.local/state}/cli-workbench/sessions/<tmux 服务器>/<窗格 id>.json`。服务器目录是 tmux 服务器的 pid 加启动时间，所以 tmux 重启后复用的窗格 id 不会碰到旧记录。每个事件都带自己的时间和会话 id；比记录旧的事件、或来自更旧会话的事件不起作用，更新在锁内进行，所以慢的 hook 无法撤销更新的状态。窗格已经不存在的文件、已结束会话一分钟后的记录、已退出的 tmux 服务器的目录，会在打开弹窗时删除。
+- **多个 tmux 客户端：** 弹窗切换的是打开它的那个客户端，而不是当前活动的那个。
 - **响铃：** 进入等待时，也会向该窗格的终端响一次铃，和你可能已有的 Stop hook 一样，这样 Ghostty 会标记标签页。Stop 自己的响铃不变；本仓库不管理 `~/.claude/settings.json`。
 - **状态栏：** tmux 状态栏右侧在有两个代理等你时显示 `⏳2`，没有时什么都不显示。
-- **不用 mod：** 同一个脚本也可以由 `~/.claude/settings.json` 里的普通 hook 调用，每个事件一条 `command` hook，状态作为参数，例如 `PermissionRequest` 上写 `"command": "~/.tmux/scripts/agent-state.sh waiting"`，`Notification` 上用匹配器 `permission_prompt|elicitation_dialog` 同样写 `waiting`。hook 的 JSON 输入从标准输入读取。
-- **局限：** 状态只和最近一次 hook 一样新。代理崩溃而没有结束会话时，它会一直留在列表里，直到窗格关闭。总览只显示运行在 tmux 窗格里的代理。
+- **不用 mod：** 同一个脚本也可以由 `~/.claude/settings.json` 里的 `command` hook 调用，动作作为参数，hook 的 JSON 从标准输入读：`UserPromptSubmit` 用 `begin`，`Stop` 用 `idle`，`SessionStart` 用 `start`，`SessionEnd` 用 `end`，`PermissionRequest` 用 `wait`，`PostToolUse`、`PostToolUseFailure`、`PermissionDenied` 用 `unwait`，`Notification`（匹配器 `elicitation_dialog|elicitation_url_dialog`）用 `wait`，`ElicitationResult` 用 `unwait`。这些 hook 不带事件时间和请求键，所以脚本用运行时的时钟，且一次应答会清掉所有等待：在工具并行或 hook 很慢时不如 mod 精确。需要 `jq`。
+- **局限：** 状态只和最近一次 hook 一样新，工具调用靠工具名和输入与它的权限提示对应。代理崩溃而没有结束会话时，它会一直留在列表里，直到窗格关闭。总览只显示运行在 tmux 窗格里的代理。
 
 ## 权限白名单提案
 
