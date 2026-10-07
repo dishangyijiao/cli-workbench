@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
+- Agent overview: `prefix O` opens a popup that lists every agent session in tmux, waiting for you first, then working, then idle, with project, branch and how long; `Enter` jumps to the pane (fzf picker, or a numbered menu without fzf). The status line shows `⏳N` while N agents wait. The rows come from one small JSON file per pane in `${XDG_STATE_HOME:-~/.local/state}/cli-workbench/sessions/`, written by `home/dot_tmux/scripts/executable_agent-state.sh`, which a new Claude Code mod, `agent-state`, runs on `UserPromptSubmit`, `PostToolUse`, `PermissionRequest`, `Notification`, `Stop`, `SessionStart` and `SessionEnd`. Waiting also rings the pane's terminal once. Files of vanished panes are removed when the popup opens. `home/dot_tmux/scripts/executable_agents.sh`, tested by `tests/agents.test.sh` and `tests/agent-state.test.sh`; the mod has its own tests, run by `tests/mods.test.sh`.
+- `docs/permission-allowlist.md`: a proposal of read-only commands to allow explicitly, ranked by how often an agent ran them, so that work does not stop when auto mode's classifier is unreachable. Nothing applies it.
 - Markdown files are shown rendered in place in Neovim (render-markdown.nvim); `<leader>mp` switches the rendering off and on. The text is a centred column of 80 characters (no-neck-pain.nvim), only while a Markdown file is shown.
 - `docs/keybindings.md` and `docs/keybindings.zh-CN.md`: the keys used most, on one printable page. `tests/keybindings.test.sh` fails when a documented `prefix` key is not bound in the deployed tmux config, a documented `<leader>` key is not mapped in Neovim, or the two languages list different keys.
 

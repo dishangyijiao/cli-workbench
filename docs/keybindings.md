@@ -16,6 +16,7 @@ Notation: `C-a` means hold Ctrl and press a. `prefix` is `C-a`: press it, let go
 | ★ `prefix e` | Neovim in a popup, to browse code (`:qa` closes it) |
 | ★ `prefix g` | The files this branch changed, with a diff preview, in a popup (`:qa` closes it) |
 | ★ `prefix a` | Write an idea down: one line, `Enter` (an empty line cancels); `idea TEXT` in a shell |
+| ★ `prefix O` | Which agents work, wait for you or are idle: pick one, `Enter` jumps there (`Esc` closes) |
 | ★ `prefix t` | Translate the text you just selected, in a popup (`q` closes it) |
 | ★ `C-h` `C-j` `C-k` `C-l` | Move between panes (also inside Neovim) |
 | ★ `prefix w` | Tree of sessions and windows to pick from |

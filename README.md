@@ -69,7 +69,7 @@ What gets deployed (the layout follows [chezmoi's naming](https://www.chezmoi.io
 | `dot_zshrc`, `dot_config/private_zsh/` | `~/.zshrc`, `~/.config/zsh/{path,tmux-autostart}.zsh` | **replaces your `.zshrc`**; move your own tweaks to `~/.config/zsh/local.zsh` first. Installers (nvm, bun, ...) append to `~/.zshrc`; `chezmoi diff` shows that, so move such lines into `local.zsh` |
 | `dot_config/ghostty/config` | `~/.config/ghostty/config` | Catppuccin Mocha, Nerd Font, macOS tabs title bar |
 | `dot_claude/executable_statusline.sh` | `~/.claude/statusline.sh` | the Claude Code status line (project, branch, model, context, cost, rate limits); only if you use Claude Code |
-| `dot_claude/workbench-mods/` | `~/.claude/workbench-mods/` | two Claude Code mods (`chezmoi-guard`, `reply-polish`) as a local marketplace; deployed, not installed: see "Claude Code mods" |
+| `dot_claude/workbench-mods/` | `~/.claude/workbench-mods/` | three Claude Code mods (`chezmoi-guard`, `reply-polish`, `agent-state`) as a local marketplace; deployed, not installed: see "Claude Code mods" |
 | `dot_codex/modify_private_config.toml` | `~/.codex/config.toml` | merge portable status-line and completion-bell preferences; preserve other local values |
 | `.chezmoitemplates/agent-instructions.md`, `dot_claude/CLAUDE.md.tmpl`, `dot_codex/AGENTS.md.tmpl`, `dot_gemini/GEMINI.md.tmpl` | `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.gemini/GEMINI.md` | the same short text for every agent: how this workbench works (config lives in the repo, secrets stay out, one tmux session per project). Your own rules: see "Agent instructions" |
 | `dot_config/git/config` | `~/.config/git/config` | portable Git settings; Git reads this file by itself, and `~/.gitconfig` (identity, credentials) stays yours |
@@ -131,11 +131,12 @@ Edit the merge template to change these shared preferences. Changes to these fiv
 
 ## Claude Code mods
 
-A *mod* is a Claude Code plugin whose behavior is a small TypeScript file that Claude Code calls when something happens: a tool is about to run, a reply is about to be drawn. This repository ships two, as a local *marketplace* (a folder Claude Code installs plugins from) in `home/dot_claude/workbench-mods/`:
+A *mod* is a Claude Code plugin whose behavior is a small TypeScript file that Claude Code calls when something happens: a tool is about to run, a reply is about to be drawn. This repository ships three, as a local *marketplace* (a folder Claude Code installs plugins from) in `home/dot_claude/workbench-mods/`:
 
 | Mod | What it does |
 |---|---|
 | `chezmoi-guard` | Refuses `Edit`, `Write` and `NotebookEdit` on a file chezmoi deploys (`~/.zshrc`, `~/.tmux.conf`, ...) and names the source file to edit instead, so the next `chezmoi apply` cannot overwrite the change. Shows a line above the prompt while the deployed files differ from the source (`chezmoi status`). It cannot see edits made through Bash (`sed -i`, `> file`). If chezmoi is missing or fails, it blocks nothing. |
+| `agent-state` | Records, in one small file per tmux pane, whether the agent in it is working, waiting for you or idle, so that the overview popup (see "Agent overview") can list them. It runs `~/.tmux/scripts/agent-state.sh` on seven Claude Code events and changes nothing else: outside tmux, or if the script fails, nothing happens and the agent is not slowed. |
 | `reply-polish` | Lays out the assistant's replies for a wide terminal. The text is one column, at most 80 cells (about 40 Chinese characters) and at most 72% of the window, left-aligned and centered on the screen. Headings are bold, the first two levels in cyan; lists use `•` and `◦`; a table is drawn with box lines when it fits the column and becomes a list when it does not; lines are cut so that a number stays with its unit and closing punctuation never starts a line; a code block longer than 30 lines is shortened to 12. Only the drawing changes: the stored reply, and `ctrl+o`, keep the original. |
 
 **Install once per machine** (needs Claude Code 2.1.287 or later; `chezmoi apply` only deploys the files, it does not install anything):
@@ -145,6 +146,7 @@ chezmoi apply                                                   # deploys ~/.cla
 claude plugin marketplace add ~/.claude/workbench-mods
 claude plugin install chezmoi-guard@cli-workbench --scope user
 claude plugin install reply-polish@cli-workbench --scope user
+claude plugin install agent-state@cli-workbench --scope user
 ```
 
 Then restart Claude Code, or run `/reload-plugins` in a running session.
@@ -191,6 +193,20 @@ Write an idea down the moment you have it, without leaving the pane or interrupt
 - **Where:** one line per idea in `~/.config/cli-workbench/inbox.md` (private, mode 600, not in this repository), for all projects: `- [ ] 2026-10-06 17:42 · ~/dev/projects/foo · the idea`. The project is the repository's top directory, for a worktree the repository it belongs to; `?` if the pane was gone.
 - **Safe to type anything:** the text is stored as it is and never run. A failed write keeps the popup open and repeats the idea.
 - **Processing it:** ask your agent to "process the inbox". The rules: copy the file to a timestamped backup (mode 600) first; change only the lines it handles, ticking `- [ ]` to `- [x]`, never deleting; afterwards check that every line from before is still there; ask before anything leaves the machine, such as opening a GitHub issue.
+
+## Agent overview (tmux)
+
+When several agents work at once, the question is which one needs you. Press `prefix` then `O` (`Ctrl-a O`) for a popup that lists every agent session, one row each: state, project, branch and how long it has been in that state. **Waiting** comes first (a permission prompt or a question; the longest wait on top), then **working**, then **idle**. `Enter` jumps to that pane (its session, window and pane); `Esc` closes the popup. With [fzf](https://github.com/junegunn/fzf) it is a picker you can type into; without it, a numbered menu. Plain text, no colors. It needs tmux 3.2+ and `jq`.
+
+- **Where the rows come from:** Claude Code hooks. The `agent-state` mod (see "Claude Code mods") runs `~/.tmux/scripts/agent-state.sh` when you submit a prompt (working), when a permission prompt or a question appears (waiting), when a tool then finishes (working again), when the agent stops or a session starts (idle) and when a session ends (removed). Without the mod installed the popup is empty. The files are `${XDG_STATE_HOME:-~/.local/state}/cli-workbench/sessions/<pane id>.json`: state, project, branch, since, session id. A file whose pane has vanished is removed the next time you open the popup.
+- **The bell:** waiting also rings the pane's terminal once, like the Stop hook you may already have, so Ghostty marks the tab. Stop's own bell is not changed; this repository does not manage `~/.claude/settings.json`.
+- **Status line:** the right side of the tmux status line shows `⏳2` while two agents wait for you, and nothing when none does.
+- **Without the mod:** the same script can be called from plain hooks in `~/.claude/settings.json`, one `command` hook per event with the state as its argument, for example `"command": "~/.tmux/scripts/agent-state.sh waiting"` on `PermissionRequest`, and `waiting` on `Notification` with the matcher `permission_prompt|elicitation_dialog`. The hook's JSON input is read from stdin.
+- **Limits:** a state is only as fresh as the last hook. An agent that crashes without ending its session stays listed until its pane closes. The overview shows only agents that run in a tmux pane.
+
+## Permission allow-list proposal
+
+When Claude Code's auto mode cannot reach its server-side classifier, every command that is not allowed explicitly waits for you. [`docs/permission-allowlist.md`](docs/permission-allowlist.md) proposes read-only commands to allow explicitly, ranked by how often an agent ran them on one machine. It is a proposal: nothing here changes your settings.
 
 ## Uninstall / restore
 

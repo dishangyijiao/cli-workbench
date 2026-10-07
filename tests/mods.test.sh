@@ -16,9 +16,9 @@ echo "the marketplace is deployed and names every mod"
 assert "marketplace.json is deployed" test -s "$MARKET"
 assert "marketplace.json is valid JSON" jq -e . "$MARKET"
 assert_eq "marketplace name" "cli-workbench" "$(jq -r .name "$MARKET" 2>/dev/null)"
-assert_eq "the mods listed" "chezmoi-guard reply-polish" "$(jq -r '.plugins[].name' "$MARKET" 2>/dev/null | sort | tr '\n' ' ' | sed 's/ $//')"
+assert_eq "the mods listed" "agent-state chezmoi-guard reply-polish" "$(jq -r '.plugins[].name' "$MARKET" 2>/dev/null | sort | tr '\n' ' ' | sed 's/ $//')"
 
-for name in chezmoi-guard reply-polish; do
+for name in agent-state chezmoi-guard reply-polish; do
   echo "$name"
   source=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .source' "$MARKET" 2>/dev/null)
   dir=$M/${source#./}
@@ -40,10 +40,16 @@ assert "the wording lives in message.ts, with a test" test -f "$G/message.ts" -a
 assert "it has the singular form ('differs')" grep -q "deployed file differs" "$G/message.ts"
 refute "register.tsx does not word it again" grep -q "differ from the source" "$G/register.tsx"
 
+echo "agent-state: the state words live in one tested place and the script it calls is deployed"
+A=$M/agent-state/hooks
+assert "state.ts has a test" test -f "$A/state.ts" -a -f "$A/state.test.ts"
+assert "the script the mod calls is deployed" test -x "$H/.tmux/scripts/agent-state.sh"
+assert "the mod names that script" grep -q 'tmux/scripts/agent-state.sh' "$A/register.ts"
+
 echo "with Claude Code installed: validate and run each mod's own tests"
 if command -v claude >/dev/null && claude plugin test --help >/dev/null 2>&1; then
   assert "the marketplace validates" claude plugin validate "$M"
-  for name in chezmoi-guard reply-polish; do
+  for name in agent-state chezmoi-guard reply-polish; do
     assert "$name validates" claude plugin validate "$M/$name"
     assert "$name passes its tests" claude plugin test "$M/$name"
   done
