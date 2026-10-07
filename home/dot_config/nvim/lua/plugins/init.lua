@@ -52,7 +52,9 @@ return {
           -- DevOps
           "dockerfile", "terraform", "hcl", "yaml", "bash", "json", "jsonnet",
           -- Build tools
-          "cmake", "make"
+          "cmake", "make",
+          -- Markdown (render-markdown.nvim draws from these)
+          "markdown", "markdown_inline"
         },
         auto_install = true,
         highlight = { enable = true },
@@ -60,6 +62,17 @@ return {
         incremental_selection = { enable = true },
       })
     end,
+  },
+
+  -- Markdown shown rendered in place; <leader>mp switches it off and on
+  {
+    "MeanderingProgrammer/render-markdown.nvim",
+    ft = "markdown",
+    dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-tree/nvim-web-devicons" },
+    opts = {},
+    keys = {
+      { "<leader>mp", "<cmd>RenderMarkdown toggle<cr>", ft = "markdown", desc = "Markdown: toggle rendering" },
+    },
   },
 
   -- LSP
