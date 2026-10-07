@@ -34,6 +34,12 @@ if r then
   for _, d in ipairs(r.dependencies or {}) do deps[d] = true end
   print("needs-treesitter", tostring(deps["nvim-treesitter/nvim-treesitter"] == true))
   print("needs-icons", tostring(deps["nvim-tree/nvim-web-devicons"] == true))
+  local o = r.opts or {}
+  local h = o.heading or {}
+  print("heading-block", tostring(h.width == "block"))
+  print("heading-no-sign", tostring(h.sign == false))
+  print("heading-h1-only-bar", tostring(h.backgrounds ~= nil and h.backgrounds[1] ~= "" and h.backgrounds[2] == "" and h.backgrounds[6] == ""))
+  print("code-block", tostring(o.code ~= nil and o.code.width == "block" and o.code.border == "thin"))
   local key
   for _, k in ipairs(r.keys or {}) do if k[1] == "<leader>mp" then key = k end end
   print("toggle-key", tostring(key ~= nil))
@@ -59,6 +65,10 @@ assert_contains "the plugin is in the spec" "present true" "$out"
 assert_contains "it loads for Markdown files only, so nothing else starts it" "only-markdown true" "$out"
 assert_contains "it declares treesitter, which it draws from" "needs-treesitter true" "$out"
 assert_contains "it declares the icon plugin the config already uses" "needs-icons true" "$out"
+assert_contains "headings are as wide as the text, not the window" "heading-block true" "$out"
+assert_contains "headings leave the sign column empty" "heading-no-sign true" "$out"
+assert_contains "only the top heading has a coloured bar; lower levels differ by colour and weight" "heading-h1-only-bar true" "$out"
+assert_contains "code blocks are as wide as their text, with a thin border" "code-block true" "$out"
 assert_contains "<leader>mp is defined with the plugin" "toggle-key true" "$out"
 assert_contains "it runs the plugin's toggle" "toggle-runs true" "$out"
 assert_contains "it exists only in Markdown buffers, in normal mode" "toggle-scope true" "$out"

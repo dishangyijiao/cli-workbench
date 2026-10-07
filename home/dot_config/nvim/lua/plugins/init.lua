@@ -69,7 +69,19 @@ return {
     "MeanderingProgrammer/render-markdown.nvim",
     ft = "markdown",
     dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-tree/nvim-web-devicons" },
-    opts = {},
+    opts = {
+      -- Headings: a bar as wide as the text (not the whole window), no icon or sign column mark, and a background
+      -- only for the top level, so the levels differ by weight and colour instead of all being the same blue bar.
+      heading = {
+        width = "block",
+        left_pad = 1,
+        right_pad = 1,
+        sign = false,
+        icons = {},
+        backgrounds = { "RenderMarkdownH1Bg", "", "", "", "", "" },
+      },
+      code = { width = "block", left_pad = 1, right_pad = 1, border = "thin" },
+    },
     keys = {
       { "<leader>mp", "<cmd>RenderMarkdown toggle<cr>", ft = "markdown", desc = "Markdown: toggle rendering" },
     },
