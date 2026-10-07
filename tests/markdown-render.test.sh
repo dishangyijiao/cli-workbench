@@ -39,6 +39,7 @@ if r then
   print("heading-block", tostring(h.width == "block"))
   print("heading-no-sign", tostring(h.sign == false))
   print("heading-h1-only-bar", tostring(h.backgrounds ~= nil and h.backgrounds[1] ~= "" and h.backgrounds[2] == "" and h.backgrounds[6] == ""))
+  print("heading-icons", tostring(type(h.icons) == "table" and #h.icons >= 6 and h.icons[2] ~= ""))
   print("code-block", tostring(o.code ~= nil and o.code.width == "block" and o.code.border == "thin"))
   local key
   for _, k in ipairs(r.keys or {}) do if k[1] == "<leader>mp" then key = k end end
@@ -68,6 +69,7 @@ assert_contains "it declares the icon plugin the config already uses" "needs-ico
 assert_contains "headings are as wide as the text, not the window" "heading-block true" "$out"
 assert_contains "headings leave the sign column empty" "heading-no-sign true" "$out"
 assert_contains "only the top heading has a coloured bar; lower levels differ by colour and weight" "heading-h1-only-bar true" "$out"
+assert_contains "every heading level has a mark, so no raw # signs stay on screen" "heading-icons true" "$out"
 assert_contains "code blocks are as wide as their text, with a thin border" "code-block true" "$out"
 assert_contains "<leader>mp is defined with the plugin" "toggle-key true" "$out"
 assert_contains "it runs the plugin's toggle" "toggle-runs true" "$out"

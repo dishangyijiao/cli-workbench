@@ -70,14 +70,15 @@ return {
     ft = "markdown",
     dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-tree/nvim-web-devicons" },
     opts = {
-      -- Headings: a bar as wide as the text (not the whole window), no icon or sign column mark, and a background
+      -- Headings: a bar as wide as the text (not the whole window), no sign column mark, and a background
       -- only for the top level, so the levels differ by weight and colour instead of all being the same blue bar.
       heading = {
         width = "block",
         left_pad = 1,
         right_pad = 1,
         sign = false,
-        icons = {},
+        -- One mark per level, in place of the "#" signs. With no icons the raw "##" stays on screen.
+        icons = { "◆ ", "◇ ", "▸ ", "▹ ", "· ", "· " },
         backgrounds = { "RenderMarkdownH1Bg", "", "", "", "", "" },
       },
       code = { width = "block", left_pad = 1, right_pad = 1, border = "thin" },
