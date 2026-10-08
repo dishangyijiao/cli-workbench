@@ -28,6 +28,15 @@ if [ "$1" = select-window ] && [ "${FAKE_SELECT_FAIL:-}" = 1 ]; then exit 1; fi
 echo "$*" >> "$FAKE_LOG"
 SH
 chmod +x "$T_DIR/bin/tmux"
+# claude stub: `claude agents --json` prints $FAKE_AGENTS (no background sessions when unset); FAKE_AGENTS_FAIL=1 fails like
+# a missing or broken claude. It also stands in for the real one, so no test sees this machine's sessions.
+cat > "$T_DIR/bin/claude" <<'SH'
+#!/bin/sh
+[ "${FAKE_AGENTS_FAIL:-}" = 1 ] && exit 1
+if [ "$1 $2" = "agents --json" ]; then if [ -n "${FAKE_AGENTS:-}" ]; then cat "$FAKE_AGENTS"; else echo '[]'; fi; exit 0; fi
+exit 1
+SH
+chmod +x "$T_DIR/bin/claude"
 export FAKE_PANES=$T_DIR/panes FAKE_LOG=$LOG
 now=$(date +%s)
 rec() { printf '{"state":"%s","project":"%s","branch":"%s","since":%s,"session_id":"s"}\n' "$2" "$3" "$4" "$5" > "$SESS/$1.json"; }
@@ -205,6 +214,33 @@ if [ -n "$REAL" ] && "$REAL" -L "wbagents$$" -f /dev/null new-session -d -s one 
 else
   echo "  skip  tmux cannot run a throwaway server here"
 fi
+
+echo "background sessions (claude agents --json) are listed and counted next to the panes"
+rm -f "$SESS"/*.json; rec %3 waiting gamma fix/y $((now - 30))
+printf '%s\n' '%3 $2 @3' > "$FAKE_PANES"
+export FAKE_AGENTS=$T_DIR/agents.json
+cat > "$FAKE_AGENTS" <<JSON
+[{"id":"ab12cd34","cwd":"/w/new-magnet","kind":"background","startedAt":$(( (now - 86400 * 7) * 1000 )),"name":"tidy files","state":"blocked"},
+ {"id":"ef56","cwd":"/w/inkspring","kind":"background","startedAt":$(( (now - 600) * 1000 )),"name":"add tests","state":"working"},
+ {"id":"aa11","cwd":"/w/cli-workbench","kind":"interactive","startedAt":$(( now * 1000 )),"name":"lead","state":null}]
+JSON
+out=$(run --list)
+assert_eq "one pane and two background sessions; interactive sessions come from the panes only" 3 "$(printf '%s\n' "$out" | grep -c .)"
+assert_eq "a blocked background session waits for you, the longest wait first" "waiting new-magnet bg: tidy files 7d" "$(printf '%s\n' "$out" | sed -n 1p | tr -s ' ')"
+assert_eq "then the waiting pane" gamma "$(printf '%s\n' "$out" | sed -n 2p | awk '{print $2}')"
+assert_eq "a working background session" "working inkspring bg: add tests 10m" "$(printf '%s\n' "$out" | sed -n 3p | tr -s ' ')"
+assert_eq "the count includes the blocked background session" "⏳2" "$(run --count)"
+
+echo "Enter on a background session opens it in a new window"
+: > "$LOG"; run --jump bg:ab12cd34 >/dev/null
+assert_contains "a window that attaches to the session" "new-window -n bg-ab12cd34 claude attach ab12cd34" "$(cat "$LOG")"
+refute "an id with other characters is refused" run --jump 'bg:ab;rm -rf x'
+assert_eq "and nothing is run for it" "new-window -n bg-ab12cd34 claude attach ab12cd34" "$(cat "$LOG")"
+
+echo "without a working claude, the panes are still listed and counted"
+assert_eq "only the pane" 1 "$(FAKE_AGENTS_FAIL=1 run --list | grep -c .)"
+assert_eq "only the pane is counted" "⏳1" "$(FAKE_AGENTS_FAIL=1 run --count)"
+unset FAKE_AGENTS
 
 echo "tmux binds prefix+O to the popup, shows the waiting count in the status line, and deploys both scripts"
 if command -v tmux >/dev/null && command -v chezmoi >/dev/null; then

@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Changed
+
+- The agent overview (`prefix O`) and its status-line count include Claude Code background sessions from `claude agents --json`: each is a row marked `bg:`, a blocked one counts as waiting, and `Enter` opens a window running `claude attach <id>`. Tested in `tests/agents.test.sh` with a stand-in `claude`.
+
 ### Added
 
 - Agent overview: `prefix O` opens a popup that lists every agent session in tmux, waiting for you first, then working, then idle, with project, branch and how long; `Enter` jumps to the pane on the client that opened the popup (fzf picker, or a numbered menu without fzf). The status line shows `⏳N` while N agents wait. The rows come from one small JSON file per pane in `${XDG_STATE_HOME:-~/.local/state}/cli-workbench/sessions/<tmux server>/`, written by `home/dot_tmux/scripts/executable_agent-state.sh`, which a new Claude Code mod, `agent-state`, runs on the main agent's turn start and end, permission prompts and questions, and session end. The last event wins and the file is replaced atomically; there are no locks. The popup heals instead: it removes records of vanished panes (only if unchanged since read), marks records older than two hours with `?`, and removes directories of tmux servers that are certainly gone. Entering waiting rings the pane's terminal once. `home/dot_tmux/scripts/executable_agents.sh`, tested by `tests/agents.test.sh` (with a real two-client tmux) and `tests/agent-state.test.sh`; the mod has its own tests, run by `tests/mods.test.sh`.
