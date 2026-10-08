@@ -5,6 +5,7 @@
 #   agents.sh --list            the rows as plain text: state, project, branch, how long
 #   agents.sh --count           "⏳N" when N agents wait for you, nothing when none do (for the tmux status line)
 #   agents.sh --jump %12 [--client NAME]   go to that pane: its session, its window, then the pane
+#   agents.sh --jump bg:ID      open a new window attached to that background session (claude attach ID)
 # The rows come from the files agent-state.sh writes, one per pane, in
 # ${XDG_STATE_HOME:-~/.local/state}/cli-workbench/sessions/<tmux server>/. Waiting comes first (the longest wait on top),
 # then working, then idle. The overview is a hint, so it heals instead of insisting:
@@ -12,6 +13,8 @@
 #   - a record that was not updated for two hours is shown with a "?" (a crash or a missed hook left it behind);
 #   - the directory of a tmux server whose process is gone (kill -0 says "No such process", not "not permitted") is removed.
 # When tmux cannot be asked, nothing is removed. Needs jq: without it the list says so, and the count stays silent.
+# Background sessions (claude --bg) have no pane, so they come from `claude agents --json` instead: each one is a row marked
+# "bg:", its time counts from when it started, and one that is blocked counts as waiting. Without claude they are left out.
 base=${XDG_STATE_HOME:-$HOME/.local/state}/cli-workbench/sessions
 TAB=$(printf '\t')
 client=
@@ -44,6 +47,18 @@ records() {
   fi
 }
 
+# bg_records: "id<TAB>state<TAB>project<TAB>name<TAB>started" per background session; nothing when claude or jq is missing or
+# fails. Interactive sessions are left out: their panes already have records.
+bg_records() {
+  [ -n "$have_jq" ] && command -v claude >/dev/null 2>&1 || return 0
+  claude agents --json 2>/dev/null | jq -r '.[]? | select(.kind == "background")
+    | [.id, (.state // "unknown"), ((.cwd // "") | sub(".*/"; "")), (.name // "-"), ((.startedAt // 0) / 1000 | floor | tostring)]
+    | @tsv' 2>/dev/null
+}
+
+# bg_waiting STATE: true when a background session in that state needs you.
+bg_waiting() { case $1 in blocked|needs_input|needs-input|waiting) return 0 ;; esac; return 1; }
+
 # Remove the directories of tmux servers that are gone. Only a pid that is certainly dead counts: "No such process".
 # Permission denied means it exists (another user's), and any other doubt means do nothing.
 sweep_servers() {
@@ -64,7 +79,7 @@ rows() {
   # What the files held just before they were read; a removal below happens only if the file still holds the same.
   sigs=$(cksum "$dir"/*.json 2>/dev/null)
   old=$(find "$dir" -name '*.json' -mmin +120 2>/dev/null)
-  records | while IFS= read -r line; do
+  { records | while IFS= read -r line; do
     [ -n "$line" ] || continue
     f=${line%%"$TAB"*}; rest=${line#*"$TAB"}
     state=${rest%%"$TAB"*}; rest=${rest#*"$TAB"}
@@ -89,23 +104,43 @@ $f
     elapsed=$((now - since)); [ "$elapsed" -ge 0 ] || elapsed=0
     text=$(printf '%-9s %-24.24s %-24.24s %s' "$state$mark" "$project" "$branch" "$(age "$elapsed")")
     printf '%s\t%s\t%s\t%s\n' "$rank" "$since" "$pane" "$text"
-  done | sort -t "$TAB" -k1,1n -k2,2n | cut -f3-
+  done
+  bg_records | while IFS="$TAB" read -r id state project name since; do
+    case $id in ''|*[!A-Za-z0-9-]*) continue ;; esac
+    case $since in ''|*[!0-9]*) continue ;; esac
+    if bg_waiting "$state"; then state=waiting rank=0; elif [ "$state" = working ]; then rank=1; else rank=2; fi
+    elapsed=$((now - since)); [ "$elapsed" -ge 0 ] || elapsed=0
+    text=$(printf '%-9s %-24.24s %-24.24s %s' "$state" "$project" "bg: $name" "$(age "$elapsed")")
+    printf '%s\t%s\t%s\t%s\n' "$rank" "$since" "bg:$id" "$text"
+  done; } | sort -t "$TAB" -k1,1n -k2,2n | cut -f3-
 }
 
-# count: the number of waiting agents whose pane exists. Three commands in all (tmux, jq, awk), whatever the number of records.
+# count: the number of waiting agents whose pane exists, plus the background sessions that wait. A few commands in all
+# (tmux, jq, awk, claude), whatever the number of records.
 count() {
+  bg=0
+  while IFS="$TAB" read -r _ state _; do bg_waiting "$state" && bg=$((bg + 1)); done <<EOF2
+$(bg_records)
+EOF2
   ids=$(panes | awk '{ printf "%s ", $1 }')
-  [ -n "$ids" ] || { echo 0; return; }
+  [ -n "$ids" ] || { echo "${bg:-0}"; return; }
   # A record not updated for two hours is stale (the list marks it "?"): an agent that crashed while waiting must not keep
   # the status line saying someone needs you.
   old=$(find "$dir" -name '*.json' -mmin +120 2>/dev/null)
   records | awk -F'\t' -v ids="$ids" -v old="$old" 'BEGIN { n = split(ids, a, " "); for (i = 1; i <= n; i++) live[a[i]] = 1
       n = split(old, b, "\n"); for (i = 1; i <= n; i++) if (b[i] != "") stale[b[i]] = 1 }
     $2 == "waiting" && !($1 in stale) { f = $1; sub(/.*\//, "", f); sub(/\.json$/, "", f); if (f in live) c++ }
-    END { print c + 0 }'
+    END { print c + 0 }' | { read -r n; echo $(( ${n:-0} + ${bg:-0} )); }
 }
 
 jump() {
+  case ${1-} in
+    bg:*)
+      id=${1#bg:}
+      case $id in ''|*[!A-Za-z0-9-]*) echo "agents: not a session id: $id" >&2; return 2 ;; esac
+      tmux new-window -n "bg-$id" "claude attach $id"
+      return ;;
+  esac
   case ${1-} in %[0-9]*) ;; *) echo "agents: not a pane id: ${1-}" >&2; return 2 ;; esac
   case $1 in *[!%0-9]*) echo "agents: not a pane id: $1" >&2; return 2 ;; esac
   target=$(panes | awk -v p="$1" '$1 == p { print $2, $3; exit }')
@@ -155,7 +190,7 @@ while [ $# -gt 0 ]; do
     --client) client=${2-}; shift 2 || break ;;
     --list|--count) mode=$1; shift ;;
     --jump) mode=jump; pane=${2-}; shift 2 || break ;;
-    *) echo "usage: agents.sh [--client NAME] [--list | --count | --jump PANE_ID]" >&2; exit 2 ;;
+    *) echo "usage: agents.sh [--client NAME] [--list | --count | --jump PANE_ID | --jump bg:ID]" >&2; exit 2 ;;
   esac
 done
 case $mode in
