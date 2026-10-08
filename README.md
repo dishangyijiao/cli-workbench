@@ -192,6 +192,10 @@ Write an idea down the moment you have it, without leaving the pane or interrupt
 - **Safe to type anything:** the text is stored as it is and never run. A failed write keeps the popup open and repeats the idea.
 - **Processing it:** ask your agent to "process the inbox". The rules: copy the file to a timestamped backup (mode 600) first; change only the lines it handles, ticking `- [ ]` to `- [x]`, never deleting; afterwards check that every line from before is still there; ask before anything leaves the machine, such as opening a GitHub issue.
 
+## Permission allow-list proposal
+
+When Claude Code's auto mode cannot reach its server-side classifier, every command that is not allowed explicitly waits for you. [`docs/permission-allowlist.md`](docs/permission-allowlist.md) proposes read-only commands to allow explicitly, ranked by how often an agent ran them on one machine. It is a proposal: nothing here changes your settings.
+
 ## Uninstall / restore
 
 Restore from `~/.cli-workbench-backup/<timestamp>/RESTORE` (one command per file), or delete what you no longer want. `chezmoi unmanage <target>` stops managing one file.

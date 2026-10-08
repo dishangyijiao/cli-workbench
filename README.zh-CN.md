@@ -192,6 +192,10 @@ claude plugin install reply-polish@cli-workbench --scope user
 - **输入什么都安全：** 文字原样保存，绝不会被执行。写入失败时弹窗不会关闭，并把你的想法再显示一遍。
 - **整理：** 让代理"处理收件箱"。规则：先把文件复制成带时间戳的备份（权限 600）；只改它处理的那几行，把 `- [ ]` 改成 `- [x]`，从不删除；改完检查之前的每一行都还在；任何要发到本机以外的操作（比如开 GitHub issue）先问你。
 
+## 权限白名单提案
+
+Claude Code 的自动模式连不上服务器端分类器时，每条没有明确允许的命令都要等你确认。[`docs/permission-allowlist.md`](docs/permission-allowlist.md) 按一台机器上代理运行它们的频率，排出了建议明确允许的只读命令。这只是提案：这里没有任何东西会改你的设置。
+
 ## 卸载 / 恢复
 
 从 `~/.cli-workbench-backup/<时间戳>/RESTORE` 里按文件恢复（每个文件一条命令），或者删掉不想要的文件。`chezmoi unmanage <目标>` 可以让它不再管理某个文件。

@@ -6,6 +6,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
+- `docs/permission-allowlist.md`: a proposal of read-only commands to allow explicitly, ranked by how often an agent ran them, so that work does not stop when auto mode's classifier is unreachable. Nothing applies it.
 - `.coderabbit.yaml`: configuration for CodeRabbit, an advisory reviewer that only comments on pull requests. Every feature that pushes commits or opens follow-up pull requests is switched off explicitly (CodeRabbit turns several of them on by default), and it cannot block a merge. See "Automated review" in `CONTRIBUTING.md`.
 
 - Markdown files are shown rendered in place in Neovim (render-markdown.nvim); `<leader>mp` switches the rendering off and on. The text is a centred column of 80 characters (no-neck-pain.nvim), only while a Markdown file is shown.
