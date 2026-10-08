@@ -69,7 +69,7 @@ chezmoi apply                      # 再应用全部
 | `dot_zshrc`、`dot_config/private_zsh/` | `~/.zshrc`、`~/.config/zsh/{path,tmux-autostart}.zsh` | **会替换你的 `.zshrc`**；先把自己的改动挪到 `~/.config/zsh/local.zsh`。安装器（nvm、bun 等）会往 `~/.zshrc` 追加内容，`chezmoi diff` 能看到，请把这类行挪进 `local.zsh` |
 | `dot_config/ghostty/config` | `~/.config/ghostty/config` | Catppuccin Mocha 主题、Nerd Font、macOS 标签式标题栏 |
 | `dot_claude/executable_statusline.sh` | `~/.claude/statusline.sh` | Claude Code 状态栏（项目、分支、模型、上下文、费用、速率限制）；仅在使用 Claude Code 时需要 |
-| `dot_claude/workbench-mods/` | `~/.claude/workbench-mods/` | 两个 Claude Code mod（`chezmoi-guard`、`reply-polish`），作为本地插件市场；只部署，不安装，见“Claude Code mod” |
+| `dot_claude/workbench-mods/` | `~/.claude/workbench-mods/` | 三个 Claude Code mod（`chezmoi-guard`、`reply-polish`、`agent-state`），作为本地插件市场；只部署，不安装，见“Claude Code mod” |
 | `dot_codex/modify_private_config.toml` | `~/.codex/config.toml` | 合并通用状态栏和完成铃铛偏好，保留其他本机设置 |
 | `.chezmoitemplates/agent-instructions.md`、`dot_claude/CLAUDE.md.tmpl`、`dot_codex/AGENTS.md.tmpl`、`dot_gemini/GEMINI.md.tmpl` | `~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`、`~/.gemini/GEMINI.md` | 给所有代理的同一段简短文本：这个工作台怎么运作（配置在仓库里、密钥不进仓库、每个项目一个 tmux 会话）。你自己的规则见“代理指令” |
 | `dot_config/git/config` | `~/.config/git/config` | 可移植的 Git 设置；Git 会自动读取这个文件，`~/.gitconfig`（身份、凭据）仍归你自己 |
@@ -131,11 +131,12 @@ Claude Code、Codex 和 Gemini CLI 都会从各自的主目录读取一个纯文
 
 ## Claude Code mod
 
-*mod* 是一种 Claude Code 插件，它的行为写在一个小的 TypeScript 文件里，Claude Code 在事件发生时调用它：比如一个工具即将运行、一条回复即将绘制。本仓库带了两个，放在 `home/dot_claude/workbench-mods/`，组成一个本地*插件市场*（Claude Code 从中安装插件的文件夹）：
+*mod* 是一种 Claude Code 插件，它的行为写在一个小的 TypeScript 文件里，Claude Code 在事件发生时调用它：比如一个工具即将运行、一条回复即将绘制。本仓库带了三个，放在 `home/dot_claude/workbench-mods/`，组成一个本地*插件市场*（Claude Code 从中安装插件的文件夹）：
 
 | mod | 作用 |
 |---|---|
 | `chezmoi-guard` | 拒绝用 `Edit`、`Write`、`NotebookEdit` 修改 chezmoi 已部署的文件（`~/.zshrc`、`~/.tmux.conf` 等），并指出该改哪个源文件，这样下一次 `chezmoi apply` 不会覆盖你的修改。已部署文件与源不一致时，在提示栏上方显示一行提示（来自 `chezmoi status`）。它看不到通过 Bash 做的修改（`sed -i`、`> 文件`）。chezmoi 不存在或执行失败时，它什么都不拦。 |
+| `agent-state` | 为每个 tmux 窗格写一个小文件，记录里面的代理是在工作、在等你，还是空闲，供总览弹窗（见“代理总览”）列出。它在 Claude Code 事件上运行 `~/.tmux/scripts/agent-state.sh`，别的什么都不改：不在 tmux 里，或脚本失败时，什么都不发生；hook 等待脚本最多一秒。 |
 | `reply-polish` | 为宽终端排版助手的回复。文字是一栏，最宽 80 格（约 40 个汉字）且不超过窗口的 72%，左对齐，并整体居中。标题加粗，前两级为青色；列表用 `•` 和 `◦`；表格在放得下时用制表符画出，放不下就变成列表；折行时数字不和单位分开，句号逗号不出现在行首；超过 30 行的代码块缩短为 12 行。只改绘制：已存储的回复和 `ctrl+o` 看到的仍是原文。 |
 
 **每台机器安装一次**（需要 Claude Code 2.1.287 或更新版本；`chezmoi apply` 只部署文件，不会安装任何东西）：
@@ -145,6 +146,7 @@ chezmoi apply                                                   # 部署 ~/.clau
 claude plugin marketplace add ~/.claude/workbench-mods
 claude plugin install chezmoi-guard@cli-workbench --scope user
 claude plugin install reply-polish@cli-workbench --scope user
+claude plugin install agent-state@cli-workbench --scope user
 ```
 
 然后重启 Claude Code，或在运行中的会话里执行 `/reload-plugins`。
@@ -152,7 +154,7 @@ claude plugin install reply-polish@cli-workbench --scope user
 - **修改 mod：** 在 `home/dot_claude/workbench-mods/` 下改，执行 `chezmoi apply`，再 `/reload-plugins`。文件夹形式的插件市场直接从文件夹读取，所以不需要提升版本号。`claude plugin disable <名称>` 临时关闭，`claude plugin uninstall <名称>` 卸载。
 - **测试：** `tests/mods.test.sh` 总会检查插件市场的结构。装有 Claude Code 时，还会运行 `claude plugin validate` 和每个 mod 自带的测试（`claude plugin test`）；没装则跳过这一部分。
 - **信任：** mod 能看到每一次工具调用和每一条回复，并以你的权限运行。安装前请先读源码，每个 mod 只有几百行。
-- **稳定性：** mod 的 API 处于早期阶段，不同版本之间会变化。这两个 mod 是用 Claude Code 2.1.289 开发和测试的。使用 `--safe-mode` 或 `--bare` 时 mod 不会加载。
+- **稳定性：** mod 的 API 处于早期阶段，不同版本之间会变化。这三个 mod 是用 Claude Code 2.1.289 开发和测试的。使用 `--safe-mode` 或 `--bare` 时 mod 不会加载。
 - **有意不纳入版本控制：** Claude Code 加载 mod 时写进 `.claude-plugin/types/` 的类型声明文件。
 
 ## 按键表
@@ -191,6 +193,19 @@ claude plugin install reply-polish@cli-workbench --scope user
 - **记在哪里：** 所有项目共用 `~/.config/cli-workbench/inbox.md`（私人文件，权限 600，不在本仓库里），每个想法一行：`- [ ] 2026-10-06 17:42 · ~/dev/projects/foo · 想法`。项目是仓库的根目录；在 worktree 里则是它所属的仓库；窗格已不存在时记为 `?`。
 - **输入什么都安全：** 文字原样保存，绝不会被执行。写入失败时弹窗不会关闭，并把你的想法再显示一遍。
 - **整理：** 让代理"处理收件箱"。规则：先把文件复制成带时间戳的备份（权限 600）；只改它处理的那几行，把 `- [ ]` 改成 `- [x]`，从不删除；改完检查之前的每一行都还在；任何要发到本机以外的操作（比如开 GitHub issue）先问你。
+
+## 代理总览（tmux）
+
+好几个代理同时干活时，要回答的问题是：哪一个需要你？按 `prefix` 再按 `O`（`Ctrl-a O`），弹出一个窗口，每个代理会话一行：状态、项目、分支，以及处于该状态多久。**等待**排最前（权限提示或提问；等得最久的在最上面），然后是**工作中**，最后是**空闲**。`Enter` 跳到那个窗格（它的会话、窗口和窗格），`Esc` 关闭弹窗。装了 [fzf](https://github.com/junegunn/fzf) 时可以边输入边筛选，没有则是编号菜单。纯文本，没有颜色。需要 tmux 3.2+ 和 `jq`。
+
+- **行从哪来：** 来自 Claude Code。`agent-state` mod（见“Claude Code mod”）运行 `~/.tmux/scripts/agent-state.sh`：一轮开始，**工作中**；出现权限提示或 MCP 提问，**等待**；一轮因任何原因结束（回答完、被打断、出错），**空闲**；会话开始，空闲（压缩上下文不算）；会话结束，删除记录。窗格还显示等待时，如果有工具运行结束、失败、被拒绝，或对话框已被应答，就回到工作中。没装这个 mod，弹窗是空的。
+- **文件：** 每个窗格一个小文件，`${XDG_STATE_HOME:-~/.local/state}/cli-workbench/sessions/<tmux 服务器>/<窗格 id>.json`，内容是状态、项目、分支、起始时间、会话 id。服务器目录是 tmux 服务器的 pid 加启动时间，所以 tmux 重启后复用的窗格 id 不会碰到旧记录。最后一个事件生效；文件原子替换，读取方不会看到写了一半的内容。有意不做锁和序号：这是给一个人看的提示，不是状态机。
+- **自愈：** 打开弹窗时，窗格已不存在的记录会被删除（仅当文件自读取后没有变化），超过两小时没更新的记录标上 `?`，确定已退出的 tmux 服务器的目录会被删除。tmux 无法查询时什么都不删。
+- **多个 tmux 客户端：** 弹窗切换的是打开它的那个客户端，而不是当前活动的那个。
+- **响铃：** 进入等待时向该窗格的终端响一次铃，和你可能已有的 Stop hook 一样，这样 Ghostty 会标记标签页。Stop 自己的响铃不变；本仓库不管理 `~/.claude/settings.json`。
+- **状态栏：** tmux 状态栏右侧在有两个代理等你时显示 `⏳2`，没有时什么都不显示。
+- **不用 mod：** 同一个脚本也可以由 `~/.claude/settings.json` 里的 `command` hook 调用，动作作为参数，hook 的 JSON 从标准输入读：`UserPromptSubmit` 用 `working`，`Stop` 用 `idle`，`SessionStart` 用 `idle`，`SessionEnd` 用 `end`，`PermissionRequest` 用 `waiting`，`Notification`（匹配器 `permission_prompt|elicitation_dialog|elicitation_url_dialog`）用 `waiting`，`PostToolUse`、`PostToolUseFailure`、`PermissionDenied`、`ElicitationResult` 用 `heal`。需要 `jq`；没有 jq 时 hook 什么都不做，弹窗会提示“jq is required”。
+- **已知局限：** 等待状态可能一直显示到获批的工具运行结束或下一个事件到来，因为工具运行前没有“已批准”的信号。同一瞬间的两个事件可能以任意顺序落地。崩溃后记录可能过时；两小时后标上 `?`，窗格关闭时随之消失。子代理的权限提示也算等待，因为要回答的是你。请求和结果没有一一对应：并行调用工具时，任何一个工具完成都会把“等待”改回“工作中”，即使另一个提示还开着，下一个提示会把它纠正过来；你回答之后，迟到的通知也可能让它重新变成“等待”，直到工具结束。状态栏的计数不包含超过两小时的记录。总览只显示运行在 tmux 窗格里的代理。
 
 ## 卸载 / 恢复
 
