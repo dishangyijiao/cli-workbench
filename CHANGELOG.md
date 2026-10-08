@@ -18,6 +18,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Changed
 
 - The workspace switcher no longer opens an editor pane: a window is the AI agent on top with a shell under it, or just a shell when no agent is installed. `prefix e` and `prefix g` open Neovim in a popup instead. `WORKSPACE_SWITCH_EDITOR` is gone.
+- The shared agent instructions have a section on working across projects: do project work in that project's window, treat pasted status as a claim to check, name any hosted service before private code goes to it, and write hand-offs as files. `tests/agent-instructions.test.sh` checks the section is deployed.
 
 ## [0.3.0] - 2026-10-06
 

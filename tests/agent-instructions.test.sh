@@ -14,6 +14,7 @@ for f in $FILES; do assert "$f is deployed" test -s "$H/$f"; done
 assert "Codex's file equals Claude's" cmp -s "$H/.claude/CLAUDE.md" "$H/.codex/AGENTS.md"
 assert "Gemini's file equals Claude's" cmp -s "$H/.claude/CLAUDE.md" "$H/.gemini/GEMINI.md"
 assert_contains "it explains the workbench" "Terminal workbench" "$(cat "$H/.claude/CLAUDE.md")"
+assert_contains "it says how to work across projects" "Working across projects" "$(cat "$H/.claude/CLAUDE.md")"
 last2=$(tail -c 2 "$H/.claude/CLAUDE.md" | od -An -tx1 | tr -d ' \n')
 assert_eq "it ends with a newline" 0a "${last2#??}"
 refute "and no blank line after it" test "$last2" = 0a0a
