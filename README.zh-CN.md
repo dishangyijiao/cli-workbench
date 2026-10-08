@@ -207,10 +207,6 @@ claude plugin install agent-state@cli-workbench --scope user
 - **不用 mod：** 同一个脚本也可以由 `~/.claude/settings.json` 里的 `command` hook 调用，动作作为参数，hook 的 JSON 从标准输入读：`UserPromptSubmit` 用 `working`，`Stop` 用 `idle`，`SessionStart` 用 `idle`，`SessionEnd` 用 `end`，`PermissionRequest` 用 `waiting`，`Notification`（匹配器 `permission_prompt|elicitation_dialog|elicitation_url_dialog`）用 `waiting`，`PostToolUse`、`PostToolUseFailure`、`PermissionDenied`、`ElicitationResult` 用 `heal`。需要 `jq`；没有 jq 时 hook 什么都不做，弹窗会提示“jq is required”。
 - **已知局限：** 等待状态可能一直显示到获批的工具运行结束或下一个事件到来，因为工具运行前没有“已批准”的信号。同一瞬间的两个事件可能以任意顺序落地。崩溃后记录可能过时；两小时后标上 `?`，窗格关闭时随之消失。子代理的权限提示也算等待，因为要回答的是你。总览只显示运行在 tmux 窗格里的代理。
 
-## 权限白名单提案
-
-Claude Code 的自动模式连不上服务器端分类器时，每条没有明确允许的命令都要等你确认。[`docs/permission-allowlist.md`](docs/permission-allowlist.md) 按一台机器上代理运行它们的频率，排出了建议明确允许的只读命令。这只是提案：这里没有任何东西会改你的设置。
-
 ## 卸载 / 恢复
 
 从 `~/.cli-workbench-backup/<时间戳>/RESTORE` 里按文件恢复（每个文件一条命令），或者删掉不想要的文件。`chezmoi unmanage <目标>` 可以让它不再管理某个文件。

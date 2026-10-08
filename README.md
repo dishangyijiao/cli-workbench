@@ -207,10 +207,6 @@ When several agents work at once, the question is which one needs you. Press `pr
 - **Without the mod:** the same script can be called from `command` hooks in `~/.claude/settings.json`, with the action as its argument and the hook's JSON on stdin: `UserPromptSubmit` `working`, `Stop` `idle`, `SessionStart` `idle`, `SessionEnd` `end`, `PermissionRequest` `waiting`, `Notification` (matcher `permission_prompt|elicitation_dialog|elicitation_url_dialog`) `waiting`, and `PostToolUse`, `PostToolUseFailure`, `PermissionDenied`, `ElicitationResult` `heal`. It needs `jq`; without it the hooks do nothing and the popup says "jq is required".
 - **Known limits:** waiting can stay shown until the approved tool finishes or the next event arrives, because nothing says "approved" before the tool runs. Two events in the same instant may land in either order. A record can be out of date after a crash; it is marked `?` after two hours and goes away when its pane does. A subagent's permission prompt counts as waiting, since you are the one to answer it. The overview shows only agents that run in a tmux pane.
 
-## Permission allow-list proposal
-
-When Claude Code's auto mode cannot reach its server-side classifier, every command that is not allowed explicitly waits for you. [`docs/permission-allowlist.md`](docs/permission-allowlist.md) proposes read-only commands to allow explicitly, ranked by how often an agent ran them on one machine. It is a proposal: nothing here changes your settings.
-
 ## Uninstall / restore
 
 Restore from `~/.cli-workbench-backup/<timestamp>/RESTORE` (one command per file), or delete what you no longer want. `chezmoi unmanage <target>` stops managing one file.
