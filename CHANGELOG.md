@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
+- `.coderabbit.yaml`: configuration for CodeRabbit, an advisory reviewer that only comments on pull requests. Every feature that pushes commits or opens follow-up pull requests is switched off explicitly (CodeRabbit turns several of them on by default), and it cannot block a merge. See "Automated review" in `CONTRIBUTING.md`.
+
 - Markdown files are shown rendered in place in Neovim (render-markdown.nvim); `<leader>mp` switches the rendering off and on. The text is a centred column of 80 characters (no-neck-pain.nvim), only while a Markdown file is shown.
 - `docs/keybindings.md` and `docs/keybindings.zh-CN.md`: the keys used most, on one printable page. `tests/keybindings.test.sh` fails when a documented `prefix` key is not bound in the deployed tmux config, a documented `<leader>` key is not mapped in Neovim, or the two languages list different keys.
 
