@@ -14,13 +14,13 @@ The counts are a snapshot from one machine on 2026-10-07. Re-run the scan before
 
 ## How a rule matches
 
-`Bash(git status *)` allows `git status` followed by anything. A rule without `*` allows exactly that command and nothing else. A rule with `*` therefore allows every argument, and the review that matters is what the worst argument does. Each rule below was checked for that: Tier 1 rules have no argument that writes a file, runs a program, chains another command or reads the contents of a file. Where a program has such an argument (`git stash list --output=FILE`, `tmux list-panes \; run-shell CMD`, `chezmoi diff --source DIR`), the rule is exact, without `*`, or the program is not on the list. Commands such as `ls` and `git status` may already be allowed by Claude Code's built-in read-only set in your version; repeating them is harmless.
+`Bash(git status *)` allows `git status` followed by anything. A rule without `*` allows exactly that command and nothing else. A rule with `*` therefore allows every argument, and the review that matters is what the worst argument does. Each rule below was checked for that: Tier 1 rules have no argument that writes a file, runs a program, chains another command or reads the contents of a file. Tier 1 is a statement about arguments, not about configuration: it assumes that the tool itself, its configuration and the repository you are in are yours. Where a program has such an argument (`git stash list --output=FILE`, `tmux list-panes \; run-shell CMD`), the rule is exact, without `*`, or the program is not on the list. Commands that render templates (`chezmoi`) or can launch a browser (`gh ... --web`) are in Tier 2, because template functions such as `output` run programs and `--web` starts another application. Commands such as `ls` and `git status` may already be allowed by Claude Code's built-in read-only set in your version; repeating them is harmless.
 
 One more limit: a rule matches how the command starts. Repository settings can still change what a command does (a `git` alias, `core.fsmonitor`, `core.pager` in a repository you did not write), so do not allow these commands inside a repository you do not trust.
 
 ## Tier 1: no argument writes, runs a program, chains a command or prints file contents
 
-Add these first. `ls`, `wc`, `du`, `stat` and `which` show names, sizes and counts, not content. The `git` and `gh` rules show repository and pull-request metadata.
+Add these first. `ls`, `wc`, `du`, `stat` and `which` show names, sizes and counts, not content. The `git` rules show repository metadata.
 
 | # | Rule | Ran |
 |---|---|---|
@@ -28,40 +28,25 @@ Add these first. `ls`, `wc`, `du`, `stat` and `which` show names, sizes and coun
 | 2 | `Bash(git status *)` | 383 |
 | 3 | `Bash(wc *)` | 303 |
 | 4 | `Bash(sleep *)` | 189 |
-| 5 | `Bash(gh pr view *)` | 113 |
-| 6 | `Bash(gh run list *)` | 103 |
-| 7 | `Bash(git ls-files *)` | 79 |
-| 8 | `Bash(gh run view *)` | 70 |
-| 9 | `Bash(tr *)` | 59 |
-| 10 | `Bash(du *)` | 54 |
-| 11 | `Bash(git branch --show-current)` | 50 |
-| 12 | `Bash(gh pr checks *)` | 50 |
-| 13 | `Bash(gh pr list *)` | 45 |
-| 14 | `Bash(git rev-parse *)` | 39 |
-| 15 | `Bash(git worktree list *)` | 37 |
-| 16 | `Bash(git check-ignore *)` | 31 |
-| 17 | `Bash(git ls-tree *)` | 27 |
-| 18 | `Bash(chezmoi diff)` | 25 |
-| 19 | `Bash(chezmoi verify)` | 24 |
-| 20 | `Bash(which *)` | 24 |
-| 21 | `Bash(git rev-list *)` | 23 |
-| 22 | `Bash(gh repo view *)` | 21 |
-| 23 | `Bash(stat *)` | 21 |
-| 24 | `Bash(git stash list)` | 16 |
-| 25 | `Bash(git branch -vv)` | 15 |
-| 26 | `Bash(chezmoi managed)` | 12 |
-| 27 | `Bash(chezmoi source-path)` | 10 |
-| 28 | `Bash(git merge-base *)` | 9 |
-| 29 | `Bash(git branch -r)` | 9 |
-| 30 | `Bash(git branch -a)` | 8 |
-| 31 | `Bash(tmux list-keys)` | 8 |
-| 32 | `Bash(chezmoi status)` | 7 |
-| 33 | `Bash(gh pr diff *)` | 4 |
-| 34 | `Bash(tmux list-panes -a)` | 4 |
-| 35 | `Bash(gh workflow list *)` | 3 |
-| 36 | `Bash(gh issue list *)` | 2 |
-| 37 | `Bash(gh issue view *)` | 2 |
-| 38 | `Bash(tmux list-windows)` | 2 |
+| 5 | `Bash(git ls-files *)` | 79 |
+| 6 | `Bash(tr *)` | 59 |
+| 7 | `Bash(du *)` | 54 |
+| 8 | `Bash(git branch --show-current)` | 50 |
+| 9 | `Bash(git rev-parse *)` | 39 |
+| 10 | `Bash(git worktree list *)` | 37 |
+| 11 | `Bash(git check-ignore *)` | 31 |
+| 12 | `Bash(git ls-tree *)` | 27 |
+| 13 | `Bash(which *)` | 24 |
+| 14 | `Bash(git rev-list *)` | 23 |
+| 15 | `Bash(stat *)` | 21 |
+| 16 | `Bash(git stash list)` | 16 |
+| 17 | `Bash(git branch -vv)` | 15 |
+| 18 | `Bash(git merge-base *)` | 9 |
+| 19 | `Bash(git branch -r)` | 9 |
+| 20 | `Bash(git branch -a)` | 8 |
+| 21 | `Bash(tmux list-keys)` | 8 |
+| 22 | `Bash(tmux list-panes -a)` | 4 |
+| 23 | `Bash(tmux list-windows)` | 2 |
 
 ## Tier 2: read-only, but an argument can write, run a program or print a secret
 
@@ -75,18 +60,33 @@ Decide each one yourself, and read the next section first. The last column is wh
 | 4 | `Bash(grep *)` | 1245 | prints matching lines of any file, recursively with `-r` |
 | 5 | `Bash(cut *)` | 1090 | prints any file it is given |
 | 6 | `Bash(cat *)` | 736 | prints any file it is given |
-| 7 | `Bash(git log *)` | 433 | `--output=FILE` writes a file; shows committed content |
+| 7 | `Bash(git log *)` | 433 | repository-configured diff and textconv drivers run programs; `--output=FILE` writes a file; shows committed content |
 | 8 | `Bash(jq *)` | 252 | reads any file; `env` and `$ENV` print the environment, secrets included |
 | 9 | `Bash(sort *)` | 230 | `-o FILE` writes a file; reads any file |
-| 10 | `Bash(git show *)` | 204 | `--output=FILE` writes a file; shows committed content |
-| 11 | `Bash(git diff *)` | 183 | `--output=FILE` writes a file; shows file content |
+| 10 | `Bash(git show *)` | 204 | repository-configured diff and textconv drivers run programs; `--output=FILE` writes a file; shows committed content |
+| 11 | `Bash(git diff *)` | 183 | repository-configured diff and textconv drivers run programs; `--output=FILE` writes a file; shows file content |
 | 12 | `Bash(git grep *)` | 127 | `-O CMD` runs a program as pager; reads any tracked file |
-| 13 | `Bash(uniq *)` | 71 | a second file operand is written to |
-| 14 | `Bash(lsof *)` | 43 | lists what other processes hold open, with their paths |
-| 15 | `Bash(claude plugin validate *)` | 43 | loads and parses the folder it is given |
-| 16 | `Bash(diff *)` | 29 | prints the content of any two files |
-| 17 | `Bash(cmp *)` | 18 | `-l` prints the differing bytes of any two files |
-| 18 | `Bash(shellcheck *)` | 13 | prints source lines of any file it is given |
+| 13 | `Bash(gh pr view *)` | 113 | `--web` launches a browser; `gh` reads your GitHub login |
+| 14 | `Bash(gh run list *)` | 103 | `--web` launches a browser; `gh` reads your GitHub login |
+| 15 | `Bash(uniq *)` | 71 | a second file operand is written to |
+| 16 | `Bash(gh run view *)` | 70 | `--web` launches a browser; `gh` reads your GitHub login |
+| 17 | `Bash(gh pr checks *)` | 50 | `--web` launches a browser; `gh` reads your GitHub login |
+| 18 | `Bash(gh pr list *)` | 45 | `--web` launches a browser; `gh` reads your GitHub login |
+| 19 | `Bash(lsof *)` | 43 | lists what other processes hold open, with their paths |
+| 20 | `Bash(claude plugin validate *)` | 43 | loads and parses the folder it is given |
+| 21 | `Bash(diff *)` | 29 | prints the content of any two files |
+| 22 | `Bash(chezmoi diff)` | 25 | chezmoi renders templates, and template functions such as `output` run programs from the source repository |
+| 23 | `Bash(chezmoi verify)` | 24 | chezmoi renders templates, and template functions such as `output` run programs from the source repository |
+| 24 | `Bash(gh repo view *)` | 21 | `--web` launches a browser; `gh` reads your GitHub login |
+| 25 | `Bash(cmp *)` | 18 | `-l` prints the differing bytes of any two files |
+| 26 | `Bash(shellcheck *)` | 13 | prints source lines of any file it is given |
+| 27 | `Bash(chezmoi managed)` | 12 | chezmoi renders templates, and template functions such as `output` run programs from the source repository |
+| 28 | `Bash(chezmoi source-path)` | 10 | chezmoi renders templates, and template functions such as `output` run programs from the source repository |
+| 29 | `Bash(chezmoi status)` | 7 | chezmoi renders templates, and template functions such as `output` run programs from the source repository |
+| 30 | `Bash(gh pr diff *)` | 4 | `--web` launches a browser; `gh` reads your GitHub login |
+| 31 | `Bash(gh workflow list *)` | 3 | `--web` launches a browser; `gh` reads your GitHub login |
+| 32 | `Bash(gh issue list *)` | 2 | `--web` launches a browser; `gh` reads your GitHub login |
+| 33 | `Bash(gh issue view *)` | 2 | `--web` launches a browser; `gh` reads your GitHub login |
 
 ### Secrets: no default protection
 
@@ -106,7 +106,7 @@ Every Tier 2 rule that prints a file can print any file you can read: `~/.ssh`, 
 | `find *`, `xargs *`, `timeout *`, `env *` | 175 | `-exec`, `-delete` and the commands they start |
 | `curl *` | 92 | can send data to any host |
 | `tmux *` with arguments of any kind | 2 | `\;` chains a second tmux command, and `run-shell` runs a program |
-| `chezmoi diff *`, `chezmoi apply *` | 26 | `--source DIR` executes the programs in that directory's templates; apply writes |
+| `chezmoi apply *` | 11 | writes the deployed files |
 | `git add`, `commit`, `push`, `fetch`, `checkout`, `switch`, `stash` (other than `list`), `worktree add/remove`, `branch -D` | 1280 | change the repository or the remote; `git stash list --output=FILE` even writes a file, which is why `git stash list` has no `*` |
 | `gh pr merge/create/close/edit/ready`, `gh run rerun/cancel`, `gh workflow run` | 71 | change GitHub |
 | `rm`, `mv`, `cp`, `mkdir`, `touch`, `chmod`, `ln`, `kill`, `pkill` | 676 | change files or processes |

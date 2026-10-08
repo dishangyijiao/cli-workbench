@@ -198,13 +198,14 @@ claude plugin install agent-state@cli-workbench --scope user
 
 好几个代理同时干活时，要回答的问题是：哪一个需要你？按 `prefix` 再按 `O`（`Ctrl-a O`），弹出一个窗口，每个代理会话一行：状态、项目、分支，以及处于该状态多久。**等待**排最前（权限提示或提问；等得最久的在最上面），然后是**工作中**，最后是**空闲**。`Enter` 跳到那个窗格（它的会话、窗口和窗格），`Esc` 关闭弹窗。装了 [fzf](https://github.com/junegunn/fzf) 时可以边输入边筛选，没有则是编号菜单。纯文本，没有颜色。需要 tmux 3.2+ 和 `jq`。
 
-- **行从哪来：** 来自 Claude Code。`agent-state` mod（见“Claude Code mod”）在这些时刻运行 `~/.tmux/scripts/agent-state.sh`：一轮开始时（工作中）；一轮因任何原因结束时，无论是回答完、被打断还是出错（空闲）；会话开始或恢复时（空闲，压缩上下文不算）；会话结束时。**等待**按请求逐个记录：权限提示针对某一次工具调用打开一个等待，这次调用结束、失败或被拒绝时才关闭它，所以批准后长时间运行的工具显示为工作中，别的工具也不会误清掉另一个等待。MCP 的提问（`elicitation_dialog`、`elicitation_url_dialog`）是一个等待，由对话框的结果关闭。一轮开始或结束时会关闭所有等待。没装这个 mod，弹窗是空的。
-- **文件：** `${XDG_STATE_HOME:-~/.local/state}/cli-workbench/sessions/<tmux 服务器>/<窗格 id>.json`。服务器目录是 tmux 服务器的 pid 加启动时间，所以 tmux 重启后复用的窗格 id 不会碰到旧记录。每个事件都带自己的时间和会话 id；比记录旧的事件、或来自更旧会话的事件不起作用，更新在锁内进行，所以慢的 hook 无法撤销更新的状态。窗格已经不存在的文件、已结束会话一分钟后的记录、已退出的 tmux 服务器的目录，会在打开弹窗时删除。
+- **行从哪来：** 来自 Claude Code。`agent-state` mod（见“Claude Code mod”）运行 `~/.tmux/scripts/agent-state.sh`：一轮开始，**工作中**；出现权限提示或 MCP 提问，**等待**；一轮因任何原因结束（回答完、被打断、出错），**空闲**；会话开始，空闲（压缩上下文不算）；会话结束，删除记录。窗格还显示等待时，如果有工具运行结束、失败、被拒绝，或对话框已被应答，就回到工作中。没装这个 mod，弹窗是空的。
+- **文件：** 每个窗格一个小文件，`${XDG_STATE_HOME:-~/.local/state}/cli-workbench/sessions/<tmux 服务器>/<窗格 id>.json`，内容是状态、项目、分支、起始时间、会话 id。服务器目录是 tmux 服务器的 pid 加启动时间，所以 tmux 重启后复用的窗格 id 不会碰到旧记录。最后一个事件生效；文件原子替换，读取方不会看到写了一半的内容。有意不做锁和序号：这是给一个人看的提示，不是状态机。
+- **自愈：** 打开弹窗时，窗格已不存在的记录会被删除（仅当文件自读取后没有变化），超过两小时没更新的记录标上 `?`，确定已退出的 tmux 服务器的目录会被删除。tmux 无法查询时什么都不删。
 - **多个 tmux 客户端：** 弹窗切换的是打开它的那个客户端，而不是当前活动的那个。
-- **响铃：** 进入等待时，也会向该窗格的终端响一次铃，和你可能已有的 Stop hook 一样，这样 Ghostty 会标记标签页。Stop 自己的响铃不变；本仓库不管理 `~/.claude/settings.json`。
+- **响铃：** 进入等待时向该窗格的终端响一次铃，和你可能已有的 Stop hook 一样，这样 Ghostty 会标记标签页。Stop 自己的响铃不变；本仓库不管理 `~/.claude/settings.json`。
 - **状态栏：** tmux 状态栏右侧在有两个代理等你时显示 `⏳2`，没有时什么都不显示。
-- **不用 mod：** 同一个脚本也可以由 `~/.claude/settings.json` 里的 `command` hook 调用，动作作为参数，hook 的 JSON 从标准输入读：`UserPromptSubmit` 用 `begin`，`Stop` 用 `idle`，`SessionStart` 用 `start`，`SessionEnd` 用 `end`，`PermissionRequest` 用 `wait`，`PostToolUse`、`PostToolUseFailure`、`PermissionDenied` 用 `unwait`，`Notification`（匹配器 `elicitation_dialog|elicitation_url_dialog`）用 `wait`，`ElicitationResult` 用 `unwait`。这些 hook 不带事件时间和请求键，所以脚本用运行时的时钟，且一次应答会清掉所有等待：在工具并行或 hook 很慢时不如 mod 精确。需要 `jq`。
-- **局限：** 状态只和最近一次 hook 一样新，工具调用靠工具名和输入与它的权限提示对应。代理崩溃而没有结束会话时，它会一直留在列表里，直到窗格关闭。总览只显示运行在 tmux 窗格里的代理。
+- **不用 mod：** 同一个脚本也可以由 `~/.claude/settings.json` 里的 `command` hook 调用，动作作为参数，hook 的 JSON 从标准输入读：`UserPromptSubmit` 用 `working`，`Stop` 用 `idle`，`SessionStart` 用 `idle`，`SessionEnd` 用 `end`，`PermissionRequest` 用 `waiting`，`Notification`（匹配器 `permission_prompt|elicitation_dialog|elicitation_url_dialog`）用 `waiting`，`PostToolUse`、`PostToolUseFailure`、`PermissionDenied`、`ElicitationResult` 用 `heal`。需要 `jq`；没有 jq 时 hook 什么都不做，弹窗会提示“jq is required”。
+- **已知局限：** 等待状态可能一直显示到获批的工具运行结束或下一个事件到来，因为工具运行前没有“已批准”的信号。同一瞬间的两个事件可能以任意顺序落地。崩溃后记录可能过时；两小时后标上 `?`，窗格关闭时随之消失。子代理的权限提示也算等待，因为要回答的是你。总览只显示运行在 tmux 窗格里的代理。
 
 ## 权限白名单提案
 

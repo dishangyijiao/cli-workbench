@@ -22,13 +22,13 @@ cat > "$T_DIR/bin/tmux" <<'SH'
 #!/bin/sh
 [ "${FAKE_TMUX_FAIL:-}" = 1 ] && exit 1
 if [ "$1" = display-message ]; then echo "$FAKE_SERVER"; exit 0; fi
-if [ "$1" = list-panes ]; then cat "$FAKE_PANES"; exit 0; fi
+if [ "$1" = list-panes ]; then [ "${FAKE_LIST_FAIL:-}" = 1 ] && exit 1; cat "$FAKE_PANES"; exit 0; fi
 echo "$*" >> "$FAKE_LOG"
 SH
 chmod +x "$T_DIR/bin/tmux"
 export FAKE_PANES=$T_DIR/panes FAKE_LOG=$LOG
 now=$(date +%s)
-rec() { printf '{"state":"%s","project":"%s","branch":"%s","since":%s,"ts":%s000,"session_id":"s"}\n' "$2" "$3" "$4" "$5" "$5" > "$SESS/$1.json"; }
+rec() { printf '{"state":"%s","project":"%s","branch":"%s","since":%s,"session_id":"s"}\n' "$2" "$3" "$4" "$5" > "$SESS/$1.json"; }
 run() { PATH="$T_DIR/bin:$PATH" sh "$AGENTS" "$@" 2>&1 </dev/null; }
 
 rec %1 idle    alpha main    $((now - 7300))
@@ -88,30 +88,58 @@ assert_eq "and nothing is switched" "" "$(cat "$LOG")"
 out=$(run --jump '%1;touch x'); rc=$?
 assert "a pane id that is not %N is refused" test "$rc" -ne 0
 
-echo "ended sessions are hidden, then removed after a minute"
-rec %1 idle alpha main "$now"
-printf '{"state":"ended","ts":%s000,"since":1}\n' "$now" > "$SESS/%2.json"
+echo "a record that was not updated for two hours is marked with a question mark"
+rec %1 idle alpha main $((now - 7300))
+touch -t 202001010000 "$SESS/%1.json"
 out=$(run --list)
-assert_eq "an ended record is not listed" "delta gamma alpha" "$(printf '%s\n' "$out" | awk '{print $2}' | tr '\n' ' ' | sed 's/ $//')"
-assert "a fresh tombstone stays, so that late events find it" test -e "$SESS/%2.json"
-printf '{"state":"ended","ts":%s000,"since":1}\n' "$((now - 120))" > "$SESS/%2.json"
+assert_eq "the stale one is marked" "idle? alpha main 2h" "$(printf '%s\n' "$out" | grep alpha | tr -s ' ')"
+assert_eq "a fresh one is not" "working beta feat-x 2m" "$(printf '%s\n' "$out" | grep beta | tr -s ' ')"
+rec %1 idle alpha main $((now - 7300))
+
+echo "a record that changed after it was read is not removed"
+rec %9 working gone main "$now"
+mkdir -p "$T_DIR/jqbin"; REALJQ=$(command -v jq)
+cat > "$T_DIR/jqbin/jq" <<SH
+#!/bin/sh
+"$REALJQ" "\$@"; rc=\$?
+# A hook rewrites the file of the vanished pane right after it was read.
+if [ -e "$T_DIR/inject" ]; then rm -f "$T_DIR/inject"; printf '{"state":"idle","project":"back","branch":"main","since":%s,"session_id":"n"}\n' "$now" > "$SESS/%9.json"; fi
+exit \$rc
+SH
+chmod +x "$T_DIR/jqbin/jq"
+touch "$T_DIR/inject"
+PATH="$T_DIR/jqbin:$T_DIR/bin:$PATH" sh "$AGENTS" --list >/dev/null 2>&1 </dev/null
+assert "the changed file is kept" test -e "$SESS/%9.json"
+assert_eq "with its new content" back "$(jq -r .project "$SESS/%9.json")"
 run --list >/dev/null
-refute "an old tombstone is removed" test -e "$SESS/%2.json"
-assert_eq "an ended record is not counted as waiting" "⏳2" "$(run --count)"
-rec %2 working beta feat-x $((now - 125))
+refute "an unchanged one for a vanished pane is removed on the next look" test -e "$SESS/%9.json"
 
 echo "only this tmux server's records are read; directories of dead servers are swept"
 OTHER=$XDG_STATE_HOME/cli-workbench/sessions/200-1700000001; mkdir -p "$OTHER"
-printf '{"state":"waiting","project":"old","branch":"x","since":%s,"ts":1}\n' "$now" > "$OTHER/%1.json"
+printf '{"state":"waiting","project":"old","branch":"x","since":%s}\n' "$now" > "$OTHER/%1.json"
 assert_eq "a record of another server is not listed" 0 "$(run --list | grep -c old)"
 assert_eq "nor counted" "⏳2" "$(run --count)"
 sleep 0.1 & dead=$!; wait "$dead"
 DEAD=$XDG_STATE_HOME/cli-workbench/sessions/$dead-1700000002; mkdir -p "$DEAD"
 LIVEDIR=$XDG_STATE_HOME/cli-workbench/sessions/$$-1700000003; mkdir -p "$LIVEDIR"
+EPERMDIR=$XDG_STATE_HOME/cli-workbench/sessions/1-1700000004; mkdir -p "$EPERMDIR"
+FAKE_TMUX_FAIL=1 PATH="$T_DIR/bin:$PATH" sh "$AGENTS" >/dev/null 2>&1 </dev/null
+FAKE_LIST_FAIL=1 PATH="$T_DIR/bin:$PATH" sh "$AGENTS" >/dev/null 2>&1 </dev/null
+assert "nothing is swept when tmux cannot be asked" test -d "$DEAD"
 FAKE_PICK=9 PATH="$T_DIR/bin:$PATH" sh "$AGENTS" >/dev/null 2>&1 </dev/null
-refute "the directory of a server that is gone is removed" test -e "$DEAD"
+refute "the directory of a server that is certainly gone is removed" test -e "$DEAD"
 assert "a server that still runs keeps its directory" test -d "$LIVEDIR"
-rm -rf "$OTHER" "$LIVEDIR"
+assert "a pid that exists but is not ours (permission denied, or ours) is never swept" test -d "$EPERMDIR"
+rm -rf "$OTHER" "$LIVEDIR" "$EPERMDIR"
+
+echo "without jq the list says so and the count stays silent"
+mkdir -p "$T_DIR/tools2"
+for c in sh sort cut sed awk tr date cat head rm ls basename mkdir grep paste printf cksum find; do
+  p=$(command -v "$c") && [ -x "$p" ] && ln -sf "$p" "$T_DIR/tools2/$c"
+done
+assert_eq "--list explains" "jq is required" "$(PATH="$T_DIR/bin:$T_DIR/tools2" sh "$AGENTS" --list 2>&1 </dev/null)"
+assert_eq "--count prints nothing" "" "$(PATH="$T_DIR/bin:$T_DIR/tools2" sh "$AGENTS" --count 2>&1 </dev/null)"
+assert_contains "the popup explains too" "jq is required" "$(PATH="$T_DIR/bin:$T_DIR/tools2" sh "$AGENTS" 2>&1 <<<"")"
 
 echo "the picker with fzf: the choice is jumped to"
 cat > "$T_DIR/bin/fzf" <<'SH'
@@ -127,7 +155,7 @@ rm "$T_DIR/bin/fzf"
 
 echo "the picker without fzf is a numbered menu"
 mkdir -p "$T_DIR/tools"
-for c in sh jq sort cut sed awk tr date cat head rm ls basename mkdir grep paste printf; do
+for c in sh jq sort cut sed awk tr date cat head rm ls basename mkdir grep paste printf cksum find; do
   p=$(command -v "$c") && [ -x "$p" ] && ln -sf "$p" "$T_DIR/tools/$c"
 done
 menu() { PATH="$T_DIR/bin:$T_DIR/tools" sh "$AGENTS" 2>&1 <<<"$1"; }

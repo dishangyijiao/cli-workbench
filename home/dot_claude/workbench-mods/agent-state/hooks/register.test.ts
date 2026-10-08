@@ -1,8 +1,6 @@
 import type { On } from 'claude-code'
 import { expect, test } from 'claude-code/testing'
 
-import { toolKey } from './state'
-
 const done = { stderr: '', isStdoutTruncated: false, isStderrTruncated: false }
 
 // What the engine does beneath the mod: every event ends here with no opinion of its own.
@@ -20,7 +18,7 @@ const engine = (on: On) => {
   on('classic.ElicitationResult', () => ({}))
 }
 
-type Run = { argv: readonly string[]; stdin: { session_id?: string; ts?: number; key?: string }; timeoutMs?: number }
+type Run = { argv: readonly string[]; stdin: { session_id?: string }; timeoutMs?: number }
 
 // Stands in for the host's processes and remembers every command the mod ran.
 const recorder = (on: On, exitCode = 0) => {
@@ -36,14 +34,13 @@ const recorder = (on: On, exitCode = 0) => {
 const action = (run: Run) => run.argv[run.argv.length - 1]
 const actions = (runs: Run[]) => runs.map(action)
 
-test('a turn start records begin, with the session id and an event time on stdin', async ($, on) => {
+test('a turn start records working, with the session id on stdin', async ($, on) => {
   const runs = recorder(on)
 
   await $.turn.start({ text: 'hi', turnId: 't1' })
 
-  expect(actions(runs)).toEqual(['begin'])
-  expect(runs[0]!.stdin.session_id).toBe('sess-1')
-  expect(typeof runs[0]!.stdin.ts).toBe('number')
+  expect(actions(runs)).toEqual(['working'])
+  expect(runs[0]!.stdin).toEqual({ session_id: 'sess-1' })
 })
 
 test('the script is the deployed one, run without a shell string built from event text', async ($, on) => {
@@ -74,18 +71,6 @@ test('a subagent turn is not the agent being idle', async ($, on) => {
   expect(runs).toHaveLength(0)
 })
 
-test('event times only go up, even within one millisecond', async ($, on) => {
-  const runs = recorder(on)
-
-  await $.turn.start({ text: 'a', turnId: 't1' })
-  await $.turn.start({ text: 'b', turnId: 't2' })
-  await $.turn.start({ text: 'c', turnId: 't3' })
-
-  const times = runs.map(run => run.stdin.ts!)
-  expect(times[1]).toBeGreaterThan(times[0]!)
-  expect(times[2]).toBeGreaterThan(times[1]!)
-})
-
 test('a fresh session or a resume is idle; a compaction is not a new start', async ($, on) => {
   const runs = recorder(on)
 
@@ -94,7 +79,7 @@ test('a fresh session or a resume is idle; a compaction is not a new start', asy
   await $.classic.SessionStart({ source: 'clear' })
   await $.classic.SessionStart({ source: 'compact' })
 
-  expect(actions(runs)).toEqual(['start', 'start', 'start'])
+  expect(actions(runs)).toEqual(['idle', 'idle', 'idle'])
 })
 
 test('a session end records end', async ($, on) => {
@@ -105,43 +90,41 @@ test('a session end records end', async ($, on) => {
   expect(actions(runs)).toEqual(['end'])
 })
 
-test('a permission request waits under the key of that tool call', async ($, on) => {
+test('a permission request is a wait', async ($, on) => {
   const runs = recorder(on)
 
   await $.classic.PermissionRequest({ tool_name: 'Bash', tool_input: { command: 'ls' } })
 
-  expect(actions(runs)).toEqual(['wait'])
-  expect(runs[0]!.stdin.key).toBe(toolKey('Bash', { command: 'ls' }))
+  expect(actions(runs)).toEqual(['waiting'])
 })
 
-test('that call finishing, failing or being denied answers that wait, and no other', async ($, on) => {
+test('a notification that asks something is a wait, whichever kind', async ($, on) => {
+  const runs = recorder(on)
+
+  await $.classic.Notification({ message: 'x', notification_type: 'permission_prompt' })
+  await $.classic.Notification({ message: 'x', notification_type: 'elicitation_dialog' })
+  await $.classic.Notification({ message: 'x', notification_type: 'elicitation_url_dialog' })
+
+  expect(actions(runs)).toEqual(['waiting', 'waiting', 'waiting'])
+})
+
+test('something that ran, failed, was denied or was answered heals a wait', async ($, on) => {
   const runs = recorder(on)
   const input = { command: 'ls' }
 
   await $.classic.PostToolUse({ tool_name: 'Bash', tool_input: input, tool_response: {}, tool_use_id: 'u1' })
   await $.classic.PostToolUseFailure({ tool_name: 'Bash', tool_input: input, tool_use_id: 'u2', error: 'x' })
   await $.classic.PermissionDenied({ tool_name: 'Bash', tool_input: input, tool_use_id: 'u3', reason: 'no' })
-
-  expect(actions(runs)).toEqual(['unwait', 'unwait', 'unwait'])
-  expect(new Set(runs.map(run => run.stdin.key))).toEqual(new Set([toolKey('Bash', input)]))
-})
-
-test('a notification that asks a question is a wait; the dialog result answers it', async ($, on) => {
-  const runs = recorder(on)
-
-  await $.classic.Notification({ message: 'pick one', notification_type: 'elicitation_url_dialog' })
   await $.classic.ElicitationResult({ mcp_server_name: 's', action: 'accept' })
 
-  expect(actions(runs)).toEqual(['wait', 'unwait-prefix'])
-  expect(runs[0]!.stdin.key).toBe('notify:elicitation_url_dialog')
-  expect(runs[1]!.stdin.key).toBe('notify:')
+  expect(actions(runs)).toEqual(['heal', 'heal', 'heal', 'heal'])
 })
 
 test('a notification that is only a reminder records nothing', async ($, on) => {
   const runs = recorder(on)
 
   await $.classic.Notification({ message: 'Claude is waiting for your input', notification_type: 'idle_prompt' })
-  await $.classic.Notification({ message: 'Claude needs your permission', notification_type: 'permission_prompt' })
+  await $.classic.Notification({ message: 'signed in', notification_type: 'auth_success' })
 
   expect(runs).toHaveLength(0)
 })

@@ -7,12 +7,16 @@
 #   agents.sh --jump %12 [--client NAME]   go to that pane: its session, its window, then the pane
 # The rows come from the files agent-state.sh writes, one per pane, in
 # ${XDG_STATE_HOME:-~/.local/state}/cli-workbench/sessions/<tmux server>/. Waiting comes first (the longest wait on top),
-# then working, then idle. A file whose pane no longer exists is removed, and so is an "ended" record after a minute and
-# the directory of a tmux server that is gone; when tmux cannot be asked, nothing is removed. Needs jq.
+# then working, then idle. The overview is a hint, so it heals instead of insisting:
+#   - a record whose pane no longer exists is removed, but only when the file still holds what was read a moment ago;
+#   - a record that was not updated for two hours is shown with a "?" (a crash or a missed hook left it behind);
+#   - the directory of a tmux server whose process is gone (kill -0 says "No such process", not "not permitted") is removed.
+# When tmux cannot be asked, nothing is removed. Needs jq: without it the list says so, and the count stays silent.
 base=${XDG_STATE_HOME:-$HOME/.local/state}/cli-workbench/sessions
 TAB=$(printf '\t')
 client=
 
+have_jq=1; command -v jq >/dev/null 2>&1 || have_jq=
 server=$(tmux display-message -p '#{pid}-#{start_time}' 2>/dev/null)
 case $server in ''|*[!0-9-]*) server= ;; esac
 dir=$base/$server
@@ -26,13 +30,13 @@ age() {   # seconds -> 30s, 5m, 2h, 3d
   else echo "$(($1 / 86400))d"; fi
 }
 
-# records: "file<TAB>state<TAB>project<TAB>branch<TAB>since<TAB>ts" for every record, from one jq over all files; a file jq
-# cannot read is skipped (the one-by-one pass runs only when the batch failed).
+# records: "file<TAB>state<TAB>project<TAB>branch<TAB>since" for every record, from one jq over all files; a file jq cannot
+# read is skipped (the one-by-one pass runs only when the batch failed).
 records() {
-  [ -n "$server" ] || return 0
+  [ -n "$server" ] && [ -n "$have_jq" ] || return 0
   set -- "$dir"/*.json
   [ -e "$1" ] || return 0
-  prog='[input_filename, .state, .project, .branch, (.since | tostring), (.ts | tostring)] | @tsv'
+  prog='[input_filename, .state, .project, .branch, (.since | tostring)] | @tsv'
   if out=$(jq -r "$prog" "$@" 2>/dev/null); then
     printf '%s\n' "$out"
   else
@@ -40,47 +44,55 @@ records() {
   fi
 }
 
-# Remove what can never be shown again: directories of tmux servers that are gone.
+# Remove the directories of tmux servers that are gone. Only a pid that is certainly dead counts: "No such process".
+# Permission denied means it exists (another user's), and any other doubt means do nothing.
 sweep_servers() {
   for d in "$base"/*/; do
     d=${d%/}; n=${d##*/}
     [ "$n" = "$server" ] && continue
     pid=${n%%-*}
     case $pid in ''|*[!0-9]*) continue ;; esac
-    kill -0 "$pid" 2>/dev/null || rm -rf "$d"
+    err=$(LC_ALL=C kill -0 "$pid" 2>&1) && continue
+    case $err in *"No such process"*) rm -rf "$d" ;; esac
   done
 }
 
-# rows [clean]: "pane<TAB>text" per live record, in display order; with "clean", stale records are removed.
+# rows [clean]: "pane<TAB>text" per live record, in display order; with "clean", records of vanished panes are removed.
 rows() {
   live=$(panes) && [ -n "$live" ] || return 0
-  now=$(date +%s); nowms=${now}000
+  now=$(date +%s)
+  # What the files held just before they were read; a removal below happens only if the file still holds the same.
+  sigs=$(cksum "$dir"/*.json 2>/dev/null)
+  old=$(find "$dir" -name '*.json' -mmin +120 2>/dev/null)
   records | while IFS= read -r line; do
     [ -n "$line" ] || continue
     f=${line%%"$TAB"*}; rest=${line#*"$TAB"}
     state=${rest%%"$TAB"*}; rest=${rest#*"$TAB"}
     project=${rest%%"$TAB"*}; rest=${rest#*"$TAB"}
-    branch=${rest%%"$TAB"*}; rest=${rest#*"$TAB"}
-    since=${rest%%"$TAB"*}; ts=${rest#*"$TAB"}
+    branch=${rest%%"$TAB"*}; since=${rest#*"$TAB"}
     pane=${f##*/}; pane=${pane%.json}
     if ! printf '%s\n' "$live" | awk -v p="$pane" '$1 == p { found = 1 } END { exit !found }'; then
-      [ "${1-}" = clean ] && rm -f "$f"
-      continue
-    fi
-    if [ "$state" = ended ]; then
-      case $ts in ''|*[!0-9]*) ts=0 ;; esac
-      [ "${1-}" = clean ] && [ $((nowms - ts)) -gt 60000 ] && rm -f "$f"
+      if [ "${1-}" = clean ]; then
+        want=$(printf '%s\n' "$sigs" | awk -v f="$f" '{ n = $0; sub(/^[0-9]+ [0-9]+ /, "", n); if (n == f) { print $1, $2; exit } }')
+        [ -n "$want" ] && [ "$(cksum < "$f" 2>/dev/null | awk '{ print $1, $2 }')" = "$want" ] && rm -f "$f"
+      fi
       continue
     fi
     case $since in ''|*[!0-9]*) continue ;; esac
     case $state in waiting) rank=0 ;; working) rank=1 ;; *) rank=2 ;; esac
+    mark=
+    case "
+$old
+" in *"
+$f
+"*) mark='?' ;; esac
     elapsed=$((now - since)); [ "$elapsed" -ge 0 ] || elapsed=0
-    text=$(printf '%-8s %-24.24s %-24.24s %s' "$state" "$project" "$branch" "$(age "$elapsed")")
+    text=$(printf '%-9s %-24.24s %-24.24s %s' "$state$mark" "$project" "$branch" "$(age "$elapsed")")
     printf '%s\t%s\t%s\t%s\n' "$rank" "$since" "$pane" "$text"
   done | sort -t "$TAB" -k1,1n -k2,2n | cut -f3-
 }
 
-# count: the number of waiting agents whose pane exists: two processes (tmux, jq) and one awk, nothing per record.
+# count: the number of waiting agents whose pane exists. Three commands in all (tmux, jq, awk), whatever the number of records.
 count() {
   ids=$(panes | awk '{ printf "%s ", $1 }')
   [ -n "$ids" ] || { echo 0; return; }
@@ -107,7 +119,8 @@ jump() {
 pause() { printf '%s' "$1"; read -r _; }
 
 pick() {
-  sweep_servers
+  if [ -z "$have_jq" ]; then pause 'jq is required for the agent overview. Press Enter to close.'; return 0; fi
+  panes >/dev/null && [ -n "$server" ] && sweep_servers
   list=$(rows clean)
   if [ -z "$list" ]; then
     pause 'No agent sessions yet. Press Enter to close.'; return 0
@@ -115,7 +128,7 @@ pick() {
   if command -v fzf >/dev/null 2>&1; then
     # The pane id ends each line, so the choice is found whichever form of the line fzf prints.
     sel=$(printf '%s\n' "$list" | awk -F'\t' '{ print $2 "  " $1 }' | fzf --reverse --no-sort --prompt='agent> ' \
-      --header="$(printf '%-8s %-24s %-24s %-5s %s' STATE PROJECT BRANCH TIME PANE)") || return 0
+      --header="$(printf '%-9s %-24s %-24s %-5s %s' STATE PROJECT BRANCH TIME PANE)") || return 0
     [ -n "$sel" ] && jump "${sel##* }"
     return
   fi
@@ -141,7 +154,9 @@ while [ $# -gt 0 ]; do
   esac
 done
 case $mode in
-  --list) rows clean | cut -f2- ;;
+  --list)
+    if [ -z "$have_jq" ]; then echo "jq is required"; exit 0; fi
+    rows clean | cut -f2- ;;
   --count)
     n=$(count)
     [ "${n:-0}" -gt 0 ] && printf '⏳%s' "$n"
