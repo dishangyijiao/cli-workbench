@@ -26,7 +26,8 @@ export const register: Register = on => {
   // The main agent's real turns. A turn start is working; any turn end (an answer, an interrupt, a refusal, an API error)
   // is idle. A subagent's turns are not the agent being idle.
   on('turn.start', async ($, e, next) => {
-    await record($, 'working')
+    // A subagent starting must not turn a wait on the main agent back into working.
+    if (e.agentId === undefined) await record($, 'working')
     return next(e)
   })
   on('turn.complete', async ($, e, next) => {

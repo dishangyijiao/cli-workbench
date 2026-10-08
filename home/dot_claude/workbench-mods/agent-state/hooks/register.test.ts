@@ -63,6 +63,14 @@ test('every turn end records idle: an answer, an interrupt, a refusal and an err
   expect(actions(runs)).toEqual(['idle', 'idle', 'idle'])
 })
 
+test('a subagent turn start is not the agent working again: it must not hide a wait on the main agent', async ($, on) => {
+  const runs = recorder(on)
+
+  await $.turn.start({ text: 'sub task', turnId: 't2', agentId: 'sub-1' })
+
+  expect(runs).toHaveLength(0)
+})
+
 test('a subagent turn is not the agent being idle', async ($, on) => {
   const runs = recorder(on)
 

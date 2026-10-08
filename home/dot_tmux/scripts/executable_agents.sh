@@ -96,8 +96,12 @@ $f
 count() {
   ids=$(panes | awk '{ printf "%s ", $1 }')
   [ -n "$ids" ] || { echo 0; return; }
-  records | awk -F'\t' -v ids="$ids" 'BEGIN { n = split(ids, a, " "); for (i = 1; i <= n; i++) live[a[i]] = 1 }
-    $2 == "waiting" { f = $1; sub(/.*\//, "", f); sub(/\.json$/, "", f); if (f in live) c++ }
+  # A record not updated for two hours is stale (the list marks it "?"): an agent that crashed while waiting must not keep
+  # the status line saying someone needs you.
+  old=$(find "$dir" -name '*.json' -mmin +120 2>/dev/null)
+  records | awk -F'\t' -v ids="$ids" -v old="$old" 'BEGIN { n = split(ids, a, " "); for (i = 1; i <= n; i++) live[a[i]] = 1
+      n = split(old, b, "\n"); for (i = 1; i <= n; i++) if (b[i] != "") stale[b[i]] = 1 }
+    $2 == "waiting" && !($1 in stale) { f = $1; sub(/.*\//, "", f); sub(/\.json$/, "", f); if (f in live) c++ }
     END { print c + 0 }'
 }
 
@@ -107,13 +111,14 @@ jump() {
   target=$(panes | awk -v p="$1" '$1 == p { print $2, $3; exit }')
   [ -n "$target" ] || { echo "agents: pane $1 is gone" >&2; return 1; }
   session=${target% *} window=${target#* }
-  # The popup belongs to one client; with several attached, the active one may be another. -c names the right one.
+  # Select the window and the pane first: if the window closed since the listing, the client stays where it is. Only then
+  # move the client. It belongs to the popup; with several attached, the active one may be another, so -c names the right one.
+  tmux select-window -t "$session:$window" && tmux select-pane -t "$1" || return
   if [ -n "$client" ]; then
-    tmux switch-client -c "$client" -t "$session" || return
+    tmux switch-client -c "$client" -t "$session"
   else
-    tmux switch-client -t "$session" || return
+    tmux switch-client -t "$session"
   fi
-  tmux select-window -t "$session:$window" && tmux select-pane -t "$1"
 }
 
 pause() { printf '%s' "$1"; read -r _; }

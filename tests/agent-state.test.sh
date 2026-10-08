@@ -103,6 +103,17 @@ g "$P" worktree add -q "$T_DIR/wt/feature-x" -b feature-x
 hook "$T_DIR/wt/feature-x" working >/dev/null
 assert_eq "project" proj "$(f project)"
 assert_eq "branch of the worktree" feature-x "$(f branch)"
+echo "an old git (before 2.31 has no --path-format) still files a subdirectory under its repository"
+mkdir -p "$T_DIR/oldgit"; REALGIT=$(command -v git)
+cat > "$T_DIR/oldgit/git" <<SH
+#!/bin/sh
+case "\$*" in *--path-format*) echo "error: unknown option" >&2; exit 129 ;; esac
+exec "$REALGIT" "\$@"
+SH
+chmod +x "$T_DIR/oldgit/git"
+(cd "$P/sub" && printf '' | TMUX_PANE=%7 PATH="$T_DIR/oldgit:$T_DIR/bin:$PATH" sh "$STATE" working >/dev/null 2>&1)
+assert_eq "project is the repository, not the subdirectory" proj "$(f project)"
+
 hook "$T_DIR" working >/dev/null
 assert_eq "outside a repository: the directory name" "$(basename "$T_DIR")" "$(f project)"
 assert_eq "and no branch" "" "$(f branch)"

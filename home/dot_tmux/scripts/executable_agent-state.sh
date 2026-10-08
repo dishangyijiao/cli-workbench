@@ -51,10 +51,15 @@ main() {
   case $oldsince in ''|*[!0-9]*) ;; *) [ "$state" = "$oldstate" ] && since=$oldsince ;; esac
 
   here=$PWD project=$PWD
-  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) && case $common in
-    */.git) project=${common%/.git} ;;
-    *) project=$(git rev-parse --show-toplevel 2>/dev/null) || project=$here ;;
-  esac
+  # --path-format needs git 2.31; an older git fails the first command and falls back to the top of the working tree.
+  if common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null); then
+    case $common in
+      */.git) project=${common%/.git} ;;
+      *) project=$(git rev-parse --show-toplevel 2>/dev/null) || project=$here ;;
+    esac
+  else
+    project=$(git rev-parse --show-toplevel 2>/dev/null) || project=$here
+  fi
   project=${project##*/}
   branch=$(git --no-optional-locks symbolic-ref --short -q HEAD 2>/dev/null) \
     || branch=$(git --no-optional-locks rev-parse --short HEAD 2>/dev/null) || branch=

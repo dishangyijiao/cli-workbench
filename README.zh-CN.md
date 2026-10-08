@@ -205,7 +205,7 @@ claude plugin install agent-state@cli-workbench --scope user
 - **响铃：** 进入等待时向该窗格的终端响一次铃，和你可能已有的 Stop hook 一样，这样 Ghostty 会标记标签页。Stop 自己的响铃不变；本仓库不管理 `~/.claude/settings.json`。
 - **状态栏：** tmux 状态栏右侧在有两个代理等你时显示 `⏳2`，没有时什么都不显示。
 - **不用 mod：** 同一个脚本也可以由 `~/.claude/settings.json` 里的 `command` hook 调用，动作作为参数，hook 的 JSON 从标准输入读：`UserPromptSubmit` 用 `working`，`Stop` 用 `idle`，`SessionStart` 用 `idle`，`SessionEnd` 用 `end`，`PermissionRequest` 用 `waiting`，`Notification`（匹配器 `permission_prompt|elicitation_dialog|elicitation_url_dialog`）用 `waiting`，`PostToolUse`、`PostToolUseFailure`、`PermissionDenied`、`ElicitationResult` 用 `heal`。需要 `jq`；没有 jq 时 hook 什么都不做，弹窗会提示“jq is required”。
-- **已知局限：** 等待状态可能一直显示到获批的工具运行结束或下一个事件到来，因为工具运行前没有“已批准”的信号。同一瞬间的两个事件可能以任意顺序落地。崩溃后记录可能过时；两小时后标上 `?`，窗格关闭时随之消失。子代理的权限提示也算等待，因为要回答的是你。总览只显示运行在 tmux 窗格里的代理。
+- **已知局限：** 等待状态可能一直显示到获批的工具运行结束或下一个事件到来，因为工具运行前没有“已批准”的信号。同一瞬间的两个事件可能以任意顺序落地。崩溃后记录可能过时；两小时后标上 `?`，窗格关闭时随之消失。子代理的权限提示也算等待，因为要回答的是你。请求和结果没有一一对应：并行调用工具时，任何一个工具完成都会把“等待”改回“工作中”，即使另一个提示还开着，下一个提示会把它纠正过来；你回答之后，迟到的通知也可能让它重新变成“等待”，直到工具结束。状态栏的计数不包含超过两小时的记录。总览只显示运行在 tmux 窗格里的代理。
 
 ## 卸载 / 恢复
 

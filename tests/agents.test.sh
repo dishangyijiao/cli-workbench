@@ -23,6 +23,8 @@ cat > "$T_DIR/bin/tmux" <<'SH'
 [ "${FAKE_TMUX_FAIL:-}" = 1 ] && exit 1
 if [ "$1" = display-message ]; then echo "$FAKE_SERVER"; exit 0; fi
 if [ "$1" = list-panes ]; then [ "${FAKE_LIST_FAIL:-}" = 1 ] && exit 1; cat "$FAKE_PANES"; exit 0; fi
+# FAKE_SELECT_FAIL=1: the window closed between the listing and the jump.
+if [ "$1" = select-window ] && [ "${FAKE_SELECT_FAIL:-}" = 1 ]; then exit 1; fi
 echo "$*" >> "$FAKE_LOG"
 SH
 chmod +x "$T_DIR/bin/tmux"
@@ -79,9 +81,12 @@ rm -f "$SESS"/%1[0-9][0-9].json; head -n 4 "$FAKE_PANES" > "$FAKE_PANES.4"; mv "
 echo "jump goes to the session, the window and the pane, on the client that asked"
 : > "$LOG"; out=$(run --jump %3); rc=$?
 assert_eq "exit 0" 0 "$rc"
-assert_eq "switch-client, select-window (session-qualified), select-pane, in that order" 'switch-client -t $2|select-window -t $2:@3|select-pane -t %3' "$(paste -sd'|' "$LOG")"
+assert_eq "select-window (session-qualified), select-pane, then switch-client last" 'select-window -t $2:@3|select-pane -t %3|switch-client -t $2' "$(paste -sd'|' "$LOG")"
 : > "$LOG"; run --client /dev/ttys009 --jump %3 >/dev/null
-assert_eq "with a client the switch names it" 'switch-client -c /dev/ttys009 -t $2|select-window -t $2:@3|select-pane -t %3' "$(paste -sd'|' "$LOG")"
+assert_eq "with a client the switch names it" 'select-window -t $2:@3|select-pane -t %3|switch-client -c /dev/ttys009 -t $2' "$(paste -sd'|' "$LOG")"
+: > "$LOG"; out=$(FAKE_SELECT_FAIL=1 run --client /dev/ttys009 --jump %3); rc=$?
+assert "a window that closed meanwhile fails the jump" test "$rc" -ne 0
+refute "and the client is not moved to another session" grep -q switch-client "$LOG"
 : > "$LOG"; out=$(run --jump %77); rc=$?
 assert "a pane that is gone is refused" test "$rc" -ne 0
 assert_eq "and nothing is switched" "" "$(cat "$LOG")"
@@ -95,6 +100,13 @@ out=$(run --list)
 assert_eq "the stale one is marked" "idle? alpha main 2h" "$(printf '%s\n' "$out" | grep alpha | tr -s ' ')"
 assert_eq "a fresh one is not" "working beta feat-x 2m" "$(printf '%s\n' "$out" | grep beta | tr -s ' ')"
 rec %1 idle alpha main $((now - 7300))
+
+echo "a stale waiting record is not counted: the status line must not claim an agent needs you when it crashed long ago"
+assert_eq "two waiting before" "⏳2" "$(run --count)"
+touch -t 202001010000 "$SESS/%3.json"
+assert_eq "the stale one is left out" "⏳1" "$(run --count)"
+rec %3 waiting gamma fix/y $((now - 30))
+assert_eq "a fresh one counts again" "⏳2" "$(run --count)"
 
 echo "a record that changed after it was read is not removed"
 rec %9 working gone main "$now"
@@ -148,7 +160,7 @@ sed -n "${FAKE_PICK:-1}p"
 SH
 chmod +x "$T_DIR/bin/fzf"
 : > "$LOG"; FAKE_PICK=2 run >/dev/null
-assert_eq "the second row (gamma, pane %3) was jumped to" 'switch-client -t $2|select-window -t $2:@3|select-pane -t %3' "$(paste -sd'|' "$LOG")"
+assert_eq "the second row (gamma, pane %3) was jumped to" 'select-window -t $2:@3|select-pane -t %3|switch-client -t $2' "$(paste -sd'|' "$LOG")"
 : > "$LOG"; out=$(PATH="$T_DIR/bin:$PATH" FAKE_PICK=9 sh "$AGENTS" </dev/null 2>&1)
 assert_eq "no choice (fzf closed) jumps nowhere" "" "$(cat "$LOG")"
 rm "$T_DIR/bin/fzf"
@@ -161,7 +173,7 @@ done
 menu() { PATH="$T_DIR/bin:$T_DIR/tools" sh "$AGENTS" 2>&1 <<<"$1"; }
 : > "$LOG"; out=$(menu 3)
 assert_contains "the rows are numbered" "1) waiting" "$out"
-assert_eq "choosing 3 jumps to the third row (beta, pane %2)" 'switch-client -t $1|select-window -t $1:@2|select-pane -t %2' "$(paste -sd'|' "$LOG")"
+assert_eq "choosing 3 jumps to the third row (beta, pane %2)" 'select-window -t $1:@2|select-pane -t %2|switch-client -t $1' "$(paste -sd'|' "$LOG")"
 : > "$LOG"; menu 0 >/dev/null; menu 99 >/dev/null; menu x >/dev/null; menu "" >/dev/null
 assert_eq "an invalid or empty choice jumps nowhere" "" "$(cat "$LOG")"
 
