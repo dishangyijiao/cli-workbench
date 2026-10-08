@@ -42,6 +42,15 @@ A bug fix starts with a test that reproduces the bug. Commit the test together w
 
 A change with no behaviour, such as a comment, may say so with a line `tdd: skip - <reason>` in the commit message; CI prints every use of it. The gate cannot see whether the test came first, whether it is meaningful, or whether it fails without the change, so say in the pull request how you saw it fail, and the reviewer checks.
 
+## Automated review
+
+[CodeRabbit](https://www.coderabbit.ai) comments on pull requests in this repository. Its configuration is `.coderabbit.yaml`.
+
+- It is advisory. It only comments: every feature that pushes commits or opens follow-up pull requests (docstrings, unit tests, autofix, CI fixes, merge-conflict resolution) is switched off, and it is not set up to block a merge. If it ever pushes a commit, treat that as a bug and tell a maintainer.
+- It does not replace review. CI and a maintainer's review remain the merge gate, and a maintainer decides which of its comments to act on.
+- To ask for another pass after you push, comment `@coderabbitai review` on the pull request (it reviews only the new changes; `@coderabbitai full review` reviews the whole pull request). Each pass counts against the plan's review allowance, so ask when you need it.
+- Do not paste secrets or private names in a conversation with it; this is a public repository and its comments are public.
+
 ## Language
 
 Code, comments, commit messages and every file except `README.zh-CN.md` are in English.
