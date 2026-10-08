@@ -1,0 +1,90 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# CodeRabbit is an extra, advisory reviewer. It only comments: every feature that writes code or opens a follow-up
+# pull request is switched off below, and nothing here makes it block a merge. The merge gate is CI plus the
+# maintainer's own review (see CONTRIBUTING.md). The defaults of docstrings, unit_tests, autofix, fix_ci and
+# resolve_merge_conflict are ON in CodeRabbit, so each one is turned off explicitly.
+language: en-US
+early_access: false
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  in_progress_fortune: false
+  suggested_reviewers: false
+  auto_assign_reviewers: false
+  auto_apply_labels: false
+  review_status: true
+  commit_status: true
+
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+
+  path_filters:
+    - "!**/lazy-lock.json"
+
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+    simplify:
+      enabled: false
+    autofix:
+      enabled: false
+    fix_ci:
+      enabled: false
+    resolve_merge_conflict:
+      enabled: false
+    custom: []
+
+  pre_merge_checks:
+    docstrings:
+      mode: "off"
+    issue_assessment:
+      mode: "off"
+
+  tools:
+    shellcheck:
+      enabled: true
+    gitleaks:
+      enabled: true
+    markdownlint:
+      enabled: true
+    yamllint:
+      enabled: true
+    actionlint:
+      enabled: true
+
+  path_instructions:
+    - path: "home/**/*.sh"
+      instructions: |
+        POSIX sh unless the file's shebang says bash; bash scripts must stay bash 3.2 compatible (macOS system bash).
+        Check quoting, `set -eu` hazards, portability between macOS and Linux, and injection: pane ids, branch names,
+        project directories and anything read from stdin must never be interpolated into a shell command line.
+        Hooks must not block or slow the caller: look for unbounded waits and missing timeouts.
+        These scripts maintain hint-level state for one human (for example tmux pane state files). Do not ask for
+        strict concurrency guarantees, locking or event ordering there; flag only real defects such as a half-written
+        file, deleting someone else's record, command injection, or a hang.
+    - path: "tests/**"
+      instructions: |
+        Each test must fail when the behaviour it claims is broken. Point out assertions that would still pass if the
+        code under test were wrong (for example checking only that a command succeeded), and tests that use the real
+        HOME or real tmux server instead of a temporary one.
+    - path: "home/**/*.tmpl"
+      instructions: |
+        chezmoi templates. Check that the rendered file is valid for every supported OS and that no value is
+        hard-coded to one machine or user.
+    - path: "{README.md,README.zh-CN.md}"
+      instructions: |
+        The two READMEs must stay in step: a user-visible change described in one must appear in the other.
+        Flag statements the code does not back up.
+    - path: "**"
+      instructions: |
+        This is a PUBLIC repository. Flag as critical any private project name, host name, user name, absolute path
+        of a personal machine, token, or text copied from private work. Everything written into the repository is
+        in English, except README.zh-CN.md and the Chinese keybindings page.
