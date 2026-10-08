@@ -1,0 +1,6 @@
+{
+  "name": "agent-state",
+  "version": "0.1.0",
+  "author": { "name": "cli-workbench" },
+  "description": "Records in a file per tmux pane whether the agent is working, waiting for you or idle, for the overview popup (prefix + O)."
+}

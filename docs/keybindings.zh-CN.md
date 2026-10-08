@@ -16,6 +16,7 @@
 | ★ `prefix e` | 弹出 Neovim 浏览代码（`:qa` 关闭） |
 | ★ `prefix g` | 弹出本分支改过的文件，可预览 diff（`:qa` 关闭） |
 | ★ `prefix a` | 记一个想法：输入一行，`Enter`（空行取消）；shell 里用 `idea 文字` |
+| ★ `prefix O` | 哪些代理在工作、在等你、空闲：选一个，`Enter` 跳过去（`Esc` 关闭） |
 | ★ `prefix t` | 翻译刚选中的文字（弹窗，`q` 关闭） |
 | ★ `C-h` `C-j` `C-k` `C-l` | 在窗格之间移动（在 Neovim 里也通用） |
 | ★ `prefix w` | 树状列表，选择会话或窗口 |

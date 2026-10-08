@@ -12,6 +12,11 @@
       "name": "reply-polish",
       "source": "./reply-polish",
       "description": "Lays out assistant replies for the terminal: a centered text column, headings, lists, tables and line breaks."
+    },
+    {
+      "name": "agent-state",
+      "source": "./agent-state",
+      "description": "Records whether each tmux pane's agent is working, waiting for you or idle, for the overview popup."
     }
   ]
 }
