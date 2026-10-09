@@ -69,7 +69,7 @@ What gets deployed (the layout follows [chezmoi's naming](https://www.chezmoi.io
 | `dot_zshrc`, `dot_config/private_zsh/` | `~/.zshrc`, `~/.config/zsh/{path,tmux-autostart}.zsh` | **replaces your `.zshrc`**; move your own tweaks to `~/.config/zsh/local.zsh` first. Installers (nvm, bun, ...) append to `~/.zshrc`; `chezmoi diff` shows that, so move such lines into `local.zsh` |
 | `dot_config/ghostty/config` | `~/.config/ghostty/config` | Catppuccin Mocha, Nerd Font, macOS tabs title bar |
 | `dot_claude/executable_statusline.sh` | `~/.claude/statusline.sh` | the Claude Code status line (project, branch, model, context, cost, rate limits); only if you use Claude Code |
-| `dot_claude/workbench-mods/` | `~/.claude/workbench-mods/` | three Claude Code mods (`chezmoi-guard`, `reply-polish`, `agent-state`) as a local marketplace; deployed, not installed: see "Claude Code mods" |
+| `dot_claude/workbench-mods/` | `~/.claude/workbench-mods/` | four Claude Code mods (`chezmoi-guard`, `reply-polish`, `agent-state`, `md-open`) as a local marketplace; deployed, not installed: see "Claude Code mods" |
 | `dot_codex/modify_private_config.toml` | `~/.codex/config.toml` | merge portable status-line and completion-bell preferences; preserve other local values |
 | `.chezmoitemplates/agent-instructions.md`, `dot_claude/CLAUDE.md.tmpl`, `dot_codex/AGENTS.md.tmpl`, `dot_gemini/GEMINI.md.tmpl` | `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.gemini/GEMINI.md` | the same short text for every agent: how this workbench works (config lives in the repo, secrets stay out, one tmux session per project). Your own rules: see "Agent instructions" |
 | `dot_config/git/config` | `~/.config/git/config` | portable Git settings; Git reads this file by itself, and `~/.gitconfig` (identity, credentials) stays yours |
@@ -131,12 +131,13 @@ Edit the merge template to change these shared preferences. Changes to these fiv
 
 ## Claude Code mods
 
-A *mod* is a Claude Code plugin whose behavior is a small TypeScript file that Claude Code calls when something happens: a tool is about to run, a reply is about to be drawn. This repository ships three, as a local *marketplace* (a folder Claude Code installs plugins from) in `home/dot_claude/workbench-mods/`:
+A *mod* is a Claude Code plugin whose behavior is a small TypeScript file that Claude Code calls when something happens: a tool is about to run, a reply is about to be drawn. This repository ships four, as a local *marketplace* (a folder Claude Code installs plugins from) in `home/dot_claude/workbench-mods/`:
 
 | Mod | What it does |
 |---|---|
 | `chezmoi-guard` | Refuses `Edit`, `Write` and `NotebookEdit` on a file chezmoi deploys (`~/.zshrc`, `~/.tmux.conf`, ...) and names the source file to edit instead, so the next `chezmoi apply` cannot overwrite the change. Shows a line above the prompt while the deployed files differ from the source (`chezmoi status`). It cannot see edits made through Bash (`sed -i`, `> file`). If chezmoi is missing or fails, it blocks nothing. |
 | `agent-state` | Records, in one small file per tmux pane, whether the agent in it is working, waiting for you or idle, so that the overview popup (see "Agent overview") can list them. It runs `~/.tmux/scripts/agent-state.sh` on Claude Code events and changes nothing else: outside tmux, or if the script fails, nothing happens, and a hook waits for the script for at most one second. |
+| `md-open` | Adds `/md`: a pane lists the Markdown files this conversation mentioned (paths in tool calls, Bash commands, replies, your prompts and tool results; absolute, `~/` and relative to the session's directory), newest first, each once, only those that exist, with `~` for your home directory. Pick one with Enter or its digit (`1`-`9`) and it opens read-only (`nvim -R`) in a tmux popup, rendered by render-markdown.nvim; quitting Neovim closes the popup. The path goes to tmux as an argument, never through a shell. Outside tmux, or when tmux fails, a toast shows the path instead. It needs no model turn, and changes no file. |
 | `reply-polish` | Lays out the assistant's replies for a wide terminal. The text is one column, at most 80 cells (about 40 Chinese characters) and at most 72% of the window, left-aligned and centered on the screen. Headings are bold, the first two levels in cyan; lists use `•` and `◦`; a table is drawn with box lines when it fits the column and becomes a list when it does not; lines are cut so that a number stays with its unit and closing punctuation never starts a line; a code block longer than 30 lines is shortened to 12. Only the drawing changes: the stored reply, and `ctrl+o`, keep the original. |
 
 **Install once per machine** (needs Claude Code 2.1.287 or later; `chezmoi apply` only deploys the files, it does not install anything):
@@ -147,6 +148,7 @@ claude plugin marketplace add ~/.claude/workbench-mods
 claude plugin install chezmoi-guard@cli-workbench --scope user
 claude plugin install reply-polish@cli-workbench --scope user
 claude plugin install agent-state@cli-workbench --scope user
+claude plugin install md-open@cli-workbench --scope user
 ```
 
 Then restart Claude Code, or run `/reload-plugins` in a running session.
@@ -154,7 +156,7 @@ Then restart Claude Code, or run `/reload-plugins` in a running session.
 - **Change a mod:** edit it under `home/dot_claude/workbench-mods/`, run `chezmoi apply`, then `/reload-plugins`. A marketplace that is a folder is read from the folder itself, so no version bump is needed. `claude plugin disable <name>` turns one off, `claude plugin uninstall <name>` removes it.
 - **Tests:** `tests/mods.test.sh` always checks the layout of the marketplace. With Claude Code installed it also runs `claude plugin validate` and each mod's own tests (`claude plugin test`); without it that part is skipped.
 - **Trust:** a mod sees every tool call and reply and runs with your permissions. Read the source before you install it; each mod is a few hundred lines.
-- **Stability:** the mods API is early access and changes between releases. These mods were built and tested with Claude Code 2.1.289. Mods do not load under `--safe-mode` or `--bare`.
+- **Stability:** the mods API is early access and changes between releases. These mods were built and tested with Claude Code 2.1.289 (`md-open` with 2.1.295). Mods do not load under `--safe-mode` or `--bare`.
 - **Not tracked on purpose:** the type declarations Claude Code writes into a mod's `.claude-plugin/types/` when it loads the mod.
 
 ## Keybindings

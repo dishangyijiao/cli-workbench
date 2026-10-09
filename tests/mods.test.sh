@@ -16,9 +16,9 @@ echo "the marketplace is deployed and names every mod"
 assert "marketplace.json is deployed" test -s "$MARKET"
 assert "marketplace.json is valid JSON" jq -e . "$MARKET"
 assert_eq "marketplace name" "cli-workbench" "$(jq -r .name "$MARKET" 2>/dev/null)"
-assert_eq "the mods listed" "agent-state chezmoi-guard reply-polish" "$(jq -r '.plugins[].name' "$MARKET" 2>/dev/null | sort | tr '\n' ' ' | sed 's/ $//')"
+assert_eq "the mods listed" "agent-state chezmoi-guard md-open reply-polish" "$(jq -r '.plugins[].name' "$MARKET" 2>/dev/null | sort | tr '\n' ' ' | sed 's/ $//')"
 
-for name in agent-state chezmoi-guard reply-polish; do
+for name in agent-state chezmoi-guard md-open reply-polish; do
   echo "$name"
   source=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .source' "$MARKET" 2>/dev/null)
   dir=$M/${source#./}
@@ -46,10 +46,17 @@ assert "state.ts has a test" test -f "$A/state.ts" -a -f "$A/state.test.ts"
 assert "the script the mod calls is deployed" test -x "$H/.tmux/scripts/agent-state.sh"
 assert "the mod names that script" grep -q 'tmux/scripts/agent-state.sh' "$A/register.ts"
 
+echo "md-open: opens a file through tmux as an argv, never a shell string, and changes no file"
+O=$M/md-open/hooks
+assert "the path collection lives in paths.ts, with a test" test -f "$O/paths.ts" -a -f "$O/paths.test.ts"
+assert "it opens Neovim read-only in a tmux popup" grep -q "'tmux', 'display-popup', '-E'" "$O/register.tsx"
+refute "it builds no shell string" grep -Eq "'sh', '-c'|bash -c" "$O/register.tsx"
+refute "it writes no file" grep -Eq '\$\.fs\.(write|remove|rename|mkdir)' "$O/register.tsx"
+
 echo "with Claude Code installed: validate and run each mod's own tests"
 if command -v claude >/dev/null && claude plugin test --help >/dev/null 2>&1; then
   assert "the marketplace validates" claude plugin validate "$M"
-  for name in agent-state chezmoi-guard reply-polish; do
+  for name in agent-state chezmoi-guard md-open reply-polish; do
     assert "$name validates" claude plugin validate "$M/$name"
     assert "$name passes its tests" claude plugin test "$M/$name"
   done

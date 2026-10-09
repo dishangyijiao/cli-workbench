@@ -1,0 +1,7 @@
+{
+  "name": "md-open",
+  "version": "0.1.0",
+  "author": { "name": "cli-workbench" },
+  "description": "/md lists the Markdown files this conversation mentioned and opens the one you pick, read-only, in Neovim in a tmux popup.",
+  "types": "./types/index.d.ts"
+}
