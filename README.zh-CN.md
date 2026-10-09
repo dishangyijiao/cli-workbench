@@ -171,12 +171,13 @@ claude plugin install agent-state@cli-workbench --scope user
 
 ## 代码弹窗（tmux）
 
-不离开代理所在的窗格就能看代码。两个键都会在当前窗格上方弹出 Neovim，目录就是该窗格的目录；关掉 Neovim，弹窗随之关闭，回到原处。需要 tmux 3.2+。
+不离开代理所在的窗格就能看代码。这几个键都会在当前窗格上方弹出 Neovim，目录就是该窗格的目录；关掉 Neovim，弹窗随之关闭，回到原处。需要 tmux 3.2+。
 
 - 先按 `prefix` 再按 `e`：**浏览**项目，用平常的 Neovim 按键（`<leader>ff` 找文件、`<leader>fg` 全文搜索、`<leader>e` 文件树）。`:qa` 关闭。
 - 在这里打开的 Markdown 文件会原地渲染显示（标题、列表、表格、代码块）；`<leader>mp` 关闭 / 打开渲染。正文是居中的约 80 字符宽的一列，宽屏上也好读。
 - 先按 `prefix` 再按 `g`：**查看改动**。用 Telescope 列出当前分支自离开默认分支（`origin/HEAD`，否则 `origin/main`、`main` 等）以来改过的每个文件：已提交、未提交、已删除和未跟踪的都算，并分别标注，预览区是带颜色的 diff。按 `Enter` 会在新标签页里打开该文件，左边是它在分叉点时的版本，用 Neovim 自带的 diff 模式对照（已删除的文件：左边是旧版本，右边为空）（`]c`/`[c` 在改动之间跳转）。在 Neovim 里也可以用 `:Changes` 或 `<leader>gv` 打开同一个列表。`:qa` 关闭弹窗。不在 Git 仓库里时会给出提示。不需要额外插件。
 - 脚本是 `home/dot_tmux/scripts/executable_code-popup.sh`；tmux 只传给它窗格 ID，从不传目录名。
+- 先按 `prefix` 再按 `M`：**读代理提到的 Markdown 文件**。列出当前窗格里 Claude Code 对话写过、改过、读过或提到过（在消息、工具调用和工具结果里）的 `.md` 文件，最近提到的排在最前，每个只出现一次，带预览；已经不存在的文件不列出。按 `Enter` 用只读方式（`nvim -R`）打开，按上面说的方式渲染；`:q` 关闭弹窗，列表里按 `Esc` 也会关闭。没有 [fzf](https://github.com/junegunn/fzf) 时是编号菜单。它通过代理总览的状态文件里记录的该窗格的会话 ID 找到对话（见[代理总览](#代理总览tmux)），所以需要 `agent-state` mod 和 `jq`；Codex、Gemini 和 Grok 的窗格不记录会话 ID，暂不支持。它只读不写。`M` 取代了 tmux 默认的 `prefix M`（清除被标记的窗格），工作台用不到这个功能。脚本是 `home/dot_tmux/scripts/executable_md-picker.sh`。
 
 ## 翻译选中的文字（tmux）
 

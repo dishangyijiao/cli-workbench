@@ -15,6 +15,7 @@
 | ★ `prefix P` | 选择项目（fzf），打开或切换到它的会话 |
 | ★ `prefix e` | 弹出 Neovim 浏览代码（`:qa` 关闭） |
 | ★ `prefix g` | 弹出本分支改过的文件，可预览 diff（`:qa` 关闭） |
+| ★ `prefix M` | 选一个代理对话里提到的 Markdown 文件，渲染后只读打开（`:q` 或 `Esc` 关闭） |
 | ★ `prefix a` | 记一个想法：输入一行，`Enter`（空行取消）；shell 里用 `idea 文字` |
 | ★ `prefix O` | 哪些代理在工作、在等你、空闲：选一个，`Enter` 跳过去（`Esc` 关闭） |
 | ★ `prefix t` | 翻译刚选中的文字（弹窗，`q` 关闭） |
