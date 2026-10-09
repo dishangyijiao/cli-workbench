@@ -52,11 +52,11 @@ done
 echo "# weekly" > "$HOME/reports/weekly.md"
 
 {
-  rec assistant "$P" "$(tool Write "{\"file_path\":\"$P/docs/plan.md\",\"content\":\"x\"}")"
+  rec assistant "$P" "$(tool Write "$(jq -nc --arg f "$P/docs/plan.md" '{file_path: $f, content: "x"}')")"
   rec user "$P" '[{"type":"tool_result","tool_use_id":"x","content":"wrote notes/report.md and /nonexistent/gone.md"}]'
   rec assistant "$P" '[{"type":"text","text":"See `~/reports/weekly.md`, and docs/plan.mdx."}]'
-  rec user "$P" "[{\"type\":\"tool_result\",\"tool_use_id\":\"x\",\"content\":[{\"type\":\"text\",\"text\":\"($P/arr.md)\"}]}]"
-  rec assistant "$P" "[{\"type\":\"thinking\",\"thinking\":\"maybe $P/thought.md\"}]"
+  rec user "$P" "$(jq -nc --arg t "($P/arr.md)" '[{type: "tool_result", tool_use_id: "x", content: [{type: "text", text: $t}]}]')"
+  rec assistant "$P" "$(jq -nc --arg t "maybe $P/thought.md" '[{type: "thinking", thinking: $t}]')"
   echo 'not json {{{'
   jq -nc --arg c "$P/sub" --arg p "$P" '{type: "assistant", cwd: $c, message: {content: [
       {type: "tool_use", name: "Bash", input: {command: "cat ../top.md | head; ls dir.md ../dir.md"}},
