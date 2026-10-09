@@ -19,6 +19,11 @@
       "description": "Records whether each tmux pane's agent is working, waiting for you or idle, for the overview popup."
     },
     {
+      "name": "blocked-notify",
+      "source": "./blocked-notify",
+      "description": "Sends one native notification when a background session is blocked, needs input or waits, with the reset time of a usage limit."
+    },
+    {
       "name": "md-open",
       "source": "./md-open",
       "description": "/md lists the Markdown files this conversation mentioned and opens the one you pick, read-only, in Neovim in a tmux popup."

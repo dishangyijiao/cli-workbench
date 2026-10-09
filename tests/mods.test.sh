@@ -16,9 +16,9 @@ echo "the marketplace is deployed and names every mod"
 assert "marketplace.json is deployed" test -s "$MARKET"
 assert "marketplace.json is valid JSON" jq -e . "$MARKET"
 assert_eq "marketplace name" "cli-workbench" "$(jq -r .name "$MARKET" 2>/dev/null)"
-assert_eq "the mods listed" "agent-state chezmoi-guard md-open reply-polish" "$(jq -r '.plugins[].name' "$MARKET" 2>/dev/null | sort | tr '\n' ' ' | sed 's/ $//')"
+assert_eq "the mods listed" "agent-state blocked-notify chezmoi-guard md-open reply-polish" "$(jq -r '.plugins[].name' "$MARKET" 2>/dev/null | sort | tr '\n' ' ' | sed 's/ $//')"
 
-for name in agent-state chezmoi-guard md-open reply-polish; do
+for name in agent-state blocked-notify chezmoi-guard md-open reply-polish; do
   echo "$name"
   source=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .source' "$MARKET" 2>/dev/null)
   dir=$M/${source#./}
@@ -53,10 +53,17 @@ assert "it opens Neovim read-only in a tmux popup" grep -q "'tmux', 'display-pop
 refute "it builds no shell string" grep -Eq "'sh', '-c'|bash -c" "$O/register.tsx"
 refute "it writes no file" grep -Eq '\$\.fs\.(write|remove|rename|mkdir)' "$O/register.tsx"
 
+echo "blocked-notify: polls claude as an argv, sends only a notification, and changes no file"
+B=$M/blocked-notify/hooks
+assert "the limit wording lives in limit.ts, with a test" test -f "$B/limit.ts" -a -f "$B/limit.test.ts"
+assert "it polls claude agents --json" grep -q "'claude', 'agents', '--json'" "$B/register.ts"
+refute "it builds no shell string" grep -Eq "'sh', '-c'|bash -c" "$B/register.ts"
+refute "it writes no file" grep -Eq '\$\.fs\.(write|remove|rename|mkdir)' "$B/register.ts"
+
 echo "with Claude Code installed: validate and run each mod's own tests"
 if command -v claude >/dev/null && claude plugin test --help >/dev/null 2>&1; then
   assert "the marketplace validates" claude plugin validate "$M"
-  for name in agent-state chezmoi-guard md-open reply-polish; do
+  for name in agent-state blocked-notify chezmoi-guard md-open reply-polish; do
     assert "$name validates" claude plugin validate "$M/$name"
     assert "$name passes its tests" claude plugin test "$M/$name"
   done
