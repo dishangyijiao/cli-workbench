@@ -171,12 +171,13 @@ Press `prefix` then `P` (`Ctrl-a P`) for a picker over `~/dev/projects`. Every d
 
 ## Code popups (tmux)
 
-Read code without leaving the agent's pane. Both keys open Neovim in a popup over the current pane, in that pane's directory; closing Neovim closes the popup and you are back where you were. They need tmux 3.2+.
+Read code without leaving the agent's pane. These keys open Neovim in a popup over the current pane, in that pane's directory; closing Neovim closes the popup and you are back where you were. They need tmux 3.2+.
 
 - `prefix` then `e`: **browse** the project with the usual Neovim keys (`<leader>ff` find a file, `<leader>fg` search, `<leader>e` file tree). `:qa` closes it.
 - A Markdown file opened there is shown rendered in place (headings, lists, tables, code blocks); `<leader>mp` switches the rendering off and on. The text is a centred column of about 80 characters, so it stays readable on a wide screen.
 - `prefix` then `g`: **review changes**. A Telescope list of every file the branch changed since it left the default branch (`origin/HEAD`, else `origin/main`, `main` and so on): committed, uncommitted, deleted and untracked files, each marked, with a colored diff as the preview. `Enter` opens the file in a new tab beside its version at the fork point, in Neovim's own diff mode (a deleted file: its old version beside an empty side) (`]c`/`[c` jump between changes). Inside Neovim the same list is `:Changes` or `<leader>gv`. `:qa` closes the popup. Outside a Git repository it says so. No extra plugin is needed.
 - The script is `home/dot_tmux/scripts/executable_code-popup.sh`; tmux passes it only the pane id, never a directory name.
+- `prefix` then `M`: **read a Markdown file the agent mentioned**. A list of the `.md` files that the Claude Code conversation in the current pane wrote, edited, read or named (in its messages, tool calls and tool results), the most recently mentioned first, each once, with a preview; files that no longer exist are left out. `Enter` opens the file read-only (`nvim -R`), rendered as above; `:q` closes the popup, and so does `Esc` in the list. Without [fzf](https://github.com/junegunn/fzf) it is a numbered menu. It finds the conversation through the session id that the agent overview's state file holds for the pane (see [Agent overview](#agent-overview-tmux)), so it needs the `agent-state` mod and `jq`; Codex, Gemini and Grok panes record no session id and are not covered yet. It only reads. `M` replaces tmux's default `prefix M` (clear the marked pane), which the workbench does not use. The script is `home/dot_tmux/scripts/executable_md-picker.sh`.
 
 ## Translate what you select (tmux)
 
