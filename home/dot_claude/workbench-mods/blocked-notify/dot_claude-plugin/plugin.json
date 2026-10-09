@@ -1,0 +1,6 @@
+{
+  "name": "blocked-notify",
+  "version": "0.1.0",
+  "author": { "name": "cli-workbench" },
+  "description": "Sends one native notification when a Claude Code background session is blocked, needs input or waits, with the reset time when it hit a usage limit."
+}
