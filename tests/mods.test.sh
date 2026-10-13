@@ -53,6 +53,13 @@ assert "it opens Neovim read-only in a tmux popup" grep -q "'tmux', 'display-pop
 refute "it builds no shell string" grep -Eq "'sh', '-c'|bash -c" "$O/register.tsx"
 refute "it writes no file" grep -Eq '\$\.fs\.(write|remove|rename|mkdir)' "$O/register.tsx"
 
+echo "reply-polish: a wide table is narrowed and wrapped, and becomes a list only when no column fits"
+R=$M/reply-polish/hooks
+assert "drawTable takes a maximum width and wraps cells (wrapCell)" grep -q 'export const wrapCell' "$R/format.ts"
+assert "the wrapping is tested" grep -q "narrows the widest column and wraps its cells" "$R/format.test.ts"
+assert "the list fallback is tested" grep -q "gives up on a table whose narrowest columns still do not fit" "$R/format.test.ts"
+refute "a wide table no longer goes to a list when it merely exceeds the column" grep -q 'drawn.width <= width' "$R/format.ts"
+
 echo "with Claude Code installed: validate and run each mod's own tests"
 if command -v claude >/dev/null && claude plugin test --help >/dev/null 2>&1; then
   assert "the marketplace validates" claude plugin validate "$M"
