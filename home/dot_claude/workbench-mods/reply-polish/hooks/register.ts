@@ -85,7 +85,7 @@ export const register: Register = on => {
         segment.cells.map((row, k) => {
           if (row === null) return text({ dimColor: true }, segment.lines[k] ?? '')
 
-          const isHeader = k === 1
+          const isHeader = k >= 1 && k <= segment.headerLines
           const sources = segment.sources[k] ?? []
           // A body cell is drawn as markdown in a box of the column's width, so code spans and bold keep
           // their style; the header is plain text in the accent colour.

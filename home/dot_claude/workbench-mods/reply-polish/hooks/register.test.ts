@@ -57,7 +57,7 @@ test('draws list items with an accent bullet and a column of their own', async (
   expect(json).not.toContain('"text":"- one')
 })
 
-test('keeps a table no wider than the text column, as a list when it is wider', async ($, on) => {
+test('wraps a table cell that is wider than the text column, as a list only when no column fits', async ($, on) => {
   on('ui.render', { component: 'AssistantMessage' }, () => ({ type: 'Text', props: {}, children: ['engine'] }))
   const long = '一二三四五六七八九十'.repeat(6)
 
@@ -70,9 +70,20 @@ test('keeps a table no wider than the text column, as a list when it is wider', 
   })
   const json = JSON.stringify(tree)
 
-  expect(json).not.toContain('┌')
-  expect(json).toContain('"•')
-  expect(json).toContain('**a** —')
+  expect(json).toContain('┌')
+  expect(json).not.toContain('"•')
+
+  const narrow = JSON.stringify(
+    await $.ui.render({
+      component: 'AssistantMessage',
+      surface: 'terminal',
+      requestId: 'reply',
+      viewport: { columns: 30, rows: 30 },
+      props: { text: `| a | b | c | d | e | f | g | h |\n|---|---|---|---|---|---|---|---|\n| 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |`, isFirstOfReply: false },
+    }),
+  )
+  expect(narrow).not.toContain('┌')
+  expect(narrow).toContain('"•')
 })
 
 test('draws a body cell as markdown so a code span keeps its style', async ($, on) => {
