@@ -46,6 +46,8 @@ English | [简体中文](README.zh-CN.md)
 
 **What it changes on your machine:** exactly the files under [`home/`](home) that chezmoi deploys (the table below), a zsh completion cache in `~/.cache/zsh/`, and backups of the files it replaces in `~/.cli-workbench-backup/<timestamp>/` (chezmoi itself keeps none; see Safety model).
 
+For Omarchy / Arch Linux, follow [the dedicated migration guide](docs/omarchy.md) before applying dotfiles. Arch Linux container tests cover deployment and shell behavior; desktop integration needs host validation.
+
 ## Quick start
 
 ```sh

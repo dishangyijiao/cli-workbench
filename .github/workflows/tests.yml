@@ -83,3 +83,19 @@ jobs:
           ln -s /bin/bash "$RUNNER_TEMP/bash32/bash"
           PATH="$RUNNER_TEMP/bash32:$PATH" bash --version | head -1
           PATH="$RUNNER_TEMP/bash32:$PATH" tests/run.sh
+
+  arch:
+    name: archlinux-container
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+      - name: Test on current Arch Linux
+        run: |
+          docker run --rm -v "$PWD:/workspace:ro" -w /workspace archlinux:latest bash -euc '
+            pacman -Syu --noconfirm --needed git chezmoi zsh tmux jq shellcheck fzf ripgrep neovim zoxide starship xdg-utils
+            git config --global --add safe.directory /workspace
+            scripts/privacy-scan --all
+            # The existing macOS/Ubuntu matrix runs shellcheck; Arch validates runtime portability.
+            tests/run.sh
+          '

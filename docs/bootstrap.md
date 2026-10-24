@@ -25,3 +25,7 @@ Before each apply, the hook installed by `init` copies the files it is about to 
 - Installing Homebrew and the tools: `brew bundle --file=packages/Brewfile`.
 - tmux plugins: `git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm`, then press `prefix` + `I` inside tmux. The tmux config works without it.
 - Secrets and per-machine settings: copy `templates/*.example` into `~/.config/zsh/` (see `docs/architecture.md`).
+
+## Omarchy / Arch Linux
+
+See [the Omarchy migration guide](omarchy.md) for pacman dependencies, isolated tmux validation and safe incremental deployment. Arch Linux is tested in CI using a container; Hyprland integration still requires a real host.
