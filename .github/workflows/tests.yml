@@ -97,7 +97,7 @@ jobs:
             # Workstation users are unprivileged; root-only container tests give false results.
             useradd -m workbench
             echo "Arch tool versions:"; chezmoi --version; shellcheck --version | head -3
-            runuser -u workbench -- bash -c "git config --global --add safe.directory /workspace; scripts/privacy-scan --all; tests/run.sh"
+            runuser -u workbench -- bash -euc "git config --global --add safe.directory /workspace; scripts/privacy-scan --all; tests/run.sh"
           '
       - name: Diagnose Arch failures
         if: failure()
