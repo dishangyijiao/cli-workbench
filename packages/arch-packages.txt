@@ -14,5 +14,4 @@ zsh-syntax-highlighting
 ghostty
 xdg-utils
 wl-clipboard
-bc
 diffutils

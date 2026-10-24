@@ -14,7 +14,7 @@ CLI Workbench can run on Omarchy, and Arch is now included in the automated cont
 On an Omarchy installation with pacman:
 
 ```sh
-sudo pacman -S --needed git chezmoi zsh tmux fzf ripgrep jq neovim zoxide starship ghostty xdg-utils wl-clipboard bc diffutils
+sudo pacman -S --needed git chezmoi zsh tmux fzf ripgrep jq neovim zoxide starship ghostty xdg-utils wl-clipboard diffutils
 ```
 
 Install the required Nerd Font separately or change the Ghostty `font-family` setting. Install Coding Agents and their credentials separately; this repository deliberately does not manage secrets.
@@ -48,6 +48,7 @@ Deploy the remaining targets only after reviewing each diff. **Apply `~/.zshrc` 
 - Omarchy's tmux prefix may differ from CLI Workbench's `Ctrl+A`. Choose one tmux configuration as authoritative; do not concatenate both.
 - The Ghostty config is a chezmoi OS template: macOS retains its title-bar tabs and window restoration, while Linux omits those options. The rendered config is checked on macOS and Linux in CI.
 - tmux-fzf-url selects `xdg-open` when available, otherwise `open`. Check the effective `@fzf-url-open` option.
+- Ctrl+backslash Neovim-aware pane navigation uses the existing tmux version helper; `bc` is not required.
 - The Homebrew Brewfile is not an Arch package manifest.
 - Validate SSH/Tailscale, clipboard and Wayland integration on the actual host. The Arch CI container validates scripts and chezmoi deployment, but cannot validate a Hyprland desktop session or Ghostty rendering.
 

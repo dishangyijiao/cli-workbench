@@ -41,6 +41,16 @@ for _ in $(seq 1 50); do
 done
 assert_eq "branch.sh reads the branch from a pane id" "⎇ main" "$branch"
 
+echo "Ctrl+backslash pane navigation is installed without depending on bc"
+refute "tmux configuration does not shell out to bc" grep -Fq '| bc' "$CONF"
+backslash_key=""
+for _ in $(seq 1 50); do
+  backslash_key=$(X list-keys -T root 2>/dev/null | grep -F 'C-\' | grep -F 'select-pane -l' || true)
+  [ -n "$backslash_key" ] && break
+  sleep 0.1
+done
+assert "Ctrl+backslash key binding is present" test -n "$backslash_key"
+
 assert "prefix+N is bound" test "$(X list-keys -T prefix | grep -cE ' N +run-shell')" -eq 1
 # Run prefix+N's command as the config says it, through the same parser tmux uses to load the config. (list-keys prints
 # the command with version-specific escaping, so it cannot be fed back.)
