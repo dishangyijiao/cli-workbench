@@ -14,10 +14,12 @@ CLI Workbench can run on Omarchy, and Arch is now included in the automated cont
 On an Omarchy installation with pacman:
 
 ```sh
-sudo pacman -S --needed git chezmoi zsh tmux fzf ripgrep jq neovim zoxide starship ghostty xdg-utils wl-clipboard bc
+sudo pacman -S --needed git chezmoi zsh tmux fzf ripgrep jq neovim zoxide starship ghostty xdg-utils wl-clipboard bc diffutils
 ```
 
 Install the required Nerd Font separately or change the Ghostty `font-family` setting. Install Coding Agents and their credentials separately; this repository deliberately does not manage secrets.
+
+`diffutils` provides `diff` and `cmp`, both used by the regression suite and configuration comparison. Omitting it from a minimal Arch image produces misleading failures in otherwise unrelated tests.
 
 ## Safe first run
 

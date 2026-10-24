@@ -3,6 +3,13 @@ set -eu
 root=$(cd "$(dirname "$0")/.." && pwd)
 template="$root/home/dot_config/ghostty/config.tmpl"
 tmux_config="$root/home/dot_tmux.conf"
+# Tests compare deployed config files; fail with an actionable dependency error.
+for program in diff cmp; do
+  if ! command -v "$program" >/dev/null 2>&1; then
+    echo "FAIL: $program is required for config regression tests (Arch: pacman -S diffutils)" >&2
+    exit 1
+  fi
+done
 grep -q 'eq .chezmoi.os "darwin"' "$template"
 grep -q 'macos-titlebar-style = tabs' "$template"
 grep -q 'window-save-state = always' "$template"
