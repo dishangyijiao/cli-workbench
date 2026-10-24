@@ -14,7 +14,7 @@ CLI Workbench can run on Omarchy, and Arch is now included in the automated cont
 On an Omarchy installation with pacman:
 
 ```sh
-sudo pacman -S --needed git chezmoi zsh tmux fzf ripgrep jq neovim zoxide starship ghostty xdg-utils
+sudo pacman -S --needed git chezmoi zsh tmux fzf ripgrep jq neovim zoxide starship ghostty xdg-utils wl-clipboard bc
 ```
 
 Install the required Nerd Font separately or change the Ghostty `font-family` setting. Install Coding Agents and their credentials separately; this repository deliberately does not manage secrets.
@@ -66,7 +66,7 @@ The CI matrix covers macOS, Ubuntu and an Arch Linux container. It does not test
 
 ## Read-only workstation diagnostics
 
-Run `bash scripts/doctor-omarchy` to check required commands and report Wayland/session context. It does not install software or change the machine. The Wayland socket can be absent during SSH access; run from a local Ghostty window to validate desktop integration.
+Run `bash scripts/doctor-omarchy` in a local desktop session, or `bash scripts/doctor-omarchy --headless` over SSH, to check required commands and report Wayland/session context. It does not install software or change the machine. The Wayland socket can be absent during SSH access; run from a local Ghostty window to validate desktop integration.
 
 ## Manual acceptance checklist
 
