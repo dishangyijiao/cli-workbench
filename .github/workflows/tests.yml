@@ -94,11 +94,10 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/workspace:ro" -w /workspace archlinux:latest bash -euc '
             pacman -Syu --noconfirm --needed git chezmoi zsh tmux jq shellcheck fzf ripgrep neovim zoxide starship xdg-utils
-            git config --global --add safe.directory /workspace
-            scripts/privacy-scan --all
-            # The existing macOS/Ubuntu matrix runs shellcheck; Arch validates runtime portability.
+            # Workstation users are unprivileged; root-only container tests give false results.
+            useradd -m workbench
             echo "Arch tool versions:"; chezmoi --version; shellcheck --version | head -3
-            tests/run.sh
+            runuser -u workbench -- bash -c "git config --global --add safe.directory /workspace; scripts/privacy-scan --all; tests/run.sh"
           '
       - name: Diagnose Arch failures
         if: failure()
