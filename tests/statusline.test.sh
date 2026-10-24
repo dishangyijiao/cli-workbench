@@ -248,5 +248,6 @@ check "CJK characters and a space in the directory name" \
   "$(run "$(jq -n '{workspace:{project_dir:"/tmp/nonexistent/我的 项目"}}')")"
 
 echo
+check "owner check uses portable stat rather than non-POSIX test -O" yes "$(grep -q 'owned_dir()' "$SCRIPT" && ! grep -q '\\[ -O ' "$SCRIPT" && echo yes || echo no)"
 echo "$((count - fail))/$count passed"
 [ "$fail" -eq 0 ]
