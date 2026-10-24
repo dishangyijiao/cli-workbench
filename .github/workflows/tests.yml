@@ -97,5 +97,18 @@ jobs:
             git config --global --add safe.directory /workspace
             scripts/privacy-scan --all
             # The existing macOS/Ubuntu matrix runs shellcheck; Arch validates runtime portability.
+            echo "Arch tool versions:"; chezmoi --version; shellcheck --version | head -3
             tests/run.sh
+          '
+      - name: Diagnose Arch failures
+        if: failure()
+        run: |
+          docker run --rm -v "$PWD:/workspace:ro" -w /workspace archlinux:latest bash -euc '
+            pacman -Syu --noconfirm --needed git chezmoi zsh tmux jq shellcheck fzf ripgrep neovim zoxide starship xdg-utils >/dev/null
+            git config --global --add safe.directory /workspace
+            echo "Shellcheck warnings:"; scripts/lint-shell --require || true
+            echo "Agent template render:"; tmp=$(mktemp -d); HOME="$tmp" chezmoi apply --source /workspace --destination "$tmp" --no-tty --cache "$tmp/cache" --persistent-state "$tmp/state" >/dev/null 2>&1 || true
+            sha256sum "$tmp/.claude/CLAUDE.md" "$tmp/.codex/AGENTS.md" "$tmp/.gemini/GEMINI.md" || true
+            diff -u "$tmp/.claude/CLAUDE.md" "$tmp/.codex/AGENTS.md" | head -50 || true
+            echo "Neovim tree diff:"; diff -rq home/dot_config/nvim "$tmp/.config/nvim" | head -35 || true
           '
