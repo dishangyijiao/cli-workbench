@@ -26,7 +26,7 @@
 | **一路都是纯文本** | 设置、历史、笔记和代理的指令都是文件。工具是 `rg`、`fzf`、`jq`、`nvim` 和 `git`；没有 GUI 状态，没有会丢的数据库。**同一份指令文本部署给所有代理**（`CLAUDE.md`、`AGENTS.md`、`GEMINI.md`），你的私人规则从一个不入库的文件追加在后面。 |
 | **可以放心公开** | 代理需要 API 密钥，而密钥最容易通过 dotfiles 泄露。`scripts/privacy-scan` 在 pre-commit 钩子里运行，CI 里再跑一次，能识别 Anthropic（Claude）、OpenAI、Google（Gemini）、xAI（Grok）的密钥，以及 GitHub 和 AWS 令牌、私钥、个人路径和邮箱地址；pre-push 钩子还会扫描提交元数据（作者、提交者、提交说明）。tmux 窗格内容默认不落盘。密钥放在不入库的文件里。 |
 | **可回退** | 每次 `chezmoi apply` 之前，会把将被替换的文件备份到 `~/.cli-workbench-backup/`，并附恢复说明。 |
-| **承诺都有测试** | 下面的快速开始会在临时 home 目录里端到端运行（macOS 和 Ubuntu）。代理窗格（用替身代理）、备份和隐私扫描各有自己的测试。 |
+| **承诺都有测试** | 下面的快速开始会在临时 HOME 目录里端到端运行（macOS、Ubuntu 和 Arch Linux 容器）。代理窗格（用替身代理）、备份和隐私扫描各有自己的测试。 |
 
 **目前针对代理的部分有这些：** 工作台切换器可以启动这四个代理中的任何一个；状态栏（`~/.claude/statusline.sh`）和 mod（见下文）只适用于 Claude Code；共享的指令文本能到达 Claude Code、Codex 和 Gemini CLI（Grok CLI 没有接入：尚不清楚它读哪个指令文件）；各代理的完整设置文件有意不纳入；Codex 的通用界面偏好会合并到本机配置，见下文。本仓库不负责安装这些代理。
 
@@ -38,13 +38,15 @@
 
 | | |
 |---|---|
-| **平台** | **macOS** 是主要平台（在 macOS 26、Apple Silicon 上测试）。zsh、tmux 配置在 **Ubuntu 24.04** 上也通过了完整测试和首次使用流程（在容器中验证）；Ghostty 配置和 Homebrew 的 cask 是面向 macOS 的。不支持 Windows。 |
+| **平台** | **macOS** 是主要平台（在 macOS 26、Apple Silicon 上测试）。zsh、tmux 配置在 **Ubuntu 24.04** 上也通过了完整测试和首次使用流程（在容器中验证）；Ghostty 配置通过 chezmoi 按系统生成；Arch Linux 也在 CI 中测试。完整 Omarchy/Hyprland 桌面仍需实机验收；Homebrew cask 仍只适用于 macOS。不支持 Windows。 |
 | **Shell** | zsh 5.8 及以上（在 5.9 上测试）。辅助脚本兼容 bash 3.2，也就是 macOS 自带的 bash 就够用。 |
 | **tmux** | 建议 3.2 及以上（在 3.5a 上测试）。更旧的版本仍能加载配置，只是少了工作台切换键。 |
 | **必需** | `git` 和 [`chezmoi`](https://www.chezmoi.io/install/)（`brew install chezmoi`） |
 | **可选** | `fzf`（0.48+ 才有 shell 集成）、`zoxide`、`starship`、`zsh-syntax-highlighting`、`jq`（状态栏用）、`translate-shell`（翻译弹窗）、[Ghostty](https://ghostty.org) 加一款 Nerd Font、Homebrew |
 
 **它会在你的机器上做的改动：** 仅限 [`home/`](home) 下由 chezmoi 部署的文件（见下表）、使用自带 `zshrc` 后 `~/.cache/zsh/` 里的 zsh 补全缓存，以及被替换文件的备份 `~/.cli-workbench-backup/<时间戳>/`（chezmoi 自己不备份，见“安全模型”）。
+
+在 Omarchy / Arch Linux 上部署之前，请先阅读 [专用迁移指南](docs/omarchy.md)。SER9 本地图形会话可运行 `bash scripts/accept-omarchy --desktop` 进行不修改现有 HOME 的自动验收；实际剪贴板操作和跨机器 SSH/tmux 恢复还需要实机确认。
 
 ## 快速开始
 
@@ -67,7 +69,7 @@ chezmoi apply                      # 再应用全部
 |---|---|---|
 | `dot_tmux.conf`、`dot_tmux/scripts/` | `~/.tmux.conf`、`~/.tmux/scripts` | 前缀键 `Ctrl-a`、vi 键位、鼠标、带代理窗格的工作台切换器 |
 | `dot_zshrc`、`dot_config/private_zsh/` | `~/.zshrc`、`~/.config/zsh/{path,tmux-autostart}.zsh` | **会替换你的 `.zshrc`**；先把自己的改动挪到 `~/.config/zsh/local.zsh`。安装器（nvm、bun 等）会往 `~/.zshrc` 追加内容，`chezmoi diff` 能看到，请把这类行挪进 `local.zsh` |
-| `dot_config/ghostty/config` | `~/.config/ghostty/config` | Catppuccin Mocha 主题、Nerd Font、macOS 标签式标题栏 |
+| `dot_config/ghostty/config.tmpl` | `~/.config/ghostty/config` | 跨平台主题与字体，macOS 专属标签式标题栏和窗口恢复按系统生成 |
 | `dot_claude/executable_statusline.sh` | `~/.claude/statusline.sh` | Claude Code 状态栏（项目、分支、模型、上下文、费用、速率限制）；仅在使用 Claude Code 时需要 |
 | `dot_claude/workbench-mods/` | `~/.claude/workbench-mods/` | 四个 Claude Code mod（`chezmoi-guard`、`reply-polish`、`agent-state`、`md-open`），作为本地插件市场；只部署，不安装，见“Claude Code mod” |
 | `dot_codex/modify_private_config.toml` | `~/.codex/config.toml` | 合并通用状态栏和完成铃铛偏好，保留其他本机设置 |

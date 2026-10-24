@@ -15,3 +15,4 @@ ghostty
 xdg-utils
 wl-clipboard
 diffutils
+fontconfig

@@ -14,7 +14,7 @@ CLI Workbench can run on Omarchy, and Arch is now included in the automated cont
 On an Omarchy installation with pacman:
 
 ```sh
-sudo pacman -S --needed git chezmoi zsh tmux fzf ripgrep jq neovim zoxide starship ghostty xdg-utils wl-clipboard diffutils
+sudo pacman -S --needed git chezmoi zsh tmux fzf ripgrep jq neovim zoxide starship ghostty xdg-utils wl-clipboard diffutils fontconfig
 ```
 
 Install the required Nerd Font separately or change the Ghostty `font-family` setting. Install Coding Agents and their credentials separately; this repository deliberately does not manage secrets.
@@ -51,6 +51,20 @@ Deploy the remaining targets only after reviewing each diff. **Apply `~/.zshrc` 
 - Ctrl+backslash Neovim-aware pane navigation uses the existing tmux version helper; `bc` is not required.
 - The Homebrew Brewfile is not an Arch package manifest.
 - Validate SSH/Tailscale, clipboard and Wayland integration on the actual host. The Arch CI container validates scripts and chezmoi deployment, but cannot validate a Hyprland desktop session or Ghostty rendering.
+
+## Reproducible host acceptance (before applying dotfiles)
+
+Run these commands from the PR branch under a **local Ghostty window on the SER9**, before changing the existing workstation config:
+
+```sh
+bash scripts/accept-omarchy --desktop
+```
+
+The check renders the full chezmoi source into a disposable HOME, starts a separate tmux server on a private socket, checks keybindings and CLI configuration, asks Ghostty to validate the rendered Linux config, and probes Hyprland and the configured font. It cleans up afterwards and does **not** run `chezmoi apply` against your existing home directory.
+
+For an SSH/headless shell or Arch CI, run `bash scripts/accept-omarchy --headless`. That mode intentionally does not claim desktop integration. A `RESULT: PASS` only covers checks that ran. Neither mode tests real clipboard round-trips, the physical display, or a Mac-to-SER9 SSH reconnect.
+
+Finish the host acceptance by manually verifying a copy/paste operation in local Ghostty and tmux, and an SSH connection from the Mac into an already-running SER9 tmux session. Record the results in the PR before labeling the workstation migration 100% complete. Do not paste tokens, clipboard contents or private hostnames into public CI logs.
 
 ## Validation and rollback
 
