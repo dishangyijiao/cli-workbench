@@ -51,6 +51,18 @@ for _ in $(seq 1 50); do
 done
 assert "Ctrl+backslash key binding is present" test -n "$backslash_key"
 
+echo "tmux-fzf-url opens URLs with the host operating system's opener"
+opener=open
+command -v xdg-open >/dev/null 2>&1 && opener=xdg-open
+actual_opener=""
+for _ in $(seq 1 50); do
+  actual_opener=$(X show-options -gv @fzf-url-open 2>/dev/null)
+  [ -n "$actual_opener" ] && break
+  sleep 0.1
+done
+assert_eq "URL opener option follows xdg-open availability" "$opener" "$actual_opener"
+
+
 assert "prefix+N is bound" test "$(X list-keys -T prefix | grep -cE ' N +run-shell')" -eq 1
 # Run prefix+N's command as the config says it, through the same parser tmux uses to load the config. (list-keys prints
 # the command with version-specific escaping, so it cannot be fed back.)
