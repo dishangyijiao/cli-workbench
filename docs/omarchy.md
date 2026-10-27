@@ -14,7 +14,7 @@ CLI Workbench can run on Omarchy, and Arch is now included in the automated cont
 On an Omarchy installation with pacman:
 
 ```sh
-sudo pacman -S --needed git chezmoi zsh tmux fzf ripgrep jq neovim zoxide starship ghostty xdg-utils wl-clipboard diffutils fontconfig
+sudo pacman -S --needed git chezmoi zsh tmux fzf ripgrep jq neovim zoxide starship zsh-syntax-highlighting ghostty xdg-utils wl-clipboard diffutils fontconfig
 ```
 
 Install the required Nerd Font separately or change the Ghostty `font-family` setting. Install Coding Agents and their credentials separately; this repository deliberately does not manage secrets.
