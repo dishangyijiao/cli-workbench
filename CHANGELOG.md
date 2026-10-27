@@ -6,6 +6,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Changed
 
+- On Linux (Omarchy) the repository no longer deploys a Ghostty config: the desktop owns the theme and font (`home/.chezmoiignore`). `scripts/accept-omarchy` checks that, and accepts any Nerd Font. `docs/omarchy.md` states how tmux combines `~/.tmux.conf` with `~/.config/tmux/tmux.conf`, warns about the `~/.config/nvim` overlap, and names snapper snapshots as the system rollback. Tested by `tests/omarchy-ownership.test.sh`, `tests/accept-omarchy.test.sh` and `tests/arch-packages.test.sh`.
 - The agent overview (`prefix O`) and its status-line count include Claude Code background sessions from `claude agents --json`: each is a row marked `bg:`, a blocked one counts as waiting, and `Enter` opens a window running `claude attach <id>`. Tested in `tests/agents.test.sh` with a stand-in `claude`.
 
 ### Added

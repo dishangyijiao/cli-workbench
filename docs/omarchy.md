@@ -17,7 +17,7 @@ On an Omarchy installation with pacman:
 sudo pacman -S --needed git chezmoi zsh tmux fzf ripgrep jq neovim zoxide starship zsh-syntax-highlighting ghostty xdg-utils wl-clipboard diffutils fontconfig
 ```
 
-Install the required Nerd Font separately or change the Ghostty `font-family` setting. Install Coding Agents and their credentials separately; this repository deliberately does not manage secrets.
+Omarchy ships a Nerd Font and its own Ghostty configuration, and this repository leaves both alone on Linux. Install Coding Agents and their credentials separately; this repository deliberately does not manage secrets.
 
 `diffutils` provides `diff` and `cmp`, both used by the regression suite and configuration comparison. Omitting it from a minimal Arch image produces misleading failures in otherwise unrelated tests.
 
@@ -45,8 +45,9 @@ Deploy the remaining targets only after reviewing each diff. **Apply `~/.zshrc` 
 
 ## Known platform differences
 
-- Omarchy's tmux prefix may differ from CLI Workbench's `Ctrl+A`. Choose one tmux configuration as authoritative; do not concatenate both.
-- The Ghostty config is a chezmoi OS template: macOS retains its title-bar tabs and window restoration, while Linux omits those options. The rendered config is checked on macOS and Linux in CI.
+- tmux loads `~/.tmux.conf` first and then `~/.config/tmux/tmux.conf`: both files, and on a conflict the later one wins (checked on tmux 3.8, the version Omarchy ships). Omarchy's file is the later one, so on an Omarchy host its prefix (`Ctrl+Space`, with `Ctrl+b` as the second prefix) and its `prefix` `v` split binding override this repository's `Ctrl+A` and `prefix` `v` copy-mode. See the effective prefix with `tmux -L probe new-session -d \; show -gv prefix \; kill-server`. To keep this repository's keys, change Omarchy's file yourself; this repository never edits it.
+- Omarchy ships LazyVim in `~/.config/nvim`, and this repository also deploys `~/.config/nvim` (`init.lua`, `lua/`). Applying that target replaces Omarchy's `init.lua` and mixes the two plugin sets, so review `chezmoi diff` for it before applying.
+- Omarchy owns the Ghostty theme and font, so `home/.chezmoiignore` deploys this repository's Ghostty config on macOS only. `scripts/accept-omarchy` checks that nothing is deployed on Linux and, with `--desktop`, that the installed Ghostty accepts the rendered template.
 - tmux-fzf-url selects `xdg-open` when available, otherwise `open`. Check the effective `@fzf-url-open` option.
 - Ctrl+backslash Neovim-aware pane navigation uses the existing tmux version helper; `bc` is not required.
 - The Homebrew Brewfile is not an Arch package manifest.
@@ -75,7 +76,7 @@ tmux -V
 command -v xdg-open
 ```
 
-Use the backup notes in `~/.cli-workbench-backup/` to restore any overwritten files. This does not revert installed packages or desktop settings. Never commit private SSH keys, tokens, agent sessions or proxy credentials.
+Use the backup notes in `~/.cli-workbench-backup/` to restore any overwritten files. This does not revert installed packages or desktop settings; for those, use Omarchy's btrfs snapshots (snapper), the system-level rollback. Never commit private SSH keys, tokens, agent sessions or proxy credentials.
 
 ## Coverage boundary
 
@@ -88,8 +89,8 @@ Run `bash scripts/doctor-omarchy` in a local desktop session, or `bash scripts/d
 ## Manual acceptance checklist
 
 1. On macOS, render Ghostty config with `chezmoi execute-template < home/dot_config/ghostty/config.tmpl`; confirm title-bar and window-state options remain.
-2. On Omarchy, render the same template and confirm those options are absent; launch Ghostty and check Nerd Font glyphs.
-3. Start an isolated tmux server, verify `Ctrl+A`, project picker, agent overview, clipboard, and URL opener.
+2. On Omarchy, apply and confirm `~/.config/ghostty/config` is still Omarchy's own file (this repository does not deploy one there); launch Ghostty and check Nerd Font glyphs.
+3. Start an isolated tmux server, verify the effective prefix (see above), project picker, agent overview, clipboard, and URL opener.
 4. Open interactive zsh; check `PATH`, completions and required Omarchy commands. Keep Bash login shell until verified.
 5. Reattach the SER9 tmux session from the MacBook over SSH/Tailscale; verify that Agent processes remain alive.
 6. Verify backups and restore a disposable configuration in a test HOME before applying to the real workstation.

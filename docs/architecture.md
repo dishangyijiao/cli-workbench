@@ -37,7 +37,7 @@ A marketplace that is a folder is read from the folder, so the loop is: edit the
 
 ## Machine differences
 
-Common settings live in `home/`. Ghostty's `config.tmpl` uses `.chezmoi.os` to preserve macOS-specific settings without emitting them on Linux. Differences between machines live in files chezmoi does not manage, so no config is duplicated:
+Common settings live in `home/`. `home/.chezmoiignore` deploys the Ghostty config on macOS only; on Linux the desktop (Omarchy) owns the theme and font. Differences between machines live in files chezmoi does not manage, so no config is duplicated:
 
 - `~/.config/zsh/local.zsh`: PATH additions, proxies, opt-in switches (template: `templates/local.zsh.example`)
 - `~/.config/zsh/secrets.zsh`: API keys and tokens, mode 600 (template: `templates/secrets.zsh.example`)

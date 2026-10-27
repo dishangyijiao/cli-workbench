@@ -38,7 +38,7 @@ English | [简体中文](README.zh-CN.md)
 
 | | |
 |---|---|
-| **Platform** | **macOS** is the primary platform (tested on macOS 26, Apple Silicon). The zsh and tmux configs also pass the full test suite and the first-run flow on **Ubuntu 24.04** (checked in a container); the Ghostty settings are rendered per OS with chezmoi. Arch Linux is also tested in CI; a real Omarchy/Hyprland desktop requires separate host acceptance. Homebrew casks remain macOS-specific. Windows is not supported. |
+| **Platform** | **macOS** is the primary platform (tested on macOS 26, Apple Silicon). The zsh and tmux configs also pass the full test suite and the first-run flow on **Ubuntu 24.04** (checked in a container); the Ghostty config is deployed on macOS only (on Linux the desktop owns it). Arch Linux is also tested in CI; a real Omarchy/Hyprland desktop requires separate host acceptance. Homebrew casks remain macOS-specific. Windows is not supported. |
 | **Shell** | zsh 5.8 or newer (tested with 5.9). The helper scripts are bash 3.2 compatible, i.e. the macOS system bash is enough. |
 | **tmux** | 3.2 or newer recommended (tested with 3.5a). Older versions still load the config, minus the workspace switcher key. |
 | **Required** | `git` and [`chezmoi`](https://www.chezmoi.io/install/) (`brew install chezmoi`) |
@@ -69,7 +69,7 @@ What gets deployed (the layout follows [chezmoi's naming](https://www.chezmoi.io
 |---|---|---|
 | `dot_tmux.conf`, `dot_tmux/scripts/` | `~/.tmux.conf`, `~/.tmux/scripts` | prefix `Ctrl-a`, vi keys, mouse, workspace switcher with the agent pane |
 | `dot_zshrc`, `dot_config/private_zsh/` | `~/.zshrc`, `~/.config/zsh/{path,tmux-autostart}.zsh` | **replaces your `.zshrc`**; move your own tweaks to `~/.config/zsh/local.zsh` first. Installers (nvm, bun, ...) append to `~/.zshrc`; `chezmoi diff` shows that, so move such lines into `local.zsh` |
-| `dot_config/ghostty/config.tmpl` | `~/.config/ghostty/config` | Shared theme/font; macOS title-bar tabs and window restoration are rendered only on macOS |
+| `dot_config/ghostty/config.tmpl` | `~/.config/ghostty/config` | Theme, font, and macOS title-bar tabs and window restoration; deployed on macOS only (`home/.chezmoiignore`), because the Linux desktop owns its own Ghostty config |
 | `dot_claude/executable_statusline.sh` | `~/.claude/statusline.sh` | the Claude Code status line (project, branch, model, context, cost, rate limits); only if you use Claude Code |
 | `dot_claude/workbench-mods/` | `~/.claude/workbench-mods/` | four Claude Code mods (`chezmoi-guard`, `reply-polish`, `agent-state`, `md-open`) as a local marketplace; deployed, not installed: see "Claude Code mods" |
 | `dot_codex/modify_private_config.toml` | `~/.codex/config.toml` | merge portable status-line and completion-bell preferences; preserve other local values |
@@ -85,7 +85,7 @@ These are opinions, not requirements. Edit the files in `home/` and run `chezmoi
 
 - **tmux:** prefix is `Ctrl-a` (not `Ctrl-b`); vi-style copy mode; mouse on; windows numbered from 1. Pane contents are **not** saved to disk by default (that would store anything printed in a pane, tokens included); see the comment next to `@resurrect-capture-pane-contents` to turn it on.
 - **zsh:** 50,000-line shared history, case-insensitive completion, `starship`, `zoxide`, `fzf` and `zsh-syntax-highlighting` only if installed.
-- **Ghostty:** Catppuccin Mocha and `SauceCodePro Nerd Font Mono` (install the font or change the line).
+- **Ghostty:** Catppuccin Mocha and `SauceCodePro Nerd Font Mono` (install the font or change the line). macOS only; on Linux the desktop keeps its own Ghostty theme and font.
 
 ## Make it yours
 

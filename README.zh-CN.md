@@ -38,7 +38,7 @@
 
 | | |
 |---|---|
-| **平台** | **macOS** 是主要平台（在 macOS 26、Apple Silicon 上测试）。zsh、tmux 配置在 **Ubuntu 24.04** 上也通过了完整测试和首次使用流程（在容器中验证）；Ghostty 配置通过 chezmoi 按系统生成；Arch Linux 也在 CI 中测试。完整 Omarchy/Hyprland 桌面仍需实机验收；Homebrew cask 仍只适用于 macOS。不支持 Windows。 |
+| **平台** | **macOS** 是主要平台（在 macOS 26、Apple Silicon 上测试）。zsh、tmux 配置在 **Ubuntu 24.04** 上也通过了完整测试和首次使用流程（在容器中验证）；Ghostty 配置只在 macOS 上部署（Linux 上由桌面环境管理）；Arch Linux 也在 CI 中测试。完整 Omarchy/Hyprland 桌面仍需实机验收；Homebrew cask 仍只适用于 macOS。不支持 Windows。 |
 | **Shell** | zsh 5.8 及以上（在 5.9 上测试）。辅助脚本兼容 bash 3.2，也就是 macOS 自带的 bash 就够用。 |
 | **tmux** | 建议 3.2 及以上（在 3.5a 上测试）。更旧的版本仍能加载配置，只是少了工作台切换键。 |
 | **必需** | `git` 和 [`chezmoi`](https://www.chezmoi.io/install/)（`brew install chezmoi`） |
@@ -69,7 +69,7 @@ chezmoi apply                      # 再应用全部
 |---|---|---|
 | `dot_tmux.conf`、`dot_tmux/scripts/` | `~/.tmux.conf`、`~/.tmux/scripts` | 前缀键 `Ctrl-a`、vi 键位、鼠标、带代理窗格的工作台切换器 |
 | `dot_zshrc`、`dot_config/private_zsh/` | `~/.zshrc`、`~/.config/zsh/{path,tmux-autostart}.zsh` | **会替换你的 `.zshrc`**；先把自己的改动挪到 `~/.config/zsh/local.zsh`。安装器（nvm、bun 等）会往 `~/.zshrc` 追加内容，`chezmoi diff` 能看到，请把这类行挪进 `local.zsh` |
-| `dot_config/ghostty/config.tmpl` | `~/.config/ghostty/config` | 跨平台主题与字体，macOS 专属标签式标题栏和窗口恢复按系统生成 |
+| `dot_config/ghostty/config.tmpl` | `~/.config/ghostty/config` | 主题、字体，以及 macOS 专属的标签式标题栏和窗口恢复；只在 macOS 上部署（`home/.chezmoiignore`），Linux 桌面自己管理 Ghostty 配置 |
 | `dot_claude/executable_statusline.sh` | `~/.claude/statusline.sh` | Claude Code 状态栏（项目、分支、模型、上下文、费用、速率限制）；仅在使用 Claude Code 时需要 |
 | `dot_claude/workbench-mods/` | `~/.claude/workbench-mods/` | 四个 Claude Code mod（`chezmoi-guard`、`reply-polish`、`agent-state`、`md-open`），作为本地插件市场；只部署，不安装，见“Claude Code mod” |
 | `dot_codex/modify_private_config.toml` | `~/.codex/config.toml` | 合并通用状态栏和完成铃铛偏好，保留其他本机设置 |
@@ -85,7 +85,7 @@ chezmoi apply                      # 再应用全部
 
 - **tmux：** 前缀键是 `Ctrl-a`（不是 `Ctrl-b`）；vi 风格复制模式；开启鼠标；窗口从 1 开始编号。窗格内容默认**不**保存到磁盘（那样会把窗格里打印过的任何东西，包括令牌，都存下来）；想开启请看 `@resurrect-capture-pane-contents` 旁边的注释。
 - **zsh：** 50,000 行共享历史、补全不区分大小写，`starship`、`zoxide`、`fzf` 和 `zsh-syntax-highlighting` 仅在已安装时启用。
-- **Ghostty：** Catppuccin Mocha 和 `SauceCodePro Nerd Font Mono`（安装该字体，或者改掉这一行）。
+- **Ghostty：** Catppuccin Mocha 和 `SauceCodePro Nerd Font Mono`（安装该字体，或者改掉这一行）。仅 macOS；Linux 上桌面环境保留自己的 Ghostty 主题和字体。
 
 ## 把它变成你的
 
