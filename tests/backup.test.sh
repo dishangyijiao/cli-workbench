@@ -28,13 +28,13 @@ assert_eq "applying again (nothing changes) still creates none" "" "$(backups)"
 echo "replaced files are backed up first, with their paths, modes and a RESTORE note"
 newhome 2
 echo '# my old zshrc' > "$HOME/.zshrc"; chmod 600 "$HOME/.zshrc"
-mkdir -p "$HOME/.config/ghostty"; echo 'font-size = 14' > "$HOME/.config/ghostty/config"
+mkdir -p "$HOME/.config/git"; echo '# my old git config' > "$HOME/.config/git/config"
 err=$(chezmoi apply --no-tty 2>&1 >/dev/null); assert_eq "apply exits 0" 0 $?
 B=$(latest)
 assert_contains "it says where the backup is" "backed up 2 file(s)" "$err"
 assert_eq "one backup directory" 1 "$(backups | wc -l | tr -d ' ')"
 assert_eq ".zshrc backed up" "# my old zshrc" "$(cat "$B/.zshrc" 2>/dev/null)"
-assert_eq "ghostty config backed up under its own path" "font-size = 14" "$(cat "$B/.config/ghostty/config" 2>/dev/null)"
+assert_eq "a nested config backed up under its own path" "# my old git config" "$(cat "$B/.config/git/config" 2>/dev/null)"
 assert_eq "file mode kept" 600 "$(stat -c %a "$B/.zshrc" 2>/dev/null || stat -f %Lp "$B/.zshrc")"
 assert_eq "backup directory is private (700)" 700 "$(stat -c %a "$B" 2>/dev/null || stat -f %Lp "$B")"
 assert "RESTORE note exists" test -s "$B/RESTORE"
