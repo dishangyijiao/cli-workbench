@@ -253,9 +253,11 @@ echo
 # Skipped as root, who owns it.
 if [ "$(id -u)" != 0 ]; then
   other=$(cd -P /tmp && pwd)
-  J8=$(jq -n --arg d "$T/owner-check-repo" '{workspace:{project_dir:$d}}')
-  mkdir -p "$T/owner-check-repo"
-  key8=$(printf '%s' "$T/owner-check-repo" | cksum | cut -d' ' -f1)
+  # The directory name carries this test's pid, so the cache file name cannot be one a real cache already uses.
+  repo8="$T/owner-check-repo-$$"
+  mkdir -p "$repo8"
+  J8=$(jq -n --arg d "$repo8" '{workspace:{project_dir:$d}}')
+  key8=$(printf '%s' "$repo8" | cksum | cut -d' ' -f1)
   rm -f "$other/$key8"
   printf '%s' "$J8" | STATUSLINE_CACHE_DIR="$other" sh "$SCRIPT" >/dev/null 2>&1
   check "a cache directory owned by someone else gets no cache file" no "$([ -e "$other/$key8" ] && echo yes || echo no)"
