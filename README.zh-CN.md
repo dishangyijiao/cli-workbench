@@ -46,7 +46,7 @@
 
 **它会在你的机器上做的改动：** 仅限 [`home/`](home) 下由 chezmoi 部署的文件（见下表）、使用自带 `zshrc` 后 `~/.cache/zsh/` 里的 zsh 补全缓存，以及被替换文件的备份 `~/.cli-workbench-backup/<时间戳>/`（chezmoi 自己不备份，见“安全模型”）。
 
-在 Omarchy / Arch Linux 上部署之前，请先阅读 [专用迁移指南](docs/omarchy.md)。SER9 本地图形会话可运行 `bash scripts/accept-omarchy --desktop` 进行不修改现有 HOME 的自动验收；实际剪贴板操作和跨机器 SSH/tmux 恢复还需要实机确认。
+在 Omarchy / Arch Linux 上部署之前，请先阅读 [专用迁移指南](docs/omarchy.md)。Omarchy 本机的图形会话可运行 `bash scripts/accept-omarchy --desktop` 进行不修改现有 HOME 的自动验收；实际剪贴板操作和跨机器 SSH/tmux 恢复还需要实机确认。
 
 ## 快速开始
 

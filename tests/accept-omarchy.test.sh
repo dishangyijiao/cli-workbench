@@ -38,7 +38,8 @@ if [ "$(uname -s)" = Linux ] && command -v chezmoi >/dev/null 2>&1 &&
   # how it was asked to validate.
   T_DIR=$(cd -P "$(mktemp -d)" && pwd); trap t_cleanup EXIT
   mkdir -p "$T_DIR/bin"
-  printf '#!/bin/sh\nprintf "%%s\\n" "$*" >> "%s/ghostty.args"\n' "$T_DIR" > "$T_DIR/bin/ghostty"
+  # The stub also keeps the config file it was given, so the test can tell which rendering of the template was checked.
+  printf '#!/bin/sh\nprintf "%%s\\n" "$*" >> "%s/ghostty.args"\nfor a in "$@"; do case $a in --config-file=*) cat "${a#--config-file=}" > "%s/ghostty.config";; esac; done\n' "$T_DIR" "$T_DIR" > "$T_DIR/bin/ghostty"
   printf '#!/bin/sh\necho "[{}]"\n' > "$T_DIR/bin/hyprctl"
   printf '#!/bin/sh\nprintf "JetBrainsMono Nerd Font\\nNoto Sans\\n"\n' > "$T_DIR/bin/fc-list"
   printf '#!/bin/sh\nexit 0\n' > "$T_DIR/bin/wl-copy"; cp "$T_DIR/bin/wl-copy" "$T_DIR/bin/wl-paste"
@@ -49,6 +50,10 @@ if [ "$(uname -s)" = Linux ] && command -v chezmoi >/dev/null 2>&1 &&
   assert_eq 'desktop acceptance passes with Omarchy fonts' 0 "$rc"
   assert_contains 'Ghostty parser check ran' 'PASS  Ghostty accepts the rendered template' "$out"
   assert_contains 'Ghostty was asked to validate a config' '+validate-config' "$(cat "$T_DIR/ghostty.args" 2>/dev/null)"
+  # Linux does not deploy the template, so the check renders the macOS variant; the guide has to say that and not claim a Linux config.
+  assert_contains 'the config Ghostty checked is the macOS rendering' 'macos-titlebar-style' "$(cat "$T_DIR/ghostty.config" 2>/dev/null)"
+  assert_contains 'the guide says which rendering is validated' 'validate the template rendered for macOS' "$(tr '\n' ' ' < "$WB_SRC/docs/omarchy.md" | tr -s ' ')"
+  refute 'the guide does not call it a Linux config' grep -Fq 'validate the rendered Linux config' "$WB_SRC/docs/omarchy.md"
   assert_contains 'any Nerd Font satisfies the font check' 'PASS  a Nerd Font is installed' "$out"
 else
   echo 'skip Linux integration: platform or dependency unavailable'

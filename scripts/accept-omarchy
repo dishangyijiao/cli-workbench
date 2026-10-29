@@ -127,7 +127,7 @@ if [ "$mode" = desktop ]; then
     pass 'a Nerd Font is installed'
   else fail 'no Nerd Font found'; fi
   printf 'MANUAL: verify Ghostty appearance and input on the live desktop.\n'
-  printf 'MANUAL: test Wayland clipboard round-trip and Mac-to-SER9 SSH/tmux reattach.\n'
+  printf 'MANUAL: test Wayland clipboard round-trip and Mac-to-Omarchy SSH/tmux reattach.\n'
 fi
 printf 'RESULT: %s (%s passed, %s failed)\n' "$([ "$failed" -eq 0 ] && echo PASS || echo FAIL)" "$passed" "$failed"
 [ "$failed" -eq 0 ]

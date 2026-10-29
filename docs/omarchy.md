@@ -36,7 +36,7 @@ chezmoi apply --dry-run
 Review the output before applying individual targets. `chezmoi init` is important because this repository installs a backup-before-apply hook. Confirm its configuration before relying on the backups.
 
 ```sh
-chezmoi apply ~/.tmux/scripts ~/.tmux.conf
+chezmoi apply ~/.tmux ~/.tmux.conf
 # Test in an isolated tmux server, leaving existing sessions alone:
 tmux -L workbench-test -f ~/.tmux.conf new-session
 ```
@@ -55,17 +55,17 @@ Deploy the remaining targets only after reviewing each diff. **Apply `~/.zshrc` 
 
 ## Reproducible host acceptance (before applying dotfiles)
 
-Run these commands from the PR branch under a **local Ghostty window on the SER9**, before changing the existing workstation config:
+Run these commands from the PR branch under a **local Ghostty window on the Omarchy host**, before changing the existing workstation config:
 
 ```sh
 bash scripts/accept-omarchy --desktop
 ```
 
-The check renders the full chezmoi source into a disposable HOME, starts a separate tmux server on a private socket, checks keybindings and CLI configuration, asks Ghostty to validate the rendered Linux config, and probes Hyprland and the configured font. It cleans up afterwards and does **not** run `chezmoi apply` against your existing home directory.
+The check renders the full chezmoi source into a disposable HOME, starts a separate tmux server on a private socket, checks keybindings and CLI configuration, asks Ghostty to validate the template rendered for macOS (Linux does not deploy it, so that is the only rendering there is), and probes Hyprland and the configured font. It cleans up afterwards and does **not** run `chezmoi apply` against your existing home directory.
 
-For an SSH/headless shell or Arch CI, run `bash scripts/accept-omarchy --headless`. That mode intentionally does not claim desktop integration. A `RESULT: PASS` only covers checks that ran. Neither mode tests real clipboard round-trips, the physical display, or a Mac-to-SER9 SSH reconnect.
+For an SSH/headless shell or Arch CI, run `bash scripts/accept-omarchy --headless`. That mode intentionally does not claim desktop integration. A `RESULT: PASS` only covers checks that ran. Neither mode tests real clipboard round-trips, the physical display, or an SSH reconnect from the Mac to the Omarchy host.
 
-Finish the host acceptance by manually verifying a copy/paste operation in local Ghostty and tmux, and an SSH connection from the Mac into an already-running SER9 tmux session. Record the results in the PR before labeling the workstation migration 100% complete. Do not paste tokens, clipboard contents or private hostnames into public CI logs.
+Finish the host acceptance by manually verifying a copy/paste operation in local Ghostty and tmux, and an SSH connection from the Mac into an already-running tmux session on the Omarchy host. Record the results in the PR before labeling the workstation migration 100% complete. Do not paste tokens, clipboard contents or private hostnames into public CI logs.
 
 ## Validation and rollback
 
@@ -80,7 +80,7 @@ Use the backup notes in `~/.cli-workbench-backup/` to restore any overwritten fi
 
 ## Coverage boundary
 
-The CI matrix covers macOS, Ubuntu and an Arch Linux container. It does not test the complete Omarchy desktop image, graphics, system sleep, or live SSH/Tailscale connections. Validate those on the SER9 before declaring the workstation migration complete.
+The CI matrix covers macOS, Ubuntu and an Arch Linux container. It does not test the complete Omarchy desktop image, graphics, system sleep, or live SSH/Tailscale connections. Validate those on the Omarchy host before declaring the workstation migration complete.
 
 ## Read-only workstation diagnostics
 
@@ -92,5 +92,5 @@ Run `bash scripts/doctor-omarchy` in a local desktop session, or `bash scripts/d
 2. On Omarchy, apply and confirm `~/.config/ghostty/config` is still Omarchy's own file (this repository does not deploy one there); launch Ghostty and check Nerd Font glyphs.
 3. Start an isolated tmux server, verify the effective prefix (see above), project picker, agent overview, clipboard, and URL opener.
 4. Open interactive zsh; check `PATH`, completions and required Omarchy commands. Keep Bash login shell until verified.
-5. Reattach the SER9 tmux session from the MacBook over SSH/Tailscale; verify that Agent processes remain alive.
+5. Reattach the Omarchy host's tmux session from the Mac over SSH/Tailscale; verify that Agent processes remain alive.
 6. Verify backups and restore a disposable configuration in a test HOME before applying to the real workstation.
