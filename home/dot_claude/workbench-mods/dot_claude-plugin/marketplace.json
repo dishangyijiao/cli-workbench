@@ -17,6 +17,11 @@
       "name": "agent-state",
       "source": "./agent-state",
       "description": "Records whether each tmux pane's agent is working, waiting for you or idle, for the overview popup."
+    },
+    {
+      "name": "md-open",
+      "source": "./md-open",
+      "description": "/md lists the Markdown files this conversation mentioned and opens the one you pick, read-only, in Neovim in a tmux popup."
     }
   ]
 }
