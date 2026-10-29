@@ -2,5 +2,5 @@
   "name": "reply-polish",
   "version": "0.1.0",
   "author": { "name": "cli-workbench" },
-  "description": "Makes assistant replies easier to read in the terminal: wide tables become lists, headings become bold lines, blank runs collapse and very long code blocks are shortened."
+  "description": "Makes assistant replies easier to read in the terminal: wide tables are narrowed and wrapped (a list only when no column fits), headings become bold lines, blank runs collapse and very long code blocks are shortened."
 }

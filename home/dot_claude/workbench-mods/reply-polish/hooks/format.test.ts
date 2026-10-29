@@ -1,6 +1,12 @@
 import { expect, test } from 'claude-code/testing'
 
-import { displayWidth, drawTable, layout, polish, reflow, wrapLine } from './format'
+import { displayWidth, drawTable as draw, layout, polish, reflow, wrapCell, wrapLine } from './format'
+
+const drawTable = (header: string[], rows: string[][], maxWidth?: number) => {
+  const drawn = draw(header, rows, maxWidth)
+  if (drawn === null) throw new Error('table did not fit')
+  return drawn
+}
 
 const SMALL_TABLE = ['| 名称 | 命令 |', '|---|---|', '| tmux | `tmux` |', '| zellij | `zellij` |'].join('\n')
 
@@ -88,6 +94,35 @@ test('puts a rule between the rows of a long table only', () => {
 
   expect(rules(6)).toBe(1)
   expect(rules(7)).toBe(7)
+})
+
+test('narrows the widest column and wraps its cells when the table is too wide', () => {
+  const long = '一二三四五六七八九十'.repeat(6)
+  const drawn = drawTable(['名称', '说明'], [['a', long], ['b', 'short']], 40)
+
+  expect(drawn.width).toBeLessThanOrEqual(40)
+  expect(drawn.lines.map(displayWidth)).toEqual(drawn.lines.map(() => drawn.width))
+  expect(drawn.lines.filter(line => line.startsWith('├')).length).toBeGreaterThan(1)
+  expect(drawn.cells.filter(row => row !== null && row[0]?.trim() === 'a')).toHaveLength(1)
+  expect(drawn.cells.map(row => (row ?? []).join('').replace(/ /g, '')).join('')).toContain(long.slice(0, 10))
+})
+
+test('wraps a header onto more lines and reports how many', () => {
+  const drawn = drawTable(['alpha beta gamma', 'x'], [['1', '2']], 16)
+
+  expect(drawn.headerLines).toBeGreaterThan(1)
+})
+
+test('gives up on a table whose narrowest columns still do not fit', () => {
+  expect(draw(['a', 'b', 'c'], [['1', '2', '3']], 10)).toBeNull()
+})
+
+test('splits a word longer than the column', () => {
+  expect(wrapCell('abcdefghij', 4)).toEqual(['abcd', 'efgh', 'ij'])
+})
+
+test('closes and reopens a code span cut by a line break', () => {
+  expect(wrapCell('`git log output`', 8)).toEqual(['`git log`', '`output`'])
 })
 
 test('returns headings as blocks of their own when the width is known', () => {

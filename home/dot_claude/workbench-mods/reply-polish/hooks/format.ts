@@ -161,6 +161,8 @@ export const reflow = (text: string, width: number): string => {
 
 // A table with this many body rows or more gets a rule between its rows, so a long table stays readable.
 export const ROW_RULES_FROM = 7
+// A column is never squeezed below this many cells; a table that needs less goes to a list.
+export const MIN_COLUMN = 4
 
 type Drawn = {
   lines: string[]
@@ -170,34 +172,105 @@ type Drawn = {
   sources: (string[] | null)[]
   widths: number[]
   width: number
+  // How many lines the header takes, from line 1 on; a wrapped header takes more than one.
+  headerLines: number
 }
 
-// The table as box-drawing lines, columns sized to their widest cell. Line 1 is the header.
-export const drawTable = (header: string[], rows: string[][]): Drawn => {
+// Cuts at most `width` cells off the front of `text`, ignoring the markup that is not shown.
+const hardSplit = (text: string, width: number): string[] => {
+  const out: string[] = []
+  let current = ''
+  let used = 0
+  let i = 0
+  while (i < text.length) {
+    const isMark = text[i] === '`' || text.startsWith('**', i)
+    const step = text.startsWith('**', i) ? 2 : 1
+    const char = isMark ? text.slice(i, i + step) : String.fromCodePoint(text.codePointAt(i) ?? 32)
+    const size = isMark ? 0 : displayWidth(char)
+    if (used + size > width && current !== '') {
+      out.push(current)
+      current = ''
+      used = 0
+    }
+    current += char
+    used += size
+    i += char.length
+  }
+  if (current !== '') out.push(current)
+  return out
+}
+
+// A cell as lines of at most `width` cells. A code span or bold run cut by a line break is closed
+// at the end of its line and opened again at the start of the next, so each line draws on its own.
+export const wrapCell = (source: string, width: number): string[] => {
+  const text = source.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+  if (text === '') return ['']
+
+  const lines = wrapLine(text, width).flatMap(line => (displayWidth(line.replace(/`|\*\*/g, '')) > width ? hardSplit(line, width) : [line]))
+  let isCode = false
+  let isBold = false
+
+  return lines.map(line => {
+    const prefix = (isCode ? '`' : '') + (isBold ? '**' : '')
+    for (const part of line.split(/(`|\*\*)/)) {
+      if (part === '`') isCode = !isCode
+      else if (part === '**' && !isCode) isBold = !isBold
+    }
+    return prefix + line + (isBold ? '**' : '') + (isCode ? '`' : '')
+  })
+}
+
+// The widest column width `cap` such that the columns, each cut to `cap`, fit in `available`.
+const capColumns = (natural: number[], available: number): number[] | null => {
+  if (natural.reduce((sum, width) => sum + width, 0) <= available) return natural
+  for (let cap = Math.max(...natural) - 1; cap >= MIN_COLUMN; cap -= 1) {
+    const widths = natural.map(width => Math.min(width, cap))
+    if (widths.reduce((sum, width) => sum + width, 0) <= available) return widths
+  }
+  return null
+}
+
+// The table as box-drawing lines, columns sized to their widest cell. Line 1 is the header. With
+// `maxWidth`, the widest columns are narrowed and their cells wrap onto more lines; null when even
+// the narrowest columns do not fit.
+export const drawTable = (header: string[], rows: string[][], maxWidth?: number): Drawn | null => {
   const raw = [header, ...rows.map(row => header.map((_, k) => row[k] ?? ''))]
   const grid = raw.map(row => row.map(plain))
-  const widths = header.map((_, k) => Math.max(...grid.map(row => displayWidth(row[k] ?? ''))))
-  const pad = (text: string, width: number) => text + ' '.repeat(width - displayWidth(text))
+  const natural = header.map((_, k) => Math.max(...grid.map(row => displayWidth(row[k] ?? ''))))
+  const widths = maxWidth === undefined ? natural : capColumns(natural, maxWidth - (3 * header.length + 1))
+  if (widths === null) return null
+
+  const pad = (text: string, width: number) => text + ' '.repeat(Math.max(0, width - displayWidth(text)))
   const rule = (left: string, mid: string, right: string) =>
     left + widths.map(width => '─'.repeat(width + 2)).join(mid) + right
-  const padded = grid.map(row => row.map((cell, k) => pad(cell, widths[k] ?? 0)))
   const [top, middle, bottom] = [rule('┌', '┬', '┐'), rule('├', '┼', '┤'), rule('└', '┴', '┘')]
-  const hasRowRules = rows.length >= ROW_RULES_FROM
 
-  type Entry = { rule: string } | { row: number }
-  const entries: Entry[] = [{ rule: top }, { row: 0 }, { rule: middle }]
-  for (let r = 1; r < grid.length; r += 1) {
-    entries.push({ row: r })
-    if (hasRowRules && r < grid.length - 1) entries.push({ rule: middle })
-  }
+  // Each table row as visual lines: [sources of each cell] per line.
+  const wrapped = raw.map(row => {
+    const pieces = row.map((cell, k) => (displayWidth(plain(cell)) <= (widths[k] ?? 0) ? [cell] : wrapCell(cell, widths[k] ?? 0)))
+    const height = Math.max(...pieces.map(cell => cell.length))
+    return Array.from({ length: height }, (_, line) => pieces.map(cell => cell[line] ?? ''))
+  })
+  const isWrapped = wrapped.some(row => row.length > 1)
+  const hasRowRules = rows.length >= ROW_RULES_FROM || isWrapped
+
+  type Entry = { rule: string } | { source: string[] }
+  const entries: Entry[] = [{ rule: top }]
+  wrapped.forEach((row, r) => {
+    entries.push(...row.map(source => ({ source })))
+    if (r === 0 || (hasRowRules && r < wrapped.length - 1)) entries.push({ rule: middle })
+  })
   entries.push({ rule: bottom })
 
+  const padded = (source: string[]) => source.map((cell, k) => pad(plain(cell), widths[k] ?? 0))
+
   return {
-    lines: entries.map(entry => ('rule' in entry ? entry.rule : '│ ' + (padded[entry.row] ?? []).join(' │ ') + ' │')),
-    cells: entries.map(entry => ('rule' in entry ? null : (padded[entry.row] ?? []))),
-    sources: entries.map(entry => ('rule' in entry ? null : (raw[entry.row] ?? []))),
+    lines: entries.map(entry => ('rule' in entry ? entry.rule : '│ ' + padded(entry.source).join(' │ ') + ' │')),
+    cells: entries.map(entry => ('rule' in entry ? null : padded(entry.source))),
+    sources: entries.map(entry => ('rule' in entry ? null : entry.source)),
     widths,
     width: displayWidth(top),
+    headerLines: wrapped[0]?.length ?? 1,
   }
 }
 
@@ -272,9 +345,9 @@ export const layout = (text: string, width?: number): Segment[] => {
       const raw = lines.slice(i, end)
       const header = cells(line)
       const rows = lines.slice(i + 2, end).map(cells)
-      const drawn = width === undefined ? null : drawTable(header, rows)
+      const drawn = width === undefined ? null : drawTable(header, rows, width)
 
-      if (drawn !== null && width !== undefined && drawn.width <= width) {
+      if (drawn !== null) {
         flush()
         segments.push({ kind: 'table', ...drawn })
       } else if (width !== undefined) {
