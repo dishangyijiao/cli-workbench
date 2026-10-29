@@ -30,16 +30,26 @@ assert_eq "dry-run changed nothing" "# my old zshrc" "$(cat "$HOME/.zshrc")"
 
 echo "apply deploys every file"
 "${CZ[@]}" apply >/dev/null 2>&1; assert_eq "apply exits 0" 0 $?
-for f in .zshrc .tmux.conf .config/zsh/path.zsh .config/zsh/tmux-autostart.zsh .config/ghostty/config .config/git/config .config/nvim/init.lua .claude/statusline.sh .claude/CLAUDE.md .codex/AGENTS.md .gemini/GEMINI.md .tmux/scripts/workspace-switch.sh; do
+for f in .zshrc .tmux.conf .config/zsh/path.zsh .config/zsh/tmux-autostart.zsh .config/git/config .config/nvim/init.lua .claude/statusline.sh .claude/CLAUDE.md .codex/AGENTS.md .gemini/GEMINI.md .tmux/scripts/workspace-switch.sh; do
   assert "$f is deployed" test -f "$HOME/$f"
 done
 for f in .claude/statusline.sh .tmux/scripts/workspace-switch.sh .tmux/scripts/tmux-version-ge.sh .tmux/scripts/branch.sh; do
   assert "$f is executable" test -x "$HOME/$f"
 done
 
+# Ghostty is the one target that depends on the OS: macOS gets the repository's config (and backs the old one up); on
+# Linux the desktop owns it, so a config already there must be left exactly as it is.
+case $(uname -s) in
+  Darwin) assert ".config/ghostty/config is deployed on macOS" test -f "$HOME/.config/ghostty/config" ;;
+  *)      assert_eq "the desktop's Ghostty config is left untouched on Linux" "font-size = 14" "$(cat "$HOME/.config/ghostty/config" 2>/dev/null)" ;;
+esac
+
 echo "the user's own files were backed up, not lost"
 assert "old .zshrc is in a backup" test -n "$(grep -rl 'my old zshrc' "$WB_BACKUP_DIR" 2>/dev/null | head -1)"
-assert "old ghostty config is in a backup" test -n "$(grep -rl 'font-size = 14' "$WB_BACKUP_DIR" 2>/dev/null | head -1)"
+case $(uname -s) in
+  Darwin) assert "old ghostty config is in a backup" test -n "$(grep -rl 'font-size = 14' "$WB_BACKUP_DIR" 2>/dev/null | head -1)" ;;
+  *)      refute "an untouched Ghostty config needs no backup" test -n "$(grep -rl 'font-size = 14' "$WB_BACKUP_DIR" 2>/dev/null | head -1)" ;;
+esac
 assert "a RESTORE note exists" test -n "$(find "$WB_BACKUP_DIR" -name RESTORE | head -1)"
 
 echo "applying again is a no-op"

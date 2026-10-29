@@ -1,0 +1,18 @@
+# Omarchy / Arch Linux package names (reference only; not auto-installed)
+# Install with: sudo pacman -S --needed $(grep -v '^#' packages/arch-packages.txt | grep -v '^$')
+git
+chezmoi
+zsh
+tmux
+fzf
+ripgrep
+jq
+neovim
+zoxide
+starship
+zsh-syntax-highlighting
+ghostty
+xdg-utils
+wl-clipboard
+diffutils
+fontconfig

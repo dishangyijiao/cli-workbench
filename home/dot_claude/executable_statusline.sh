@@ -87,8 +87,14 @@ case $ttl in '' | *[!0-9]*) ttl=5 ;; esac
 
 # $XDG_RUNTIME_DIR is private to the user (Linux); macOS's $TMPDIR is too. In a shared /tmp another user could have created the
 # directory first, so the cache is used only when the directory is ours and not a symlink; otherwise it is left out.
+# POSIX sh has no test -O; compare numeric owners with GNU/BSD stat instead.
+owned_dir() {
+  [ -d "$1" ] && [ ! -L "$1" ] || return 1
+  owner=$(stat -c %u "$1" 2>/dev/null || stat -f %u "$1" 2>/dev/null) || return 1
+  [ "$owner" = "$(id -u)" ]
+}
 cache_dir=${STATUSLINE_CACHE_DIR:-${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/claude-statusline-$(id -u)}
-if [ -L "$cache_dir" ] || { [ -e "$cache_dir" ] && { [ ! -d "$cache_dir" ] || [ ! -O "$cache_dir" ]; }; }; then ttl=0; fi
+if [ -L "$cache_dir" ] || { [ -e "$cache_dir" ] && { [ ! -d "$cache_dir" ] || ! owned_dir "$cache_dir"; }; }; then ttl=0; fi
 
 info=""
 hit=""
@@ -109,7 +115,7 @@ if [ -z "$hit" ]; then
   if [ "$ttl" -gt 0 ]; then
     # Check again after mkdir: another user may have created the directory between the check above and here, and a
     # directory that is not ours could hold a symlink named like the cache file.
-    (umask 077 && mkdir -p "$cache_dir" && [ ! -L "$cache_dir" ] && [ -O "$cache_dir" ] && printf '%s' "$info" > "$cache_file") 2>/dev/null
+    (umask 077 && mkdir -p "$cache_dir" && [ ! -L "$cache_dir" ] && owned_dir "$cache_dir" && printf '%s' "$info" > "$cache_file") 2>/dev/null
   fi
 fi
 

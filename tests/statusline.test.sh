@@ -248,5 +248,23 @@ check "CJK characters and a space in the directory name" \
   "$(run "$(jq -n '{workspace:{project_dir:"/tmp/nonexistent/我的 项目"}}')")"
 
 echo
+# A cache directory that belongs to someone else is never used: no cache file may be written into it. The system temp
+# directory is owned by root and writable by everyone, so it stands in for a directory another user created first.
+# Skipped as root, who owns it.
+if [ "$(id -u)" != 0 ]; then
+  other=$(cd -P /tmp && pwd)
+  # The directory name carries this test's pid, so the cache file name cannot be one a real cache already uses.
+  repo8="$T/owner-check-repo-$$"
+  mkdir -p "$repo8"
+  J8=$(jq -n --arg d "$repo8" '{workspace:{project_dir:$d}}')
+  key8=$(printf '%s' "$repo8" | cksum | cut -d' ' -f1)
+  rm -f "$other/$key8"
+  printf '%s' "$J8" | STATUSLINE_CACHE_DIR="$other" sh "$SCRIPT" >/dev/null 2>&1
+  check "a cache directory owned by someone else gets no cache file" no "$([ -e "$other/$key8" ] && echo yes || echo no)"
+  rm -f "$other/$key8"
+  mkdir -p "$T/own-cache"
+  printf '%s' "$J8" | STATUSLINE_CACHE_DIR="$T/own-cache" sh "$SCRIPT" >/dev/null 2>&1
+  check "a cache directory of our own does get one" yes "$([ -e "$T/own-cache/$key8" ] && echo yes || echo no)"
+fi
 echo "$((count - fail))/$count passed"
 [ "$fail" -eq 0 ]
