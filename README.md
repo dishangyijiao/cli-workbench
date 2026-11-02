@@ -26,7 +26,7 @@ English | [简体中文](README.zh-CN.md)
 | **Plain text all the way down** | Settings, history, notes and agent instructions are files. `rg`, `fzf`, `jq`, `nvim` and `git` are the tools; there is no GUI state and no database to lose. **One instruction text is deployed to every agent** (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`), with your private rules appended from an untracked file. |
 | **Safe to make public** | Agents need API keys, and keys leak through dotfiles. `scripts/privacy-scan` runs as a pre-commit hook and again in CI, and recognises Anthropic (Claude), OpenAI, Google (Gemini) and xAI (Grok) keys, GitHub and AWS tokens, private keys, personal paths and e-mail addresses. A pre-push hook scans commit metadata (author, committer, message) too. tmux pane contents are not saved to disk by default. Secrets live in an untracked file. |
 | **Reversible** | Before every `chezmoi apply`, the files it would replace are backed up to `~/.cli-workbench-backup/` with a restore note. |
-| **The promises are tested** | The quick start below is run end to end in a throwaway home directory on macOS and Ubuntu. The agent pane (with stand-in agents), the backup and the privacy scanner each have their own tests. |
+| **The promises are tested** | The quick start runs end to end in disposable home directories on macOS, Ubuntu and Arch containers. The agent pane (with stand-in agents), the backup and the privacy scanner each have their own tests. |
 
 **Agent-specific today:** the workspace switcher starts any of the four agents; the shared instruction text reaches Claude Code, Codex and Gemini CLI (Grok CLI is not wired up: the location of its instruction file is not known); the status line (`~/.claude/statusline.sh`) and the mods (below) are for Claude Code only. Full agent settings files are deliberately not tracked. Codex's portable UI preferences are merged into its local configuration, see below. The agents themselves are not installed by this repository.
 
@@ -38,13 +38,15 @@ English | [简体中文](README.zh-CN.md)
 
 | | |
 |---|---|
-| **Platform** | **macOS** is the primary platform (tested on macOS 26, Apple Silicon). The zsh and tmux configs also pass the full test suite and the first-run flow on **Ubuntu 24.04** (checked in a container); the Ghostty config and the Homebrew casks are macOS-oriented. Windows is not supported. |
+| **Platform** | **macOS** is the primary platform (tested on macOS 26, Apple Silicon). The zsh and tmux configs also pass the full test suite and the first-run flow on **Ubuntu 24.04** (checked in a container); the Ghostty config is deployed on macOS only (on Linux the desktop owns it). Arch Linux is also tested in CI; a real Omarchy/Hyprland desktop requires separate host acceptance. Homebrew casks remain macOS-specific. Windows is not supported. |
 | **Shell** | zsh 5.8 or newer (tested with 5.9). The helper scripts are bash 3.2 compatible, i.e. the macOS system bash is enough. |
 | **tmux** | 3.2 or newer recommended (tested with 3.5a). Older versions still load the config, minus the workspace switcher key. |
 | **Required** | `git` and [`chezmoi`](https://www.chezmoi.io/install/) (`brew install chezmoi`) |
-| **Optional** | `fzf` (0.48+ for the shell integration), `zoxide`, `starship`, `zsh-syntax-highlighting`, `jq` (status line), `translate-shell` (the translation popup), [Ghostty](https://ghostty.org) and a Nerd Font, Homebrew |
+| **Optional** | `fzf` (0.48+ for the shell integration), `zoxide`, `starship`, `zsh-syntax-highlighting` (found automatically where Homebrew, apt and pacman install it), `jq` (status line), `translate-shell` (the translation popup), [Ghostty](https://ghostty.org) and a Nerd Font, Homebrew |
 
 **What it changes on your machine:** exactly the files under [`home/`](home) that chezmoi deploys (the table below), a zsh completion cache in `~/.cache/zsh/`, and backups of the files it replaces in `~/.cli-workbench-backup/<timestamp>/` (chezmoi itself keeps none; see Safety model).
+
+For Omarchy / Arch Linux, follow [the dedicated migration guide](docs/omarchy.md) before applying dotfiles. Arch Linux container tests cover deployment and shell behavior; run `bash scripts/accept-omarchy --desktop` from a local Ghostty session on the Omarchy host for non-destructive host checks; clipboard and Mac-to-Linux remote reattach remain manual acceptance items.
 
 ## Quick start
 
@@ -67,7 +69,7 @@ What gets deployed (the layout follows [chezmoi's naming](https://www.chezmoi.io
 |---|---|---|
 | `dot_tmux.conf`, `dot_tmux/scripts/` | `~/.tmux.conf`, `~/.tmux/scripts` | prefix `Ctrl-a`, vi keys, mouse, workspace switcher with the agent pane |
 | `dot_zshrc`, `dot_config/private_zsh/` | `~/.zshrc`, `~/.config/zsh/{path,tmux-autostart}.zsh` | **replaces your `.zshrc`**; move your own tweaks to `~/.config/zsh/local.zsh` first. Installers (nvm, bun, ...) append to `~/.zshrc`; `chezmoi diff` shows that, so move such lines into `local.zsh` |
-| `dot_config/ghostty/config` | `~/.config/ghostty/config` | Catppuccin Mocha, Nerd Font, macOS tabs title bar |
+| `dot_config/ghostty/config.tmpl` | `~/.config/ghostty/config` | Theme, font, and macOS title-bar tabs and window restoration; deployed on macOS only (`home/.chezmoiignore`), because the Linux desktop owns its own Ghostty config |
 | `dot_claude/executable_statusline.sh` | `~/.claude/statusline.sh` | the Claude Code status line (project, branch, model, context, cost, rate limits); only if you use Claude Code |
 | `dot_claude/workbench-mods/` | `~/.claude/workbench-mods/` | five Claude Code mods (`chezmoi-guard`, `reply-polish`, `agent-state`, `md-open`, `blocked-notify`) as a local marketplace; deployed, not installed: see "Claude Code mods" |
 | `dot_codex/modify_private_config.toml` | `~/.codex/config.toml` | merge portable status-line and completion-bell preferences; preserve other local values |
@@ -83,7 +85,7 @@ These are opinions, not requirements. Edit the files in `home/` and run `chezmoi
 
 - **tmux:** prefix is `Ctrl-a` (not `Ctrl-b`); vi-style copy mode; mouse on; windows numbered from 1. Pane contents are **not** saved to disk by default (that would store anything printed in a pane, tokens included); see the comment next to `@resurrect-capture-pane-contents` to turn it on.
 - **zsh:** 50,000-line shared history, case-insensitive completion, `starship`, `zoxide`, `fzf` and `zsh-syntax-highlighting` only if installed.
-- **Ghostty:** Catppuccin Mocha and `SauceCodePro Nerd Font Mono` (install the font or change the line).
+- **Ghostty:** Catppuccin Mocha and `SauceCodePro Nerd Font Mono` (install the font or change the line). macOS only; on Linux the desktop keeps its own Ghostty theme and font.
 
 ## Make it yours
 
@@ -175,12 +177,13 @@ Press `prefix` then `P` (`Ctrl-a P`) for a picker over `~/dev/projects`. Every d
 
 ## Code popups (tmux)
 
-Read code without leaving the agent's pane. Both keys open Neovim in a popup over the current pane, in that pane's directory; closing Neovim closes the popup and you are back where you were. They need tmux 3.2+.
+Read code without leaving the agent's pane. These keys open Neovim in a popup over the current pane, in that pane's directory; closing Neovim closes the popup and you are back where you were. They need tmux 3.2+.
 
 - `prefix` then `e`: **browse** the project with the usual Neovim keys (`<leader>ff` find a file, `<leader>fg` search, `<leader>e` file tree). `:qa` closes it.
 - A Markdown file opened there is shown rendered in place (headings, lists, tables, code blocks); `<leader>mp` switches the rendering off and on. The text is a centred column of about 80 characters, so it stays readable on a wide screen.
 - `prefix` then `g`: **review changes**. A Telescope list of every file the branch changed since it left the default branch (`origin/HEAD`, else `origin/main`, `main` and so on): committed, uncommitted, deleted and untracked files, each marked, with a colored diff as the preview. `Enter` opens the file in a new tab beside its version at the fork point, in Neovim's own diff mode (a deleted file: its old version beside an empty side) (`]c`/`[c` jump between changes). Inside Neovim the same list is `:Changes` or `<leader>gv`. `:qa` closes the popup. Outside a Git repository it says so. No extra plugin is needed.
 - The script is `home/dot_tmux/scripts/executable_code-popup.sh`; tmux passes it only the pane id, never a directory name.
+- `prefix` then `M`: **read a Markdown file the agent mentioned**. A list of the `.md` files that the Claude Code conversation in the current pane wrote, edited, read or named (in its messages, tool calls and tool results), the most recently mentioned first, each once, with a preview; files that no longer exist are left out. `Enter` opens the file read-only (`nvim -R`), rendered as above; `:q` closes the popup, and so does `Esc` in the list. Without [fzf](https://github.com/junegunn/fzf) it is a numbered menu. It finds the conversation through the session id that the agent overview's state file holds for the pane (see [Agent overview](#agent-overview-tmux)), so it needs the `agent-state` mod and `jq`; Codex, Gemini and Grok panes record no session id and are not covered yet. It only reads. `M` replaces tmux's default `prefix M` (clear the marked pane), which the workbench does not use. The script is `home/dot_tmux/scripts/executable_md-picker.sh`. The `md-open` mod's `/md` does the same from inside Claude Code: you type it in the conversation and it also lists files named in Bash commands and in your prompts. Use `prefix M` from any pane, without typing into the conversation; use `/md` when you are already in the conversation. Both open the file read-only in a Neovim popup.
 
 ## Translate what you select (tmux)
 

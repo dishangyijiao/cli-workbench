@@ -1,0 +1,9 @@
+theme = Catppuccin Mocha
+# Install this font on each platform, or override locally.
+font-family = SauceCodePro Nerd Font Mono
+{{- if eq .chezmoi.os "darwin" }}
+
+# Preserve the existing macOS Ghostty behavior.
+macos-titlebar-style = tabs
+window-save-state = always
+{{- end }}

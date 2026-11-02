@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+# Non-destructive, reproducible Omarchy workstation acceptance.
+# Changes are confined to a disposable HOME and an isolated tmux socket.
+set -u
+
+usage() {
+  cat <<'HELP'
+Usage: bash scripts/accept-omarchy [--headless | --desktop]
+  --headless: CI/SSH checks without a graphical session.
+  --desktop:  also verify a live Hyprland session, Ghostty config, and font.
+No changes to your existing HOME or tmux server. Clipboard interaction and
+a real remote SSH reattach still need human verification.
+HELP
+}
+case ${1:---desktop} in
+  --help|-h) usage; exit 0 ;;
+  --headless) mode=headless ;;
+  --desktop) mode=desktop ;;
+  *) usage >&2; exit 2 ;;
+esac
+if [ "$#" -gt 1 ]; then usage >&2; exit 2; fi
+if [ "$(uname -s)" != Linux ]; then
+  echo 'FAIL: acceptance must run on Arch/Omarchy Linux' >&2
+  exit 2
+fi
+
+root=$(cd "$(dirname "$0")/.." && pwd -P) || exit 2
+passed=0; failed=0
+pass() { printf 'PASS  %s\n' "$1"; passed=$((passed+1)); }
+fail() { printf 'FAIL  %s\n' "$1" >&2; failed=$((failed+1)); }
+require() {
+  if command -v "$1" >/dev/null 2>&1; then pass "dependency $1"
+  else fail "missing dependency $1"; fi
+}
+
+printf 'CLI Workbench host acceptance (%s)\n' "$mode"
+for cmd in chezmoi tmux zsh jq diff cmp; do require "$cmd"; done
+if [ "$mode" = desktop ]; then
+  for cmd in ghostty hyprctl wl-copy wl-paste fc-list; do require "$cmd"; done
+fi
+if [ "$failed" -gt 0 ]; then
+  printf 'RESULT: BLOCKED (%s missing commands)\n' "$failed" >&2
+  exit 1
+fi
+
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/wb-omarchy-accept.XXXXXXXX") || exit 2
+probe="$tmp/home"; sock="$tmp/tmux.sock"
+mkdir -p "$probe"
+cleanup() {
+  tmux -S "$sock" kill-server >/dev/null 2>&1 || :
+  rm -rf -- "$tmp"
+}
+trap cleanup EXIT HUP INT TERM
+
+# Override the caller's XDG variables so even existing per-machine values
+# cannot make chezmoi write outside the temporary destination.
+if env -u XDG_CONFIG_HOME -u XDG_DATA_HOME -u XDG_CACHE_HOME -u XDG_STATE_HOME \
+    HOME="$probe" chezmoi apply --source "$root" --destination "$probe" \
+    --no-tty --cache "$tmp/cache" --persistent-state "$tmp/state" >"$tmp/apply.log" 2>&1; then
+  pass 'chezmoi deployment to disposable HOME'
+else
+  fail 'chezmoi deployment to disposable HOME'
+  sed -n '1,12p' "$tmp/apply.log" >&2
+  printf 'RESULT: FAIL (%s failed checks)\n' "$failed" >&2
+  exit 1
+fi
+
+# The desktop owns the Ghostty theme and font on Linux, so nothing may be deployed there (home/.chezmoiignore).
+if [ ! -e "$probe/.config/ghostty" ]; then
+  pass 'Ghostty config not deployed on Linux (the desktop owns it)'
+else
+  fail 'Ghostty config was deployed on Linux'
+fi
+if cmp -s "$probe/.claude/CLAUDE.md" "$probe/.codex/AGENTS.md" &&
+   cmp -s "$probe/.claude/CLAUDE.md" "$probe/.gemini/GEMINI.md"; then
+  pass 'Claude/Codex/Gemini instructions identical'
+else
+  fail 'agent instructions differ after deployment'
+fi
+if [ -s "$probe/.config/nvim/init.lua" ]; then
+  pass 'Neovim config deployed'
+else
+  fail 'Neovim config missing'
+fi
+
+if env HOME="$probe" tmux -S "$sock" -f "$probe/.tmux.conf" new-session -d -s workbench-acceptance >/dev/null 2>&1; then
+  pass 'isolated tmux server started'
+  if [ "$(tmux -S "$sock" show-options -gv prefix 2>/dev/null)" = 'C-a' ]; then
+    pass 'tmux Ctrl+A prefix'
+  else fail 'tmux Ctrl+A prefix'; fi
+  if tmux -S "$sock" list-keys -T prefix 2>/dev/null | grep -Eq '(^|[[:space:]])P[[:space:]]+display-popup'; then
+    pass 'tmux project picker keybinding'
+  else fail 'tmux project picker keybinding'; fi
+  if tmux -S "$sock" list-keys -T prefix 2>/dev/null | grep -Eq '(^|[[:space:]])O[[:space:]]+display-popup'; then
+    pass 'tmux agent overview keybinding'
+  else fail 'tmux agent overview keybinding'; fi
+  if [ "$(tmux -S "$sock" show-options -gv @fzf-url-open 2>/dev/null)" = 'xdg-open' ]; then
+    pass 'tmux Linux URL opener'
+  else fail 'tmux Linux URL opener'; fi
+  if [ "$(tmux -S "$sock" show-options -gv set-clipboard 2>/dev/null)" = 'on' ]; then
+    pass 'tmux OSC 52 clipboard option enabled'
+  else fail 'tmux OSC 52 clipboard option'; fi
+else
+  fail 'isolated tmux server startup'
+fi
+
+if [ "$mode" = desktop ]; then
+  if [ "${XDG_SESSION_TYPE:-}" = wayland ] && [ -n "${WAYLAND_DISPLAY:-}" ] &&
+     [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+    pass 'Wayland + Hyprland environment'
+  else fail 'expected active Wayland + Hyprland session'; fi
+  if hyprctl -j monitors 2>/dev/null | jq -e 'type == "array" and length > 0' >/dev/null 2>&1; then
+    pass 'Hyprland monitor reachable'
+  else fail 'Hyprland monitor unreachable'; fi
+  # Linux does not deploy the template, but it is still one file Ghostty must parse: render the macOS variant and let
+  # the installed Ghostty check it.
+  if chezmoi execute-template --source "$root" --override-data '{"chezmoi":{"os":"darwin"}}' \
+       <"$root/home/dot_config/ghostty/config.tmpl" >"$tmp/ghostty.config" 2>"$tmp/ghostty.log" &&
+     ghostty +validate-config --config-file="$tmp/ghostty.config" >>"$tmp/ghostty.log" 2>&1; then
+    pass 'Ghostty accepts the rendered template'
+  else
+    fail 'Ghostty config validation'
+    sed -n '1,10p' "$tmp/ghostty.log" >&2
+  fi
+  # The theme and font belong to the desktop; any Nerd Font keeps the status line and tmux glyphs readable.
+  if fc-list -f '%{family}\n' | grep -Fqi 'Nerd Font'; then
+    pass 'a Nerd Font is installed'
+  else fail 'no Nerd Font found'; fi
+  printf 'MANUAL: verify Ghostty appearance and input on the live desktop.\n'
+  printf 'MANUAL: test Wayland clipboard round-trip and Mac-to-Omarchy SSH/tmux reattach.\n'
+fi
+printf 'RESULT: %s (%s passed, %s failed)\n' "$([ "$failed" -eq 0 ] && echo PASS || echo FAIL)" "$passed" "$failed"
+[ "$failed" -eq 0 ]

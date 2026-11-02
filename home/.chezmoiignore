@@ -1,0 +1,5 @@
+{{- /* Not deployed to $HOME. Paths here are targets, relative to the home directory. */ -}}
+{{- if ne .chezmoi.os "darwin" }}
+# Omarchy (Linux) owns the Ghostty theme and font; only macOS gets this repository's Ghostty config.
+.config/ghostty
+{{- end }}
