@@ -40,6 +40,20 @@ const transcriptTail = async ($: Engine, row: Row): Promise<string> => {
 
 const readNotified = async ($: Engine): Promise<Notified> => (((await $.store.get('notified')) ?? {}) as Notified)
 
+// Take back a claim that did not end in a notification. The store is read again just before the write, because another
+// window may have changed it meanwhile; there is no compare-and-set, so a write by another window landing between this
+// read and this write is still lost. A failure here only leaves the claim, and with it this one stop unannounced.
+const giveBack = async ($: Engine, id: string, state: string): Promise<void> => {
+  try {
+    const now = await readNotified($)
+    if (now[id] !== state) return
+    delete now[id]
+    await $.store.set('notified', now)
+  } catch {
+    // Nothing more can be done from here.
+  }
+}
+
 // What was announced: session id -> the state it was announced in. It lives in the store, which every window shares, so
 // two windows do not both announce. A session that is no longer waiting, or gone, drops out, so its next stop is announced.
 //
@@ -68,16 +82,16 @@ const poll = async ($: Engine): Promise<void> => {
     if (JSON.stringify(before) !== JSON.stringify(claimed)) await $.store.set('notified', claimed)
 
     for (const f of fresh) {
-      const name = typeof f.row.name === 'string' && f.row.name !== '' ? f.row.name : f.id
-      const text = wording(name, f.state, resetFrom(await transcriptTail($, f.row)))
-      if ((await $.ui.notify(text, { title: 'Claude Code' })).isSent) continue
-      // Nobody to tell (no terminal, notifications off): give the claim back, so the next poll tries again. Read the store
-      // again first: another window may have changed it meanwhile.
-      const now = await readNotified($)
-      if (now[f.id] === f.state) {
-        delete now[f.id]
-        await $.store.set('notified', now)
+      let sent = false
+      try {
+        const name = typeof f.row.name === 'string' && f.row.name !== '' ? f.row.name : f.id
+        const text = wording(name, f.state, resetFrom(await transcriptTail($, f.row)))
+        sent = (await $.ui.notify(text, { title: 'Claude Code' })).isSent
+      } catch {
+        // A notifier that throws is the same as nobody to tell, and must not hold up the sessions after this one.
       }
+      // Nobody to tell (no terminal, notifications off, a failure): give the claim back, so the next poll tries again.
+      if (!sent) await giveBack($, f.id, f.state)
     }
   } catch {
     // A failed poll costs one minute: the next one looks again.

@@ -15,6 +15,7 @@ type World = {
   tailFails?: boolean
   sent?: () => boolean
   store?: Record<string, unknown>
+  throwOnce?: boolean // the first notification throws instead of answering
   whileSending?: () => Promise<void> // runs while a notification is being sent: another window can poll meanwhile
 }
 
@@ -31,7 +32,8 @@ const limitLine = (text: string) => JSON.stringify({ type: 'assistant', isApiErr
 
 // Stands in for the engine: the environment, the store, the clock, `claude agents --json`, `tail` and the notification.
 const world = (on: On, w: World) => {
-  const seen = { runs: [] as (readonly string[])[], notes: [] as { text: string; title?: string }[] }
+  const seen = { runs: [] as (readonly string[])[], notes: [] as { text: string; title?: string }[], told: [] as string[] }
+  let threw = false
   mock.env(on, { HOME })
   mock.store(on, w.store ?? {})
   const clock: MockClock = mock.clock(on)
@@ -52,6 +54,11 @@ const world = (on: On, w: World) => {
   on('ui.notify', async (_$, e) => {
     seen.notes.push({ text: e.text, title: e.title })
     await w.whileSending?.()
+    if (w.throwOnce && !threw) {
+      threw = true
+      throw new Error('the notifier broke')
+    }
+    seen.told.push(e.text)
     return { value: (w.sent?.() ?? true) ? { isSent: true as const, channel: 'ghostty' as const } : { isSent: false as const, reason: 'no-surface' as const } }
   })
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
@@ -242,4 +249,15 @@ test('a row with the right kind but no readable state forgets nothing: the sessi
   await seen.clock.advance(POLL_MS)
 
   expect(seen.notes).toHaveLength(1)
+})
+
+test('a notification that throws gives its session back and does not hold up the others in the same poll', async ($, on) => {
+  const seen = world(on, { rows: () => [bg('a1', 'blocked', 'one'), bg('b2', 'blocked', 'two')], throwOnce: true })
+
+  await start($, seen.clock)
+  expect(seen.told).toEqual(['two is blocked'])
+  await seen.clock.advance(POLL_MS)
+  await seen.clock.advance(POLL_MS)
+
+  expect(seen.told).toEqual(['two is blocked', 'one is blocked'])
 })
