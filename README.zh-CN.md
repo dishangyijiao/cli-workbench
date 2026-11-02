@@ -42,7 +42,7 @@
 | **Shell** | zsh 5.8 及以上（在 5.9 上测试）。辅助脚本兼容 bash 3.2，也就是 macOS 自带的 bash 就够用。 |
 | **tmux** | 建议 3.2 及以上（在 3.5a 上测试）。更旧的版本仍能加载配置，只是少了工作台切换键。 |
 | **必需** | `git` 和 [`chezmoi`](https://www.chezmoi.io/install/)（`brew install chezmoi`） |
-| **可选** | `fzf`（0.48+ 才有 shell 集成）、`zoxide`、`starship`、`zsh-syntax-highlighting`、`jq`（状态栏用）、`translate-shell`（翻译弹窗）、[Ghostty](https://ghostty.org) 加一款 Nerd Font、Homebrew |
+| **可选** | `fzf`（0.48+ 才有 shell 集成）、`zoxide`、`starship`、`zsh-syntax-highlighting`（Homebrew、apt、pacman 安装的位置都会自动识别）、`jq`（状态栏用）、`translate-shell`（翻译弹窗）、[Ghostty](https://ghostty.org) 加一款 Nerd Font、Homebrew |
 
 **它会在你的机器上做的改动：** 仅限 [`home/`](home) 下由 chezmoi 部署的文件（见下表）、使用自带 `zshrc` 后 `~/.cache/zsh/` 里的 zsh 补全缓存，以及被替换文件的备份 `~/.cli-workbench-backup/<时间戳>/`（chezmoi 自己不备份，见“安全模型”）。
 
