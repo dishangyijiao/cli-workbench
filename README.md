@@ -42,7 +42,7 @@ English | [简体中文](README.zh-CN.md)
 | **Shell** | zsh 5.8 or newer (tested with 5.9). The helper scripts are bash 3.2 compatible, i.e. the macOS system bash is enough. |
 | **tmux** | 3.2 or newer recommended (tested with 3.5a). Older versions still load the config, minus the workspace switcher key. |
 | **Required** | `git` and [`chezmoi`](https://www.chezmoi.io/install/) (`brew install chezmoi`) |
-| **Optional** | `fzf` (0.48+ for the shell integration), `zoxide`, `starship`, `zsh-syntax-highlighting`, `jq` (status line), `translate-shell` (the translation popup), [Ghostty](https://ghostty.org) and a Nerd Font, Homebrew |
+| **Optional** | `fzf` (0.48+ for the shell integration), `zoxide`, `starship`, `zsh-syntax-highlighting` (found automatically where Homebrew, apt and pacman install it), `jq` (status line), `translate-shell` (the translation popup), [Ghostty](https://ghostty.org) and a Nerd Font, Homebrew |
 
 **What it changes on your machine:** exactly the files under [`home/`](home) that chezmoi deploys (the table below), a zsh completion cache in `~/.cache/zsh/`, and backups of the files it replaces in `~/.cli-workbench-backup/<timestamp>/` (chezmoi itself keeps none; see Safety model).
 
