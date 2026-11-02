@@ -15,6 +15,7 @@ type World = {
   tailFails?: boolean
   sent?: () => boolean
   store?: Record<string, unknown>
+  whileSending?: () => Promise<void> // runs while a notification is being sent: another window can poll meanwhile
 }
 
 const bg = (id: string, state: string, name = `job-${id}`): Row => ({
@@ -48,8 +49,9 @@ const world = (on: On, w: World) => {
     }
     return { value: { exitCode: r.exitCode, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
   })
-  on('ui.notify', (_$, e) => {
+  on('ui.notify', async (_$, e) => {
     seen.notes.push({ text: e.text, title: e.title })
+    await w.whileSending?.()
     return { value: (w.sent?.() ?? true) ? { isSent: true as const, channel: 'ghostty' as const } : { isSent: false as const, reason: 'no-surface' as const } }
   })
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
@@ -209,4 +211,35 @@ test('the poll runs `claude agents --json` as an argv with a time limit, and a s
 
   expect(seen.runs.find(a => a[0] === 'claude')).toEqual(['claude', 'agents', '--json'])
   expect(seen.runs.filter(a => a[0] === 'claude').length - before).toBe(1)
+})
+
+test('a window that polls while another one is still sending does not announce the same stop twice', async ($, on) => {
+  let clock: MockClock | undefined
+  let nested = false
+  const seen = world(on, {
+    rows: () => [bg('a1', 'blocked', 'job')],
+    whileSending: async () => {
+      if (nested) return
+      nested = true
+      await clock?.advance(POLL_MS)
+    },
+  })
+  clock = seen.clock
+
+  await start($, seen.clock)
+
+  expect(seen.notes.map(n => n.text)).toEqual(['job is blocked'])
+})
+
+test('a row with the right kind but no readable state forgets nothing: the session is not announced twice', async ($, on) => {
+  let broken = false
+  const seen = world(on, { rows: () => (broken ? [{ id: 'a1', kind: 'background' }] : [bg('a1', 'blocked', 'job')]) })
+
+  await start($, seen.clock)
+  broken = true
+  await seen.clock.advance(POLL_MS)
+  broken = false
+  await seen.clock.advance(POLL_MS)
+
+  expect(seen.notes).toHaveLength(1)
 })

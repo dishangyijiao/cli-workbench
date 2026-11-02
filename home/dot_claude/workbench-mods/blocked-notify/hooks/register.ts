@@ -38,26 +38,47 @@ const transcriptTail = async ($: Engine, row: Row): Promise<string> => {
   }
 }
 
+const readNotified = async ($: Engine): Promise<Notified> => (((await $.store.get('notified')) ?? {}) as Notified)
+
 // What was announced: session id -> the state it was announced in. It lives in the store, which every window shares, so
 // two windows do not both announce. A session that is no longer waiting, or gone, drops out, so its next stop is announced.
+//
+// The store has no compare-and-set, so two windows polling in the same instant could still both announce. To make that
+// instant as short as it can be, a new stop is written to the store first, before the slow work (reading the transcript,
+// sending the notification), and given back if nobody could be told.
 const poll = async ($: Engine): Promise<void> => {
   try {
     const rows = await background($)
     if (rows === undefined) return
-    const before = ((await $.store.get('notified')) ?? {}) as Notified
-    const after: Notified = {}
+    const before = await readNotified($)
+    const claimed: Notified = {}
+    const fresh: { id: string; state: string; row: Row }[] = []
     for (const row of rows) {
-      if (typeof row.id !== 'string' || typeof row.state !== 'string' || !isWaiting(row.state)) continue
-      if (before[row.id] === row.state) {
-        after[row.id] = row.state
+      if (typeof row.id !== 'string') continue
+      // A row we cannot read the state of says nothing: keep what we knew about it, so it is not announced again later.
+      if (typeof row.state !== 'string') {
+        if (before[row.id] !== undefined) claimed[row.id] = before[row.id]
         continue
       }
-      const name = typeof row.name === 'string' && row.name !== '' ? row.name : row.id
-      const text = wording(name, row.state, resetFrom(await transcriptTail($, row)))
-      // Nobody to tell (no terminal, notifications off): leave it out, so the next poll tries again.
-      if ((await $.ui.notify(text, { title: 'Claude Code' })).isSent) after[row.id] = row.state
+      if (!isWaiting(row.state)) continue
+      if (before[row.id] === row.state) claimed[row.id] = row.state
+      else fresh.push({ id: row.id, state: row.state, row })
     }
-    if (JSON.stringify(before) !== JSON.stringify(after)) await $.store.set('notified', after)
+    for (const f of fresh) claimed[f.id] = f.state
+    if (JSON.stringify(before) !== JSON.stringify(claimed)) await $.store.set('notified', claimed)
+
+    for (const f of fresh) {
+      const name = typeof f.row.name === 'string' && f.row.name !== '' ? f.row.name : f.id
+      const text = wording(name, f.state, resetFrom(await transcriptTail($, f.row)))
+      if ((await $.ui.notify(text, { title: 'Claude Code' })).isSent) continue
+      // Nobody to tell (no terminal, notifications off): give the claim back, so the next poll tries again. Read the store
+      // again first: another window may have changed it meanwhile.
+      const now = await readNotified($)
+      if (now[f.id] === f.state) {
+        delete now[f.id]
+        await $.store.set('notified', now)
+      }
+    }
   } catch {
     // A failed poll costs one minute: the next one looks again.
   }

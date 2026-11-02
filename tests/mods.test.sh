@@ -59,6 +59,8 @@ assert "the limit wording lives in limit.ts, with a test" test -f "$B/limit.ts" 
 assert "it polls claude agents --json" grep -q "'claude', 'agents', '--json'" "$B/register.ts"
 refute "it builds no shell string" grep -Eq "'sh', '-c'|bash -c" "$B/register.ts"
 refute "it writes no file" grep -Eq '\$\.fs\.(write|remove|rename|mkdir)' "$B/register.ts"
+assert "a window polling while another one sends is tested" grep -q "while another one is still sending" "$B/register.test.ts"
+assert "an unreadable row keeping what was known is tested" grep -q "no readable state forgets nothing" "$B/register.test.ts"
 
 echo "reply-polish: a wide table is narrowed and wrapped, and becomes a list only when no column fits"
 R=$M/reply-polish/hooks
