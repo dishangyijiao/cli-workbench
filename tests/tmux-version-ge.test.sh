@@ -8,6 +8,8 @@ ge() { TMUX_VERSION_CMD="echo tmux $1" "$V" "$2" "$3" >/dev/null 2>&1; echo $?; 
 echo "tmux-version-ge.sh MAJOR MINOR: exit 0 when the running tmux is at least that version"
 assert_eq "3.5a >= 3.2"      0 "$(ge 3.5a 3 2)"
 assert_eq "3.2 >= 3.2"       0 "$(ge 3.2 3 2)"
+assert_eq "2.9 < 3.0 (legacy Ctrl-backslash)" 1 "$(ge 2.9 3 0)"
+assert_eq "3.0 >= 3.0 (modern Ctrl-backslash)" 0 "$(ge 3.0 3 0)"
 assert_eq "3.1c < 3.2"       1 "$(ge 3.1c 3 2)"
 assert_eq "2.9a < 3.2"       1 "$(ge 2.9a 3 2)"
 assert_eq "4.0 >= 3.2"       0 "$(ge 4.0 3 2)"

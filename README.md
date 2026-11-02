@@ -26,7 +26,7 @@ English | [简体中文](README.zh-CN.md)
 | **Plain text all the way down** | Settings, history, notes and agent instructions are files. `rg`, `fzf`, `jq`, `nvim` and `git` are the tools; there is no GUI state and no database to lose. **One instruction text is deployed to every agent** (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`), with your private rules appended from an untracked file. |
 | **Safe to make public** | Agents need API keys, and keys leak through dotfiles. `scripts/privacy-scan` runs as a pre-commit hook and again in CI, and recognises Anthropic (Claude), OpenAI, Google (Gemini) and xAI (Grok) keys, GitHub and AWS tokens, private keys, personal paths and e-mail addresses. A pre-push hook scans commit metadata (author, committer, message) too. tmux pane contents are not saved to disk by default. Secrets live in an untracked file. |
 | **Reversible** | Before every `chezmoi apply`, the files it would replace are backed up to `~/.cli-workbench-backup/` with a restore note. |
-| **The promises are tested** | The quick start below is run end to end in a throwaway home directory on macOS and Ubuntu. The agent pane (with stand-in agents), the backup and the privacy scanner each have their own tests. |
+| **The promises are tested** | The quick start runs end to end in disposable home directories on macOS, Ubuntu and Arch containers. The agent pane (with stand-in agents), the backup and the privacy scanner each have their own tests. |
 
 **Agent-specific today:** the workspace switcher starts any of the four agents; the shared instruction text reaches Claude Code, Codex and Gemini CLI (Grok CLI is not wired up: the location of its instruction file is not known); the status line (`~/.claude/statusline.sh`) and the mods (below) are for Claude Code only. Full agent settings files are deliberately not tracked. Codex's portable UI preferences are merged into its local configuration, see below. The agents themselves are not installed by this repository.
 
@@ -38,13 +38,15 @@ English | [简体中文](README.zh-CN.md)
 
 | | |
 |---|---|
-| **Platform** | **macOS** is the primary platform (tested on macOS 26, Apple Silicon). The zsh and tmux configs also pass the full test suite and the first-run flow on **Ubuntu 24.04** (checked in a container); the Ghostty config and the Homebrew casks are macOS-oriented. Windows is not supported. |
+| **Platform** | **macOS** is the primary platform (tested on macOS 26, Apple Silicon). The zsh and tmux configs also pass the full test suite and the first-run flow on **Ubuntu 24.04** (checked in a container); the Ghostty config is deployed on macOS only (on Linux the desktop owns it). Arch Linux is also tested in CI; a real Omarchy/Hyprland desktop requires separate host acceptance. Homebrew casks remain macOS-specific. Windows is not supported. |
 | **Shell** | zsh 5.8 or newer (tested with 5.9). The helper scripts are bash 3.2 compatible, i.e. the macOS system bash is enough. |
 | **tmux** | 3.2 or newer recommended (tested with 3.5a). Older versions still load the config, minus the workspace switcher key. |
 | **Required** | `git` and [`chezmoi`](https://www.chezmoi.io/install/) (`brew install chezmoi`) |
 | **Optional** | `fzf` (0.48+ for the shell integration), `zoxide`, `starship`, `zsh-syntax-highlighting`, `jq` (status line), `translate-shell` (the translation popup), [Ghostty](https://ghostty.org) and a Nerd Font, Homebrew |
 
 **What it changes on your machine:** exactly the files under [`home/`](home) that chezmoi deploys (the table below), a zsh completion cache in `~/.cache/zsh/`, and backups of the files it replaces in `~/.cli-workbench-backup/<timestamp>/` (chezmoi itself keeps none; see Safety model).
+
+For Omarchy / Arch Linux, follow [the dedicated migration guide](docs/omarchy.md) before applying dotfiles. Arch Linux container tests cover deployment and shell behavior; run `bash scripts/accept-omarchy --desktop` from a local Ghostty session on the Omarchy host for non-destructive host checks; clipboard and Mac-to-Linux remote reattach remain manual acceptance items.
 
 ## Quick start
 
@@ -67,7 +69,7 @@ What gets deployed (the layout follows [chezmoi's naming](https://www.chezmoi.io
 |---|---|---|
 | `dot_tmux.conf`, `dot_tmux/scripts/` | `~/.tmux.conf`, `~/.tmux/scripts` | prefix `Ctrl-a`, vi keys, mouse, workspace switcher with the agent pane |
 | `dot_zshrc`, `dot_config/private_zsh/` | `~/.zshrc`, `~/.config/zsh/{path,tmux-autostart}.zsh` | **replaces your `.zshrc`**; move your own tweaks to `~/.config/zsh/local.zsh` first. Installers (nvm, bun, ...) append to `~/.zshrc`; `chezmoi diff` shows that, so move such lines into `local.zsh` |
-| `dot_config/ghostty/config` | `~/.config/ghostty/config` | Catppuccin Mocha, Nerd Font, macOS tabs title bar |
+| `dot_config/ghostty/config.tmpl` | `~/.config/ghostty/config` | Theme, font, and macOS title-bar tabs and window restoration; deployed on macOS only (`home/.chezmoiignore`), because the Linux desktop owns its own Ghostty config |
 | `dot_claude/executable_statusline.sh` | `~/.claude/statusline.sh` | the Claude Code status line (project, branch, model, context, cost, rate limits); only if you use Claude Code |
 | `dot_claude/workbench-mods/` | `~/.claude/workbench-mods/` | four Claude Code mods (`chezmoi-guard`, `reply-polish`, `agent-state`, `md-open`) as a local marketplace; deployed, not installed: see "Claude Code mods" |
 | `dot_codex/modify_private_config.toml` | `~/.codex/config.toml` | merge portable status-line and completion-bell preferences; preserve other local values |
@@ -83,7 +85,7 @@ These are opinions, not requirements. Edit the files in `home/` and run `chezmoi
 
 - **tmux:** prefix is `Ctrl-a` (not `Ctrl-b`); vi-style copy mode; mouse on; windows numbered from 1. Pane contents are **not** saved to disk by default (that would store anything printed in a pane, tokens included); see the comment next to `@resurrect-capture-pane-contents` to turn it on.
 - **zsh:** 50,000-line shared history, case-insensitive completion, `starship`, `zoxide`, `fzf` and `zsh-syntax-highlighting` only if installed.
-- **Ghostty:** Catppuccin Mocha and `SauceCodePro Nerd Font Mono` (install the font or change the line).
+- **Ghostty:** Catppuccin Mocha and `SauceCodePro Nerd Font Mono` (install the font or change the line). macOS only; on Linux the desktop keeps its own Ghostty theme and font.
 
 ## Make it yours
 
