@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+
+- On Arch Linux and Omarchy, `pacman -S zsh-syntax-highlighting` installs the plugin under `/usr/share/zsh/plugins/zsh-syntax-highlighting`, which `home/dot_zshrc` did not search, so highlighting never loaded. That directory is now in the search list. Tested in `tests/highlighting.test.sh`, which runs the rendered `.zshrc` against a fake `/usr/share` root.
+
 ### Changed
 
 - On Linux (Omarchy) the repository no longer deploys a Ghostty config: the desktop owns the theme and font (`home/.chezmoiignore`). `scripts/accept-omarchy` checks that, and accepts any Nerd Font. `docs/omarchy.md` states how tmux combines `~/.tmux.conf` with `~/.config/tmux/tmux.conf`, warns about the `~/.config/nvim` overlap, and names snapper snapshots as the system rollback. Tested by `tests/omarchy-ownership.test.sh`, `tests/accept-omarchy.test.sh` and `tests/arch-packages.test.sh`.
